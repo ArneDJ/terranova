@@ -111,6 +111,7 @@ bool to_ascii(short*, size_t);
 ```
 
 Enum members should use CamelCase.
+
 Constant values that aren't arguments should always be written in caps with the words seperated by an underscore.
 
 Namespaces should be named after the directory the file is located in.
