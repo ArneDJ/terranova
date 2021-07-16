@@ -110,32 +110,22 @@ bool convert_to_ascii(short*, size_t);
 bool to_ascii(short*, size_t);
 ```
 
-Prefer index or range-for over iterators in Vector iterations for terse, easier-to-read code.
-
-###### Right:
-
-```cpp
-for (auto& child : children)
-    child->do_child_thing();
-```
-
-
-#### OK:
-
-```cpp
-for (int i = 0; i < children.size(); ++i)
-    children[i]->do_child_thing();
-```
-
-###### Wrong:
-
-```cpp
-for (auto it = children.begin(); it != children.end(); ++it)
-    (*it)->do_child_thing();
-```
-
 Enum members should use CamelCase.
 Constant values that aren't arguments should always be written in caps with the words seperated by an underscore.
+
+Namespaces should be named after the directory the file is located in.
+
+```cpp
+// src/physics/ragdoll.h
+
+namespace physx {
+
+class Ragdoll {
+    ...
+};
+
+};
+```
 
 ### Pointers and References
 
