@@ -110,7 +110,19 @@ bool convert_to_ascii(short*, size_t);
 bool to_ascii(short*, size_t);
 ```
 
-Enum members should use CamelCase.
+Enum members should always be written in caps.
+
+```cpp
+
+enum class GroundMaterial : uint8_t {
+    ROCK,
+    SAND,
+    SNOW,
+    GRASS
+};
+
+};
+```
 
 Constant values that aren't arguments should always be written in caps with the words seperated by an underscore.
 
@@ -130,6 +142,7 @@ class Ragdoll {
 
 ### Indentation
 The K&R style (Kernighan & Ritchie Style) should always be used.
+Like the Linux kernel this style uses tab stops (with the tab stops set every 8 characters) for indentation.
 
 ```cpp
 int main(int argc, char *argv[])
