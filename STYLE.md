@@ -1,6 +1,6 @@
 # Terranova C++ engine coding style
 
-The style is mostly inspired by SerenityOS' coding style and Bjarne Soustrup's C++ Core Guidelines.
+The style is mostly inspired by SerenityOS' coding style, Bjarne Soustrup's C++ Core Guidelines and K&R style.
 
 ### Names
 
@@ -126,6 +126,28 @@ class Ragdoll {
 };
 
 };
+```
+
+### Indentation
+The K&R style (Kernighan & Ritchie Style) should always be used.
+
+```cpp
+int main(int argc, char *argv[])
+{
+    ...
+    while (x == y) {
+        something();
+        somethingelse();
+
+        if (some_error) {
+            do_correct();
+        } else {
+            continue_as_usual();
+        }
+    }
+
+    return 0;
+}
 ```
 
 ### Pointers and References
