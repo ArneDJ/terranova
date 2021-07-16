@@ -24,8 +24,7 @@ float redVehicleSpeedOnHighway;
 size_t heightmap_image_buffer_size;
 ```
 
-Use CamelCase for a class or struct.
-Class and Struct names should be short but clear.
+Use CamelCase for a class, struct and enum.
 If the name of a class or struct is overly descriptive and consists of more than four words you're probably doing something wrong.
 
 ###### Right:
@@ -111,20 +110,65 @@ bool convert_to_ascii(short*, size_t);
 bool to_ascii(short*, size_t);
 ```
 
-Leave meaningless variable names out of function declarations. A good rule of thumb is if the parameter type name contains the parameter name (without trailing numbers or pluralization), then the parameter name isn't needed. Usually, there should be a parameter name for bools, strings, and numerical types.
+Prefer index or range-for over iterators in Vector iterations for terse, easier-to-read code.
 
 ###### Right:
 
 ```cpp
-void set_count(int);
+for (auto& child : children)
+    child->do_child_thing();
+```
 
-void do_something(Context*);
+
+#### OK:
+
+```cpp
+for (int i = 0; i < children.size(); ++i)
+    children[i]->do_child_thing();
 ```
 
 ###### Wrong:
 
 ```cpp
-void set_count(int count);
+for (auto it = children.begin(); it != children.end(); ++it)
+    (*it)->do_child_thing();
+```
 
-void do_something(Context* context);
+Enum members should use CamelCase.
+Constant values that aren't arguments should always be written in caps with the words seperated by an underscore.
+
+### Pointers and References
+
+When passing around pointers and references they should always be read-only unless you want them to be edited.
+Prefer to use references over pointers in function arguments.
+
+### "using" Statements
+
+In C++ implementation files, do not use "using" declarations of any kind to import names in the standard template library. Directly qualify the names at the point they're used instead.
+
+###### Right:
+
+```cpp
+// File.cpp
+
+std::swap(a, b);
+c = std::numeric_limits<int>::max()
+```
+
+###### Wrong:
+
+```cpp
+// File.cpp
+
+using std::swap;
+swap(a, b);
+```
+
+###### Wrong:
+
+```cpp
+// File.cpp
+
+using namespace std;
+swap(a, b);
 ```
