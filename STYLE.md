@@ -6,7 +6,7 @@ The style is mostly inspired by SerenityOS' coding style, Bjarne Soustrup's C++ 
 
 Keep variable names laconic and clear.
 Ideally a variable name should only consist out of one word, if the variable consists of multiple words use snake\_case.
-If your variable names are overly descriptive it most likely means your function is doing more than one thing.
+If your local variable names are overly descriptive it most likely means your function is doing more than one thing.
 
 ###### Right:
 
@@ -53,7 +53,7 @@ public:
     ...
 
 private:
-    int m_length { 0 };
+    int m_length = 0;
 };
 ```
 
@@ -64,7 +64,7 @@ class String {
 public:
     ...
 
-    int length { 0 };
+    int length = 0;
 };
 ```
 Precede setters with the word "set". Use bare words for getters. Setter and getter names should match the names of the variables being set/gotten.
@@ -110,7 +110,7 @@ bool convert_to_ascii(short*, size_t);
 bool to_ascii(short*, size_t);
 ```
 
-Enum members should always be written in caps.
+Enum members should always be written in ALL_CAPS.
 
 ```cpp
 
@@ -124,7 +124,7 @@ enum class GroundMaterial : uint8_t {
 };
 ```
 
-Constant values that aren't arguments should always be written in caps with the words seperated by an underscore.
+Constant values that aren't arguments should always be written in ALL_CAPS.
 
 Namespaces should be named after the directory the file is located in.
 
