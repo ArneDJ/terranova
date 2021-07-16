@@ -1,0 +1,3 @@
+/home/foo/Projects/repos/mine/terranova/CMakeFiles/rebuild_cache.dir
+/home/foo/Projects/repos/mine/terranova/CMakeFiles/edit_cache.dir
+/home/foo/Projects/repos/mine/terranova/CMakeFiles/terranova.dir
