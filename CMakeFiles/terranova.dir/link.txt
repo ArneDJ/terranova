@@ -1,1 +1,0 @@
-/usr/bin/c++ CMakeFiles/terranova.dir/src/extern/loguru/loguru.cpp.o CMakeFiles/terranova.dir/src/main.cpp.o -o prototype/terranova  -lpthread -ldl 
