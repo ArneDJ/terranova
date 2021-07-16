@@ -34,5 +34,8 @@
 # Make
 Makefile
 CMakeCache.txt
-CMakefiles
+CMakeFiles
 cmake_install.cmake
+
+# User files
+events.log
