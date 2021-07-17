@@ -18,6 +18,8 @@ file(GLOB all_SRCS
         "${PROJECT_SOURCE_DIR}/src/*.h"
         "${PROJECT_SOURCE_DIR}/src/util/*.cpp"
         "${PROJECT_SOURCE_DIR}/src/util/*.h"
+        "${PROJECT_SOURCE_DIR}/src/gpu/*.cpp"
+        "${PROJECT_SOURCE_DIR}/src/gpu/*.h"
         "${PROJECT_SOURCE_DIR}/src/extern/loguru/*.cpp"
         "${PROJECT_SOURCE_DIR}/src/extern/loguru/*.h"
 )
