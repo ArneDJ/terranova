@@ -16,6 +16,8 @@ include_directories(GLEW::GLEW)
 file(GLOB all_SRCS
         "${PROJECT_SOURCE_DIR}/src/*.cpp"
         "${PROJECT_SOURCE_DIR}/src/*.h"
+        "${PROJECT_SOURCE_DIR}/src/util/*.cpp"
+        "${PROJECT_SOURCE_DIR}/src/util/*.h"
         "${PROJECT_SOURCE_DIR}/src/extern/loguru/*.cpp"
         "${PROJECT_SOURCE_DIR}/src/extern/loguru/*.h"
 )
