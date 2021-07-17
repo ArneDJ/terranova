@@ -1,11 +1,15 @@
 #include <iostream>
+#include <unordered_map>
 #include <SDL2/SDL.h>
 #include <GL/glew.h>
 #include <GL/gl.h>
 
+#include <glm/glm.hpp>
+
 #include "extern/loguru/loguru.hpp"
 
 #include "util/config.h"
+#include "util/input.h"
 #include "engine.h"
 
 static const char *GAME_NAME = "terranova";
@@ -87,8 +91,8 @@ Engine::~Engine()
 	// Clean up SDL
 	SDL_Quit();
 }
-
-static const char* shaderCodeVertex = R"(
+	
+static const char* vertex_source = R"(
 #version 460 core
 layout (location=0) out vec3 color;
 const vec2 pos[3] = vec2[3](
@@ -108,7 +112,7 @@ void main()
 }
 )";
 
-static const char* shaderCodeFragment = R"(
+static const char* fragment_source = R"(
 #version 460 core
 layout (location=0) in vec3 color;
 layout (location=0) out vec4 out_FragColor;
@@ -123,11 +127,11 @@ void Engine::run()
 	glClearColor(0.5f, 0.5f, 0.5f, 1.f);
 
 	const GLuint shaderVertex = glCreateShader(GL_VERTEX_SHADER);
-	glShaderSource(shaderVertex, 1, &shaderCodeVertex, nullptr);
+	glShaderSource(shaderVertex, 1, &vertex_source, nullptr);
 	glCompileShader(shaderVertex);
 
 	const GLuint shaderFragment = glCreateShader(GL_FRAGMENT_SHADER);
-	glShaderSource(shaderFragment, 1, &shaderCodeFragment, nullptr);
+	glShaderSource(shaderFragment, 1, &fragment_source, nullptr);
 	glCompileShader(shaderFragment);
 
 	const GLuint program = glCreateProgram();
@@ -141,13 +145,16 @@ void Engine::run()
 	glCreateVertexArrays(1, &vao);
 	glBindVertexArray(vao);
 
-	glClear(GL_COLOR_BUFFER_BIT);
+	while (util::InputManager::exit_request() == false) {
+		util::InputManager::update();
 
-	glViewport(0, 0, 640, 480);
-	glClear(GL_COLOR_BUFFER_BIT);
-	glDrawArrays(GL_TRIANGLES, 0, 3);
+		glClear(GL_COLOR_BUFFER_BIT);
 
-	SDL_GL_SwapWindow(window);
+		glViewport(0, 0, 640, 480);
+		glClear(GL_COLOR_BUFFER_BIT);
+		glDrawArrays(GL_TRIANGLES, 0, 3);
 
-	SDL_Delay(3000);  // Pause execution for 3000 milliseconds, for example
+		SDL_GL_SwapWindow(window);
+	}
+
 }
