@@ -5,12 +5,14 @@
 #include <GL/gl.h>
 
 #include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 #include "extern/loguru/loguru.hpp"
 
 #include "util/config.h"
 #include "util/input.h"
 #include "gpu/shader.h"
+#include "gpu/mesh.h"
 #include "engine.h"
 
 static const char *GAME_NAME = "terranova";
@@ -92,6 +94,12 @@ Engine::~Engine()
 	// Clean up SDL
 	SDL_Quit();
 }
+
+struct PerFrameData
+{
+	glm::mat4 mvp;
+	int isWireframe;
+};
 	
 void Engine::run()
 {
@@ -102,19 +110,42 @@ void Engine::run()
 	shader.compile("shaders/triangle.frag", GL_FRAGMENT_SHADER);
 	shader.link();
 
-	GLuint vao;
-	glCreateVertexArrays(1, &vao);
-	glBindVertexArray(vao);
+	gpu::CubeMesh cube_mesh;
+	cube_mesh.create(glm::vec3(-1.f, -1.f, -1.f), glm::vec3(1.f, 1.f, 1.f));
+
+	const GLsizeiptr kBufferSize = sizeof(PerFrameData);
+	GLuint perFrameDataBuffer;
+	glCreateBuffers(1, &perFrameDataBuffer);
+	glNamedBufferStorage(perFrameDataBuffer, kBufferSize, nullptr, GL_DYNAMIC_STORAGE_BIT);
+	glBindBufferRange(GL_UNIFORM_BUFFER, 0, perFrameDataBuffer, 0, kBufferSize);
+
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_POLYGON_OFFSET_LINE);
+	glPolygonOffset(-1.0f, -1.0f);
 
 	while (util::InputManager::exit_request() == false) {
 		util::InputManager::update();
 
-		glClear(GL_COLOR_BUFFER_BIT);
-
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glViewport(0, 0, 640, 480);
-		glClear(GL_COLOR_BUFFER_BIT);
+
+		const glm::mat4 m = glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -3.5f)), 0.001f*SDL_GetTicks(), glm::vec3(1.0f, 1.0f, 1.0f));
+		const glm::mat4 p = glm::perspective(45.0f, 640.f/480.f, 0.1f, 1000.0f);
+
+		PerFrameData perFrameData = { p * m, false };
+
+		glNamedBufferSubData(perFrameDataBuffer, 0, kBufferSize, &perFrameData);
+		
 		shader.use();
-		glDrawArrays(GL_TRIANGLES, 0, 3);
+
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		cube_mesh.draw();
+
+		perFrameData.isWireframe = true;
+		glNamedBufferSubData(perFrameDataBuffer, 0, kBufferSize, &perFrameData);
+
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		cube_mesh.draw();
 
 		SDL_GL_SwapWindow(window);
 	}
