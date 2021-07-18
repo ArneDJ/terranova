@@ -25,12 +25,34 @@ void InputManager::update()
 	SDL_Event event;
 	while (SDL_PollEvent(&event)) { sample_event(&event); }
 
-	// TODO add mouse coord sampling
+	// mouse coord sampling
+	sample_absolute_mouse();
+	sample_relative_mouse();	
 }
 
 bool InputManager::exit_request()
 {
 	return m_exit;
+}
+	
+bool InputManager::key_down(uint32_t key)
+{
+	auto result = m_current.find(key);
+	if (result != m_current.end()) {
+		return result->second;
+	}
+
+	return false;
+}
+
+glm::vec2 InputManager::abs_mouse_coords()
+{
+	return m_mouse_coords.absolute;
+}
+
+glm::vec2 InputManager::rel_mouse_coords()
+{
+	return m_mouse_coords.relative;
 }
 
 void InputManager::sample_event(const SDL_Event *event)
@@ -54,6 +76,32 @@ void InputManager::press_key(uint32_t key)
 void InputManager::release_key(uint32_t key)
 {
 	m_current[key] = false;
+}
+
+void InputManager::sample_relative_mouse()
+{
+	int x = 0;
+	int y = 0;
+
+	SDL_GetRelativeMouseState(&x, &y);
+	m_mouse_coords.relative.x = float(x);
+	m_mouse_coords.relative.y = float(y);
+/*
+	if (mousegrab == false) {
+		m_mouse_coords.relative.x = 0.f;
+		m_mouse_coords.relative.y = 0.f;
+	}
+	*/
+}
+
+void InputManager::sample_absolute_mouse()
+{
+	int x = 0;
+	int y = 0;
+
+	SDL_GetMouseState(&x, &y);
+	m_mouse_coords.absolute.x = float(x);
+	m_mouse_coords.absolute.y = float(y);
 }
 
 };

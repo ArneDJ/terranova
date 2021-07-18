@@ -11,6 +11,7 @@
 
 #include "util/config.h"
 #include "util/input.h"
+#include "util/camera.h"
 #include "gpu/shader.h"
 #include "gpu/mesh.h"
 #include "engine.h"
@@ -97,6 +98,11 @@ Engine::~Engine()
 
 void Engine::run()
 {
+	util::Camera camera;
+	camera.set_projection(90.f, 640.f/480.f, 0.1f, 90.f);
+	camera.teleport(glm::vec3(10.f));
+	camera.target(glm::vec3(0.f));
+
 	glClearColor(0.5f, 0.5f, 0.5f, 1.f);
 
 	gpu::Shader shader;
@@ -113,14 +119,26 @@ void Engine::run()
 	while (util::InputManager::exit_request() == false) {
 		util::InputManager::update();
 
+		// update camera
+		float modifier = 10.f * (1.f/60.f);
+		if (util::InputManager::key_down(SDL_BUTTON_RIGHT)) {
+			glm::vec2 offset = modifier * 0.05f * util::InputManager::rel_mouse_coords();
+			camera.add_offset(offset);
+		}
+		if (util::InputManager::key_down(SDLK_w)) { camera.move_forward(modifier); }
+		if (util::InputManager::key_down(SDLK_s)) { camera.move_backward(modifier); }
+		if (util::InputManager::key_down(SDLK_d)) { camera.move_right(modifier); }
+		if (util::InputManager::key_down(SDLK_a)) { camera.move_left(modifier); }
+		camera.update_viewing();
+
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glViewport(0, 0, 640, 480);
 
 		const glm::mat4 m = glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -3.5f)), 0.001f*SDL_GetTicks(), glm::vec3(1.0f, 1.0f, 1.0f));
-		const glm::mat4 p = glm::perspective(45.0f, 640.f/480.f, 0.1f, 1000.0f);
+		//const glm::mat4 p = glm::perspective(45.0f, 640.f/480.f, 0.1f, 1000.0f);
 
 		shader.use();
-		shader.uniform_mat4("MVP", p * m);
+		shader.uniform_mat4("MVP", camera.VP * m);
 
 		shader.uniform_bool("WIRED_MODE", false);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
