@@ -75,35 +75,15 @@ void VertexArrayObject::set_attribute(GLuint index, GLint size, GLenum type, GLb
 	glVertexAttribPointer(index, size, type, normalized, stride, pointer);
 }
 
-void CubeMesh::create(const glm::vec3 &min, const glm::vec3 &max)
+void Mesh::create(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices)
 {
-	std::vector<glm::vec3> positions = {
-		{ min.x, min.y, max.z },
-		{ max.x, min.y, max.z },
-		{ max.x, max.y, max.z },
-		{ min.x, max.y, max.z },
-		{ min.x, min.y, min.z },
-		{ max.x, min.y, min.z },
-		{ max.x, max.y, min.z },
-		{ min.x, max.y, min.z }
-	};
-	// indices
-	const std::vector<uint16_t> indices = {
-		0, 1, 2, 2, 3, 0,
-		1, 5, 6, 6, 2, 1,
-		7, 6, 5, 5, 4, 7,
-		4, 0, 3, 3, 7, 4,
-		4, 5, 1, 1, 0, 4,
-		3, 2, 6, 6, 7, 3
-	};
-
-	const size_t position_size = sizeof(glm::vec3) * positions.size();
-	const size_t indices_size = sizeof(uint16_t) * indices.size();
+	const size_t vertices_size = sizeof(Vertex) * vertices.size();
+	const size_t indices_size = sizeof(uint32_t) * indices.size();
 
 	m_primitive.first_index = 0;
 	m_primitive.index_count = GLsizei(indices.size());
 	m_primitive.first_vertex = 0;
-	m_primitive.vertex_count = GLsizei(positions.size());
+	m_primitive.vertex_count = GLsizei(vertices.size());
 	m_primitive.mode = GL_TRIANGLES;
 	m_primitive.indexed = (indices.size() > 0);
 
@@ -113,17 +93,18 @@ void CubeMesh::create(const glm::vec3 &min, const glm::vec3 &max)
 	if (m_primitive.indexed) {
 		m_ebo.set_target(GL_ELEMENT_ARRAY_BUFFER);
 		m_ebo.store_mutable(indices_size, indices.data(), GL_STATIC_DRAW);
-		m_index_type = GL_UNSIGNED_SHORT;
+		m_index_type = GL_UNSIGNED_INT;
 	}
 
 	// add position buffer
 	m_vbo.set_target(GL_ARRAY_BUFFER);
-	m_vbo.store_mutable(position_size, positions.data(), GL_STATIC_DRAW);
+	m_vbo.store_mutable(vertices_size, vertices.data(), GL_STATIC_DRAW);
 
-	m_vao.set_attribute(0, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0));
+	m_vao.set_attribute(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), BUFFER_OFFSET(offsetof(Vertex, position)));
+	m_vao.set_attribute(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), BUFFER_OFFSET(offsetof(Vertex, normal)));
 }
-	
-void CubeMesh::draw() const
+
+void Mesh::draw() const
 {
 	m_vao.bind();
 
@@ -134,6 +115,31 @@ void CubeMesh::draw() const
 	}
 }
 
+CubeMesh::CubeMesh(const glm::vec3 &min, const glm::vec3 &max)
+{
+	std::vector<Vertex> vertices = {
+		{ { min.x, min.y, max.z }, { 1.f, 0.f, 1.f } },
+		{ { max.x, min.y, max.z }, { 1.f, 0.f, 1.f } },
+		{ { max.x, max.y, max.z }, { 1.f, 0.f, 1.f } },
+		{ { min.x, max.y, max.z }, { 1.f, 0.f, 1.f } },
+		{ { min.x, min.y, min.z }, { 1.f, 0.f, 1.f } },
+		{ { max.x, min.y, min.z }, { 1.f, 0.f, 1.f } },
+		{ { max.x, max.y, min.z }, { 1.f, 0.f, 1.f } },
+		{ { min.x, max.y, min.z }, { 1.f, 0.f, 1.f } }
+	};
+	// indices
+	const std::vector<uint32_t> indices = {
+		0, 1, 2, 2, 3, 0,
+		1, 5, 6, 6, 2, 1,
+		7, 6, 5, 5, 4, 7,
+		4, 0, 3, 3, 7, 4,
+		4, 5, 1, 1, 0, 4,
+		3, 2, 6, 6, 7, 3
+	};
+
+	create(vertices, indices);
+}
+	
 static size_t typesize(GLenum type)
 {
 	switch (type) {

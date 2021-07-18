@@ -1,5 +1,10 @@
 namespace gpu {
 
+struct Vertex {
+	glm::vec3 position = {};
+	glm::vec3 normal = {};
+};
+
 struct Primitive {
 	GLuint first_index = 0;
 	GLsizei index_count = 0;
@@ -35,9 +40,9 @@ private:
 	GLuint m_array = 0;
 };
 
-class CubeMesh {
+class Mesh {
 public:
-	void create(const glm::vec3 &min, const glm::vec3 &max);
+	void create(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices);
 	void draw() const;
 private:
 	BufferObject m_vbo;
@@ -45,6 +50,11 @@ private:
 	VertexArrayObject m_vao;
 	Primitive m_primitive;
 	GLenum m_index_type = GL_UNSIGNED_BYTE; // (GL_UNSIGNED_BYTE, GL_UNSIGNED_SHORT, or GL_UNSIGNED_INT) // TODO automate with templates
+};
+
+class CubeMesh : public Mesh {
+public:
+	CubeMesh(const glm::vec3 &min, const glm::vec3 &max);
 };
 
 };

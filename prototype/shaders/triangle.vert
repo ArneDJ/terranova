@@ -4,11 +4,8 @@ layout(location = 0) in vec3 vposition;
 layout(location = 1) in vec3 vnormal;
 layout(location = 2) in vec2 vtexcoords;
 
-layout(std140, binding = 0) uniform PerFrameData
-{
-	uniform mat4 MVP;
-	uniform int isWireframe;
-};
+uniform mat4 MVP;
+uniform bool WIRED_MODE;
 
 out vec3 color;
 
@@ -40,5 +37,5 @@ void main()
 {
 	int idx = indices[gl_VertexID];
 	gl_Position = MVP * vec4(vposition, 1.0);
-	color = isWireframe > 0 ? vec3(0.0) : col[idx];
+	color = WIRED_MODE == true ? vec3(0.0) : col[idx];
 }

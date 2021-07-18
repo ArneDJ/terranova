@@ -95,12 +95,6 @@ Engine::~Engine()
 	SDL_Quit();
 }
 
-struct PerFrameData
-{
-	glm::mat4 mvp;
-	int isWireframe;
-};
-	
 void Engine::run()
 {
 	glClearColor(0.5f, 0.5f, 0.5f, 1.f);
@@ -110,14 +104,7 @@ void Engine::run()
 	shader.compile("shaders/triangle.frag", GL_FRAGMENT_SHADER);
 	shader.link();
 
-	gpu::CubeMesh cube_mesh;
-	cube_mesh.create(glm::vec3(-1.f, -1.f, -1.f), glm::vec3(1.f, 1.f, 1.f));
-
-	const GLsizeiptr kBufferSize = sizeof(PerFrameData);
-	GLuint perFrameDataBuffer;
-	glCreateBuffers(1, &perFrameDataBuffer);
-	glNamedBufferStorage(perFrameDataBuffer, kBufferSize, nullptr, GL_DYNAMIC_STORAGE_BIT);
-	glBindBufferRange(GL_UNIFORM_BUFFER, 0, perFrameDataBuffer, 0, kBufferSize);
+	gpu::CubeMesh cube_mesh(glm::vec3(-1.f, -1.f, -1.f), glm::vec3(1.f, 1.f, 1.f));
 
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_POLYGON_OFFSET_LINE);
@@ -132,18 +119,14 @@ void Engine::run()
 		const glm::mat4 m = glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -3.5f)), 0.001f*SDL_GetTicks(), glm::vec3(1.0f, 1.0f, 1.0f));
 		const glm::mat4 p = glm::perspective(45.0f, 640.f/480.f, 0.1f, 1000.0f);
 
-		PerFrameData perFrameData = { p * m, false };
-
-		glNamedBufferSubData(perFrameDataBuffer, 0, kBufferSize, &perFrameData);
-		
 		shader.use();
+		shader.uniform_mat4("MVP", p * m);
 
+		shader.uniform_bool("WIRED_MODE", false);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		cube_mesh.draw();
 
-		perFrameData.isWireframe = true;
-		glNamedBufferSubData(perFrameDataBuffer, 0, kBufferSize, &perFrameData);
-
+		shader.uniform_bool("WIRED_MODE", true);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		cube_mesh.draw();
 
