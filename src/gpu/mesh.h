@@ -14,13 +14,22 @@ struct Primitive {
 	bool indexed = false;
 };
 
+struct DrawElementsCommand {
+	GLuint count = 0;
+	GLuint instance_count = 0;
+	GLuint first_index = 0;
+	GLuint base_vertex = 0;
+	GLuint base_instance = 0;
+};
+
 class BufferObject {
 public:
 	BufferObject();
 	~BufferObject();
 public:
 	void set_target(GLenum target);
-	void bind();
+	void bind() const;
+	void bind_base(GLuint index) const;
 	void store_immutable(GLsizei size, const void *data, GLbitfield flags);
 	void store_mutable(GLsizei size, const void *data, GLenum usage);
 private:
@@ -43,13 +52,20 @@ private:
 class Mesh {
 public:
 	void create(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices);
+	void add_transform(const glm::vec3 &transform);
+	void update_commands();
 	void draw() const;
 private:
 	BufferObject m_vbo;
 	BufferObject m_ebo;
 	VertexArrayObject m_vao;
 	Primitive m_primitive;
-	GLenum m_index_type = GL_UNSIGNED_BYTE; // (GL_UNSIGNED_BYTE, GL_UNSIGNED_SHORT, or GL_UNSIGNED_INT) // TODO automate with templates
+	GLenum m_index_type = GL_UNSIGNED_INT;
+	// FIXME it's getting a bit too crowded here
+	BufferObject m_dbo;
+	std::vector<DrawElementsCommand> m_draw_commands;
+	BufferObject m_tbo;
+	std::vector<glm::vec3> m_transforms;
 };
 
 class CubeMesh : public Mesh {

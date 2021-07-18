@@ -111,6 +111,10 @@ void Engine::run()
 	shader.link();
 
 	gpu::CubeMesh cube_mesh(glm::vec3(-1.f, -1.f, -1.f), glm::vec3(1.f, 1.f, 1.f));
+	for (int i = 0; i < 10; i++) {
+		cube_mesh.add_transform(glm::vec3(float(3*i), 1.f, 0.f));
+	}
+	cube_mesh.update_commands();
 
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_POLYGON_OFFSET_LINE);
@@ -131,14 +135,14 @@ void Engine::run()
 		if (util::InputManager::key_down(SDLK_a)) { camera.move_left(modifier); }
 		camera.update_viewing();
 
+		//printf("%f, %f\n", camera.position.x, camera.position.z);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glViewport(0, 0, 640, 480);
 
 		const glm::mat4 m = glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -3.5f)), 0.001f*SDL_GetTicks(), glm::vec3(1.0f, 1.0f, 1.0f));
-		//const glm::mat4 p = glm::perspective(45.0f, 640.f/480.f, 0.1f, 1000.0f);
 
 		shader.use();
-		shader.uniform_mat4("MVP", camera.VP * m);
+		shader.uniform_mat4("VP", camera.VP);
 
 		shader.uniform_bool("WIRED_MODE", false);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);

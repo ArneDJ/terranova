@@ -35,9 +35,14 @@ void BufferObject::set_target(GLenum target)
 	m_target = target;
 }
 
-void BufferObject::bind()
+void BufferObject::bind() const
 {
 	glBindBuffer(m_target, m_buffer);
+}
+
+void BufferObject::bind_base(GLuint index) const
+{
+	glBindBufferBase(m_target, index, m_buffer);
 }
 	
 void BufferObject::store_immutable(GLsizei size, const void *data, GLbitfield flags)
@@ -102,16 +107,47 @@ void Mesh::create(const std::vector<Vertex> &vertices, const std::vector<uint32_
 
 	m_vao.set_attribute(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), BUFFER_OFFSET(offsetof(Vertex, position)));
 	m_vao.set_attribute(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), BUFFER_OFFSET(offsetof(Vertex, normal)));
+
+	// indirect draw commands
+	m_dbo.set_target(GL_DRAW_INDIRECT_BUFFER);
+
+	m_tbo.set_target(GL_SHADER_STORAGE_BUFFER);
+}
+	
+void Mesh::add_transform(const glm::vec3 &transform)
+{
+	m_transforms.push_back(transform);
+
+	struct DrawElementsCommand command;
+	command.count = m_primitive.index_count;
+	command.instance_count = 1;
+	command.first_index = 0;
+	command.base_vertex = 0;
+	command.base_instance = m_draw_commands.size();
+
+	m_draw_commands.push_back(command);
+}
+
+void Mesh::update_commands()
+{
+	m_tbo.store_mutable(sizeof(glm::vec3) * m_transforms.size(), m_transforms.data(), GL_DYNAMIC_DRAW);
+	m_dbo.store_mutable(sizeof(DrawElementsCommand) * m_draw_commands.size(), m_draw_commands.data(), GL_DYNAMIC_DRAW);
 }
 
 void Mesh::draw() const
 {
 	m_vao.bind();
 
-	if (m_primitive.indexed) {
-		glDrawElementsBaseVertex(m_primitive.mode, m_primitive.index_count, m_index_type, (GLvoid *)((m_primitive.first_index)*typesize(m_index_type)), m_primitive.first_vertex);
+	if (m_draw_commands.size() > 0) {
+		m_dbo.bind();
+		m_tbo.bind_base(5);
+		glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (GLvoid*)0, GLsizei(m_draw_commands.size()), 0);
 	} else {
-		glDrawArrays(m_primitive.mode, m_primitive.first_vertex, m_primitive.vertex_count);
+		if (m_primitive.indexed) {
+			glDrawElementsBaseVertex(m_primitive.mode, m_primitive.index_count, m_index_type, (GLvoid *)((m_primitive.first_index)*typesize(m_index_type)), m_primitive.first_vertex);
+		} else {
+			glDrawArrays(m_primitive.mode, m_primitive.first_vertex, m_primitive.vertex_count);
+		}
 	}
 }
 
