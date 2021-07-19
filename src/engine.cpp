@@ -9,6 +9,10 @@
 
 #include "extern/loguru/loguru.hpp"
 
+#include "extern/imgui/imgui.h"
+#include "extern/imgui/imgui_impl_sdl.h"
+#include "extern/imgui/imgui_impl_opengl3.h"
+
 #include "util/config.h"
 #include "util/input.h"
 #include "util/camera.h"
@@ -60,10 +64,11 @@ Engine::Engine()
 		}
 	}
 
-	int canvas_width = config.get_integer("video", "window_width", 640);
-	int canvas_height = config.get_integer("video", "window_height", 480);
+	video_settings.canvas.x = config.get_integer("video", "window_width", 640);
+	video_settings.canvas.y = config.get_integer("video", "window_height", 480);
+	video_settings.fov = config.get_real("video", "fov", 90.0);
 	
-	window = SDL_CreateWindow(GAME_NAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, canvas_width, canvas_height, SDL_WINDOW_OPENGL);
+	window = SDL_CreateWindow(GAME_NAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, video_settings.canvas.x, video_settings.canvas.y, SDL_WINDOW_OPENGL);
 	// Check that the window was successfully created
 	if (window == nullptr) {
 		// In the case that the window could not be made...
@@ -83,6 +88,8 @@ Engine::Engine()
 		LOG_F(FATAL, "Could not init GLEW: %s\n", glewGetErrorString(error));
 		exit(EXIT_FAILURE);
 	}
+
+	init_imgui();
 }
 
 Engine::~Engine()
@@ -95,11 +102,28 @@ Engine::~Engine()
 	// Clean up SDL
 	SDL_Quit();
 }
+	
+void Engine::init_imgui()
+{
+	// Setup Dear ImGui context
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO &io = ImGui::GetIO();
+	(void)io;
+
+	// Setup Dear ImGui style
+	ImGui::StyleColorsDark();
+
+	// Setup Platform/Renderer bindings
+	ImGui_ImplSDL2_InitForOpenGL(window, glcontext);
+	ImGui_ImplOpenGL3_Init("#version 460");
+}
 
 void Engine::run()
 {
 	util::Camera camera;
-	camera.set_projection(90.f, 640.f/480.f, 0.1f, 90.f);
+	float ratio = float(video_settings.canvas.x) / float(video_settings.canvas.y);
+	camera.set_projection(video_settings.fov, ratio, 0.1f, 900.f);
 	camera.teleport(glm::vec3(10.f));
 	camera.target(glm::vec3(0.f));
 
@@ -111,8 +135,12 @@ void Engine::run()
 	shader.link();
 
 	gpu::CubeMesh cube_mesh(glm::vec3(-1.f, -1.f, -1.f), glm::vec3(1.f, 1.f, 1.f));
-	for (int i = 0; i < 10; i++) {
-		cube_mesh.add_transform(glm::vec3(float(3*i), 1.f, 0.f));
+	for (int i = 0; i < 50; i++) {
+		for (int j = 0; j < 50; j++) {
+			for (int k = 0; k < 50; k++) {
+				cube_mesh.add_transform(glm::vec3(float(3*i), float(3*j), float(3*k)));
+			}
+		}
 	}
 	cube_mesh.update_commands();
 
@@ -122,6 +150,16 @@ void Engine::run()
 
 	while (util::InputManager::exit_request() == false) {
 		util::InputManager::update();
+		// FIXME it's getting a bit crowded over here
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplSDL2_NewFrame(window);
+		ImGui::NewFrame();
+		ImGui::Begin("Debug Mode");
+		ImGui::SetWindowSize(ImVec2(400, 200));
+		//ImGui::Text("ms per frame: %d", timer.ms_per_frame);
+		ImGui::Text("cam position: %f, %f, %f", camera.position.x, camera.position.y, camera.position.z);
+		if (ImGui::Button("Exit")) { break; }
+		ImGui::End();
 
 		// update camera
 		float modifier = 10.f * (1.f/60.f);
@@ -135,9 +173,8 @@ void Engine::run()
 		if (util::InputManager::key_down(SDLK_a)) { camera.move_left(modifier); }
 		camera.update_viewing();
 
-		//printf("%f, %f\n", camera.position.x, camera.position.z);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		glViewport(0, 0, 640, 480);
+		glViewport(0, 0, video_settings.canvas.x, video_settings.canvas.y);
 
 		const glm::mat4 m = glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -3.5f)), 0.001f*SDL_GetTicks(), glm::vec3(1.0f, 1.0f, 1.0f));
 
@@ -151,6 +188,9 @@ void Engine::run()
 		shader.uniform_bool("WIRED_MODE", true);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		cube_mesh.draw();
+
+		ImGui::Render();
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 		SDL_GL_SwapWindow(window);
 	}

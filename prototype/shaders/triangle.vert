@@ -9,10 +9,6 @@ layout(std430, binding = 5) readonly buffer transforms
 	float transform_SSBO[];
 };
 
-//layout(binding = 1) readonly buffer SBO    { ImDrawVert data[]; } sbo;
-//layout(binding = 2) readonly buffer IBO    { uint   data[]; } ibo;
-//layout(binding = 3) readonly buffer DrawBO { DrawData data[]; } drawDataBuffer;
-
 uniform mat4 VP;
 uniform bool WIRED_MODE;
 
@@ -45,12 +41,10 @@ const int indices[36] = int[36](
 void main()
 {
 	mat4 model = mat4(1.0);
-	model[3][0] = 3.0 * gl_BaseInstance;
-	/*
+	//model[3][0] = 3.0 * gl_BaseInstance;
 	model[3][0] = transform_SSBO[3 * gl_BaseInstance];
 	model[3][1] = transform_SSBO[3 * gl_BaseInstance+1];
 	model[3][2] = transform_SSBO[3 * gl_BaseInstance+2];
-	*/
 
 	int idx = indices[gl_VertexID];
 	//gl_Position = MVP * vec4(vposition, 1.0);

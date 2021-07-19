@@ -3,6 +3,9 @@
 #include <GL/glew.h>
 #include <GL/gl.h>
 
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 #include "extern/loguru/loguru.hpp"
 
 #include "util/config.h"

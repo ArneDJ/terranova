@@ -22,6 +22,8 @@ file(GLOB all_SRCS
         "${PROJECT_SOURCE_DIR}/src/gpu/*.h"
         "${PROJECT_SOURCE_DIR}/src/extern/loguru/*.cpp"
         "${PROJECT_SOURCE_DIR}/src/extern/loguru/*.h"
+	"${PROJECT_SOURCE_DIR}/src/extern/imgui/*.cpp"
+	"${PROJECT_SOURCE_DIR}/src/extern/imgui/*.h"
 )
 
 add_executable(${PROJECT_NAME} ${all_SRCS})
