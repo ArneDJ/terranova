@@ -16,6 +16,9 @@
 
 #include "engine.h"
 
+static double g_elapsed = 0.0;
+static bool g_freeze_frustum = false;
+
 static const char *GAME_NAME = "terranova";
 
 bool UserDirectory::locate(const char *base)
@@ -140,6 +143,8 @@ void Engine::update_state()
 	ImGui::Text("cam position: %f, %f, %f", camera.position.x, camera.position.y, camera.position.z);
 	ImGui::Text("%.2f ms/frame (%.1d fps)", (frame_timer.FPS_UPDATE_TIME / frame_timer.frames_per_second()), frame_timer.frames_per_second());
 	ImGui::Text("%.4f frame delta", frame_timer.delta_seconds());
+	ImGui::Text("%.6f elapsed cull time", g_elapsed);
+	if (ImGui::Button("Freeze Frustum")) { g_freeze_frustum = !g_freeze_frustum; }
 	if (ImGui::Button("Exit")) { state = EngineState::EXIT; }
 	ImGui::End();
 
@@ -185,6 +190,23 @@ void Engine::run()
 		frame_timer.begin();
 	
 		update_state();
+
+		auto start = std::chrono::steady_clock::now();
+		// naive frustum culling
+		if (!g_freeze_frustum) {
+			for (int i = 0; i < cube_mesh.m_transforms.size(); i++) {
+				auto &cmd = cube_mesh.m_draw_commands[i];
+				if (camera.frustum.sphere_intersects(cube_mesh.m_transforms[i], 1.f)) {
+					cmd.instance_count = 1;
+				} else {
+					cmd.instance_count = 0;
+				}
+			}
+			cube_mesh.update_commands();
+		}
+		auto end = std::chrono::steady_clock::now();
+		std::chrono::duration<double> elapsed_seconds = end-start;
+		g_elapsed = elapsed_seconds.count();
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glViewport(0, 0, video_settings.canvas.x, video_settings.canvas.y);

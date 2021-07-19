@@ -50,6 +50,9 @@ private:
 };
 
 class Mesh {
+public: // TODO make private
+	std::vector<DrawElementsCommand> m_draw_commands;
+	std::vector<glm::vec3> m_transforms;
 public:
 	void create(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices);
 	void add_transform(const glm::vec3 &transform);
@@ -57,16 +60,14 @@ public:
 	void draw() const;
 	void draw_indirect() const;
 private:
+	// FIXME it's getting a bit too crowded here
 	BufferObject m_vbo;
 	BufferObject m_ebo;
 	VertexArrayObject m_vao;
 	Primitive m_primitive;
 	GLenum m_index_type = GL_UNSIGNED_INT;
-	// FIXME it's getting a bit too crowded here
-	BufferObject m_dbo;
-	std::vector<DrawElementsCommand> m_draw_commands;
 	BufferObject m_ssbo;
-	std::vector<glm::vec3> m_transforms;
+	BufferObject m_dbo;
 };
 
 class CubeMesh : public Mesh {
