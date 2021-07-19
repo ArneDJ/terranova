@@ -54,6 +54,7 @@ public: // TODO make private
 	std::vector<DrawElementsCommand> m_draw_commands;
 	std::vector<glm::vec3> m_transforms;
 	BufferObject m_dbo;
+	BufferObject m_ssbo;
 public:
 	void create(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices);
 	void add_transform(const glm::vec3 &transform);
@@ -67,7 +68,6 @@ private:
 	VertexArrayObject m_vao;
 	Primitive m_primitive;
 	GLenum m_index_type = GL_UNSIGNED_INT;
-	BufferObject m_ssbo;
 };
 
 class CubeMesh : public Mesh {
