@@ -176,6 +176,10 @@ void Engine::run()
 	shader.compile("shaders/triangle.frag", GL_FRAGMENT_SHADER);
 	shader.link();
 
+	gpu::Shader culler;
+	culler.compile("shaders/culling.comp", GL_COMPUTE_SHADER);
+	culler.link();
+
 	gpu::CubeMesh cube_mesh(glm::vec3(-1.f, -1.f, -1.f), glm::vec3(1.f, 1.f, 1.f));
 	for (int i = 0; i < 50; i++) {
 		for (int j = 0; j < 50; j++) {
@@ -193,6 +197,7 @@ void Engine::run()
 
 		auto start = std::chrono::steady_clock::now();
 		// naive frustum culling
+		/*
 		if (!g_freeze_frustum) {
 			for (int i = 0; i < cube_mesh.m_transforms.size(); i++) {
 				auto &cmd = cube_mesh.m_draw_commands[i];
@@ -204,6 +209,19 @@ void Engine::run()
 			}
 			cube_mesh.update_commands();
 		}
+		*/
+
+		// compute shader culling
+
+		culler.use();
+		culler.bind_block(0, 0);
+		// need to bind draw buffer as ssbo
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, cube_mesh.m_dbo.m_buffer);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, cube_mesh.m_dbo.m_buffer);
+
+		glDispatchCompute(cube_mesh.m_draw_commands.size(), 1, 1);
+		glMemoryBarrier(GL_COMMAND_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
+
 		auto end = std::chrono::steady_clock::now();
 		std::chrono::duration<double> elapsed_seconds = end-start;
 		g_elapsed = elapsed_seconds.count();

@@ -26,6 +26,7 @@ class BufferObject {
 public:
 	BufferObject();
 	~BufferObject();
+	GLuint m_buffer = 0; // TODO make private
 public:
 	void set_target(GLenum target);
 	void bind() const;
@@ -33,7 +34,6 @@ public:
 	void store_immutable(GLsizei size, const void *data, GLbitfield flags);
 	void store_mutable(GLsizei size, const void *data, GLenum usage);
 private:
-	GLuint m_buffer = 0;
 	GLenum m_target = GL_ARRAY_BUFFER;
 	GLsizei m_size = 0;
 };
@@ -53,6 +53,7 @@ class Mesh {
 public: // TODO make private
 	std::vector<DrawElementsCommand> m_draw_commands;
 	std::vector<glm::vec3> m_transforms;
+	BufferObject m_dbo;
 public:
 	void create(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices);
 	void add_transform(const glm::vec3 &transform);
@@ -67,7 +68,6 @@ private:
 	Primitive m_primitive;
 	GLenum m_index_type = GL_UNSIGNED_INT;
 	BufferObject m_ssbo;
-	BufferObject m_dbo;
 };
 
 class CubeMesh : public Mesh {

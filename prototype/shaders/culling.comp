@@ -1,0 +1,25 @@
+#version 460 core
+
+layout(local_size_x = 16, local_size_y = 1, local_size_z = 1) in;
+
+struct IndexedIndirectCommand {
+	uint indexCount;
+	uint instanceCount;
+	uint firstIndex;
+	uint vertexOffset;
+	uint firstInstance;
+};
+
+// Binding 1: Multi draw output
+layout (std430, binding = 0) writeonly buffer IndirectDraws
+{
+	IndexedIndirectCommand indirect_draws[];
+};
+
+void main()
+{
+	//uint idx = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * gl_NumWorkGroups.x * gl_WorkGroupSize.x;
+	uint idx = gl_GlobalInvocationID.x;
+
+	indirect_draws[idx].instanceCount = 0;
+}

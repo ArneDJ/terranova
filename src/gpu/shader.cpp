@@ -156,5 +156,10 @@ GLint Shader::uniform_location(const GLchar *name) const
 {
 	return glGetUniformLocation(program, name);
 }
+	
+void Shader::bind_block(GLuint index, GLuint binding) const
+{
+	glShaderStorageBlockBinding(program, index, binding);
+}
 
 };
