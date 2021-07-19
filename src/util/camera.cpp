@@ -11,6 +11,7 @@ namespace util {
 
 static const glm::vec3 UP_VECTOR = { 0.F, 1.F, 0.F };
 static const float MAX_CAMERA_ANGLE = 1.55F;
+static const float MIN_CAMERA_ANGLE = -1.55F;
 
 void Camera::set_projection(float FOV, float ratio, float near, float far)
 {
@@ -30,7 +31,7 @@ void Camera::add_offset(const glm::vec2 &offset)
 	yaw += offset.x;
 	pitch -= offset.y;
 
-	if (fabs(pitch) > MAX_CAMERA_ANGLE) { pitch = MAX_CAMERA_ANGLE; }
+	pitch = glm::clamp(pitch,  MIN_CAMERA_ANGLE, MAX_CAMERA_ANGLE);
 
 	angles_to_direction();
 }

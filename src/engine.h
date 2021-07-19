@@ -22,6 +22,7 @@ public:
 public:
 	void run();
 private:
+	util::FrameTimer frame_timer;
 	SDL_Window *window = nullptr;
 	SDL_GLContext glcontext;
 	UserDirectory user_dir;

@@ -111,7 +111,7 @@ void Mesh::create(const std::vector<Vertex> &vertices, const std::vector<uint32_
 	// indirect draw commands
 	m_dbo.set_target(GL_DRAW_INDIRECT_BUFFER);
 
-	m_tbo.set_target(GL_SHADER_STORAGE_BUFFER);
+	m_ssbo.set_target(GL_SHADER_STORAGE_BUFFER);
 }
 	
 void Mesh::add_transform(const glm::vec3 &transform)
@@ -119,7 +119,7 @@ void Mesh::add_transform(const glm::vec3 &transform)
 	m_transforms.push_back(transform);
 
 	struct DrawElementsCommand command;
-	command.count = m_primitive.index_count;
+	command.count = (m_primitive.index_count > 0) ? m_primitive.index_count : m_primitive.vertex_count;
 	command.instance_count = 1;
 	command.first_index = 0;
 	command.base_vertex = 0;
@@ -130,7 +130,7 @@ void Mesh::add_transform(const glm::vec3 &transform)
 
 void Mesh::update_commands()
 {
-	m_tbo.store_mutable(sizeof(glm::vec3) * m_transforms.size(), m_transforms.data(), GL_DYNAMIC_DRAW);
+	m_ssbo.store_mutable(sizeof(glm::vec3) * m_transforms.size(), m_transforms.data(), GL_DYNAMIC_DRAW);
 	m_dbo.store_mutable(sizeof(DrawElementsCommand) * m_draw_commands.size(), m_draw_commands.data(), GL_DYNAMIC_DRAW);
 }
 
@@ -138,16 +138,24 @@ void Mesh::draw() const
 {
 	m_vao.bind();
 
-	if (m_draw_commands.size() > 0) {
-		m_dbo.bind();
-		m_tbo.bind_base(5);
-		glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, (GLvoid*)0, GLsizei(m_draw_commands.size()), 0);
+	if (m_primitive.indexed) {
+		glDrawElementsBaseVertex(m_primitive.mode, m_primitive.index_count, m_index_type, (GLvoid *)((m_primitive.first_index)*typesize(m_index_type)), m_primitive.first_vertex);
 	} else {
-		if (m_primitive.indexed) {
-			glDrawElementsBaseVertex(m_primitive.mode, m_primitive.index_count, m_index_type, (GLvoid *)((m_primitive.first_index)*typesize(m_index_type)), m_primitive.first_vertex);
-		} else {
-			glDrawArrays(m_primitive.mode, m_primitive.first_vertex, m_primitive.vertex_count);
-		}
+		glDrawArrays(m_primitive.mode, m_primitive.first_vertex, m_primitive.vertex_count);
+	}
+}
+
+void Mesh::draw_indirect() const
+{
+	m_vao.bind();
+
+	m_dbo.bind();
+	m_ssbo.bind_base(0); // TODO automate binding
+		
+	if (m_primitive.indexed) {
+		glMultiDrawElementsIndirect(m_primitive.mode, m_index_type, (GLvoid*)0, GLsizei(m_draw_commands.size()), 0);
+	} else {
+		glMultiDrawArraysIndirect(m_primitive.mode, (GLvoid*)0, GLsizei(m_draw_commands.size()), 0);
 	}
 }
 

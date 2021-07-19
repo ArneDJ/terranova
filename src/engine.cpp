@@ -1,4 +1,5 @@
 #include <iostream>
+#include <chrono>
 #include <unordered_map>
 #include <SDL2/SDL.h>
 #include <GL/glew.h>
@@ -16,6 +17,7 @@
 #include "util/config.h"
 #include "util/input.h"
 #include "util/camera.h"
+#include "util/timer.h"
 #include "gpu/shader.h"
 #include "gpu/mesh.h"
 #include "engine.h"
@@ -144,11 +146,16 @@ void Engine::run()
 	}
 	cube_mesh.update_commands();
 
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
 	glEnable(GL_DEPTH_TEST);
+	glLineWidth(2.f);
 	glEnable(GL_POLYGON_OFFSET_LINE);
 	glPolygonOffset(-1.0f, -1.0f);
 
 	while (util::InputManager::exit_request() == false) {
+		frame_timer.begin();
+
 		util::InputManager::update();
 		// FIXME it's getting a bit crowded over here
 		ImGui_ImplOpenGL3_NewFrame();
@@ -156,13 +163,14 @@ void Engine::run()
 		ImGui::NewFrame();
 		ImGui::Begin("Debug Mode");
 		ImGui::SetWindowSize(ImVec2(400, 200));
-		//ImGui::Text("ms per frame: %d", timer.ms_per_frame);
 		ImGui::Text("cam position: %f, %f, %f", camera.position.x, camera.position.y, camera.position.z);
+		ImGui::Text("%.2f ms/frame (%.1d fps)", (frame_timer.FPS_UPDATE_TIME / frame_timer.frames_per_second()), frame_timer.frames_per_second());
+		ImGui::Text("%.4f ms/frame", frame_timer.delta_seconds());
 		if (ImGui::Button("Exit")) { break; }
 		ImGui::End();
 
 		// update camera
-		float modifier = 10.f * (1.f/60.f);
+		float modifier = 10.f * frame_timer.delta_seconds();
 		if (util::InputManager::key_down(SDL_BUTTON_RIGHT)) {
 			glm::vec2 offset = modifier * 0.05f * util::InputManager::rel_mouse_coords();
 			camera.add_offset(offset);
@@ -176,23 +184,26 @@ void Engine::run()
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glViewport(0, 0, video_settings.canvas.x, video_settings.canvas.y);
 
-		const glm::mat4 m = glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -3.5f)), 0.001f*SDL_GetTicks(), glm::vec3(1.0f, 1.0f, 1.0f));
+		const glm::mat4 m = glm::rotate(glm::mat4(1.0f), 0.001f*SDL_GetTicks(), glm::vec3(1.0f, 1.0f, 1.0f));
 
 		shader.use();
+		shader.uniform_mat4("MODEL", m);
 		shader.uniform_mat4("VP", camera.VP);
 
 		shader.uniform_bool("WIRED_MODE", false);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-		cube_mesh.draw();
+		cube_mesh.draw_indirect();
 
 		shader.uniform_bool("WIRED_MODE", true);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		cube_mesh.draw();
+		cube_mesh.draw_indirect();
 
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 		SDL_GL_SwapWindow(window);
+
+		frame_timer.finish();
 	}
 
 }

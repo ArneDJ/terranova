@@ -40,3 +40,4 @@ cmake_install.cmake
 
 # User files
 events.log
+imgui.ini

@@ -55,6 +55,7 @@ public:
 	void add_transform(const glm::vec3 &transform);
 	void update_commands();
 	void draw() const;
+	void draw_indirect() const;
 private:
 	BufferObject m_vbo;
 	BufferObject m_ebo;
@@ -64,7 +65,7 @@ private:
 	// FIXME it's getting a bit too crowded here
 	BufferObject m_dbo;
 	std::vector<DrawElementsCommand> m_draw_commands;
-	BufferObject m_tbo;
+	BufferObject m_ssbo;
 	std::vector<glm::vec3> m_transforms;
 };
 
