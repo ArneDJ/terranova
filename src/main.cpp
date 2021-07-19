@@ -9,8 +9,6 @@
 
 #include "extern/loguru/loguru.hpp"
 
-#include "util/config.h"
-#include "util/timer.h"
 #include "engine.h"
 
 int main(int argc, char *argv[])

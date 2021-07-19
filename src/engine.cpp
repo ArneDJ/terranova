@@ -14,12 +14,6 @@
 #include "extern/imgui/imgui_impl_sdl.h"
 #include "extern/imgui/imgui_impl_opengl3.h"
 
-#include "util/config.h"
-#include "util/input.h"
-#include "util/camera.h"
-#include "util/timer.h"
-#include "gpu/shader.h"
-#include "gpu/mesh.h"
 #include "engine.h"
 
 static const char *GAME_NAME = "terranova";
@@ -82,14 +76,7 @@ Engine::Engine()
 		SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN);
 	}
 
-	// initialize the OpenGL context
-	glcontext = SDL_GL_CreateContext(window);
-
-	GLenum error = glewInit();
-	if (error != GLEW_OK) {
-		LOG_F(FATAL, "Could not init GLEW: %s\n", glewGetErrorString(error));
-		exit(EXIT_FAILURE);
-	}
+	init_opengl();
 
 	init_imgui();
 }
@@ -103,6 +90,26 @@ Engine::~Engine()
 
 	// Clean up SDL
 	SDL_Quit();
+}
+	
+void Engine::init_opengl()
+{
+	// initialize the OpenGL context
+	glcontext = SDL_GL_CreateContext(window);
+
+	GLenum error = glewInit();
+	if (error != GLEW_OK) {
+		LOG_F(FATAL, "Could not init GLEW: %s\n", glewGetErrorString(error));
+		exit(EXIT_FAILURE);
+	}
+
+	glClearColor(0.5f, 0.5f, 0.5f, 1.f);
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
+	glEnable(GL_DEPTH_TEST);
+	glLineWidth(2.f);
+	glEnable(GL_POLYGON_OFFSET_LINE);
+	glPolygonOffset(-1.0f, -1.0f);
 }
 	
 void Engine::init_imgui()
@@ -120,16 +127,44 @@ void Engine::init_imgui()
 	ImGui_ImplSDL2_InitForOpenGL(window, glcontext);
 	ImGui_ImplOpenGL3_Init("#version 460");
 }
+	
+void Engine::update_state()
+{
+	util::InputManager::update();
+
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplSDL2_NewFrame(window);
+	ImGui::NewFrame();
+	ImGui::Begin("Debug Mode");
+	ImGui::SetWindowSize(ImVec2(400, 200));
+	ImGui::Text("cam position: %f, %f, %f", camera.position.x, camera.position.y, camera.position.z);
+	ImGui::Text("%.2f ms/frame (%.1d fps)", (frame_timer.FPS_UPDATE_TIME / frame_timer.frames_per_second()), frame_timer.frames_per_second());
+	ImGui::Text("%.4f frame delta", frame_timer.delta_seconds());
+	if (ImGui::Button("Exit")) { state = EngineState::EXIT; }
+	ImGui::End();
+
+	// update camera
+	float modifier = 10.f * frame_timer.delta_seconds();
+	if (util::InputManager::key_down(SDL_BUTTON_RIGHT)) {
+		glm::vec2 offset = modifier * 0.05f * util::InputManager::rel_mouse_coords();
+		camera.add_offset(offset);
+	}
+	if (util::InputManager::key_down(SDLK_w)) { camera.move_forward(modifier); }
+	if (util::InputManager::key_down(SDLK_s)) { camera.move_backward(modifier); }
+	if (util::InputManager::key_down(SDLK_d)) { camera.move_right(modifier); }
+	if (util::InputManager::key_down(SDLK_a)) { camera.move_left(modifier); }
+
+	camera.update_viewing();
+}
 
 void Engine::run()
 {
-	util::Camera camera;
+	state = EngineState::TITLE;
+
 	float ratio = float(video_settings.canvas.x) / float(video_settings.canvas.y);
 	camera.set_projection(video_settings.fov, ratio, 0.1f, 900.f);
 	camera.teleport(glm::vec3(10.f));
 	camera.target(glm::vec3(0.f));
-
-	glClearColor(0.5f, 0.5f, 0.5f, 1.f);
 
 	gpu::Shader shader;
 	shader.compile("shaders/triangle.vert", GL_VERTEX_SHADER);
@@ -146,40 +181,10 @@ void Engine::run()
 	}
 	cube_mesh.update_commands();
 
-	glEnable(GL_CULL_FACE);
-	glCullFace(GL_BACK);
-	glEnable(GL_DEPTH_TEST);
-	glLineWidth(2.f);
-	glEnable(GL_POLYGON_OFFSET_LINE);
-	glPolygonOffset(-1.0f, -1.0f);
-
-	while (util::InputManager::exit_request() == false) {
+	while (state == EngineState::TITLE) {
 		frame_timer.begin();
-
-		util::InputManager::update();
-		// FIXME it's getting a bit crowded over here
-		ImGui_ImplOpenGL3_NewFrame();
-		ImGui_ImplSDL2_NewFrame(window);
-		ImGui::NewFrame();
-		ImGui::Begin("Debug Mode");
-		ImGui::SetWindowSize(ImVec2(400, 200));
-		ImGui::Text("cam position: %f, %f, %f", camera.position.x, camera.position.y, camera.position.z);
-		ImGui::Text("%.2f ms/frame (%.1d fps)", (frame_timer.FPS_UPDATE_TIME / frame_timer.frames_per_second()), frame_timer.frames_per_second());
-		ImGui::Text("%.4f ms/frame", frame_timer.delta_seconds());
-		if (ImGui::Button("Exit")) { break; }
-		ImGui::End();
-
-		// update camera
-		float modifier = 10.f * frame_timer.delta_seconds();
-		if (util::InputManager::key_down(SDL_BUTTON_RIGHT)) {
-			glm::vec2 offset = modifier * 0.05f * util::InputManager::rel_mouse_coords();
-			camera.add_offset(offset);
-		}
-		if (util::InputManager::key_down(SDLK_w)) { camera.move_forward(modifier); }
-		if (util::InputManager::key_down(SDLK_s)) { camera.move_backward(modifier); }
-		if (util::InputManager::key_down(SDLK_d)) { camera.move_right(modifier); }
-		if (util::InputManager::key_down(SDLK_a)) { camera.move_left(modifier); }
-		camera.update_viewing();
+	
+		update_state();
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glViewport(0, 0, video_settings.canvas.x, video_settings.canvas.y);
@@ -204,6 +209,10 @@ void Engine::run()
 		SDL_GL_SwapWindow(window);
 
 		frame_timer.finish();
+
+		if (util::InputManager::exit_request()) {
+			state = EngineState::EXIT;
+		}
 	}
 
 }
