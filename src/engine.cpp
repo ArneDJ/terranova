@@ -18,6 +18,7 @@
 
 static double g_elapsed = 0.0;
 static bool g_freeze_frustum = false;
+static bool g_cull_naive = false;
 
 static const char *GAME_NAME = "terranova";
 
@@ -139,11 +140,16 @@ void Engine::update_state()
 	ImGui_ImplSDL2_NewFrame(window);
 	ImGui::NewFrame();
 	ImGui::Begin("Debug Mode");
-	ImGui::SetWindowSize(ImVec2(400, 200));
+	ImGui::SetWindowSize(ImVec2(400, 300));
 	ImGui::Text("cam position: %f, %f, %f", camera.position.x, camera.position.y, camera.position.z);
 	ImGui::Text("%.2f ms/frame (%.1d fps)", (frame_timer.FPS_UPDATE_TIME / frame_timer.frames_per_second()), frame_timer.frames_per_second());
 	ImGui::Text("%.4f frame delta", frame_timer.delta_seconds());
 	ImGui::Text("%.6f elapsed cull time", g_elapsed);
+	static int e = 0;
+	ImGui::Text("Cull mode:");
+	ImGui::RadioButton("naive", &e, 1);
+	ImGui::RadioButton("compute shader", &e, 0);
+	g_cull_naive = bool(e);
 	if (ImGui::Button("Freeze Frustum")) { g_freeze_frustum = !g_freeze_frustum; }
 	if (ImGui::Button("Exit")) { state = EngineState::EXIT; }
 	ImGui::End();
@@ -199,28 +205,27 @@ void Engine::run()
 		update_state();
 
 		auto start = std::chrono::steady_clock::now();
-		// naive frustum culling
-		/*
+
 		if (!g_freeze_frustum) {
-			cube_mesh.cull_instances_naive(camera.frustum);
-			cube_mesh.update_commands();
-		}
-		*/
+			if (g_cull_naive) {
+				// naive frustum culling
+				cube_mesh.cull_instances_naive(camera.frustum);
+				cube_mesh.update_commands();
+			} else {
+				// compute shader culling
+				culler.use();
 
-		// compute shader culling
-		if (!g_freeze_frustum) {
-			culler.use();
+				const auto &planes = camera.frustum.planes;
+				frustum_ubo.store_mutable(planes.size()*sizeof(glm::vec4), planes.data(), GL_STATIC_DRAW);
 
-			const auto &planes = camera.frustum.planes;
-			frustum_ubo.store_mutable(planes.size()*sizeof(glm::vec4), planes.data(), GL_STATIC_DRAW);
+				// need to bind draw buffer as ssbo
+				cube_mesh.m_dbo.bind_explicit(GL_SHADER_STORAGE_BUFFER, 0);
+				cube_mesh.m_ssbo.bind_base(1);
+				frustum_ubo.bind_base(2);
 
-			// need to bind draw buffer as ssbo
-			cube_mesh.m_dbo.bind_explicit(GL_SHADER_STORAGE_BUFFER, 0);
-			cube_mesh.m_ssbo.bind_base(1);
-			frustum_ubo.bind_base(2);
-
-			glDispatchCompute(cube_mesh.m_draw_commands.size(), 1, 1);
-			glMemoryBarrier(GL_COMMAND_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
+				glDispatchCompute(cube_mesh.m_draw_commands.size(), 1, 1);
+				glMemoryBarrier(GL_COMMAND_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
+			}
 		}
 
 		auto end = std::chrono::steady_clock::now();

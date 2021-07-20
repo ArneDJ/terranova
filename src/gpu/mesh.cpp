@@ -13,6 +13,7 @@
 #include "../extern/loguru/loguru.hpp"
 
 #include "../geom/frustum.h"
+#include "../geom/geom.h"
 #include "mesh.h"
 
 namespace gpu {
@@ -135,12 +136,12 @@ void Mesh::create(const std::vector<Vertex> &vertices, const std::vector<uint32_
 void Mesh::add_transform(const glm::vec3 &position, const glm::vec3 &scale)
 {
 	// the radius of the cull sphere is max scale multiplied by base scale
-	float radius = m_base_radius * std::max({scale.x, scale.y, scale.z});
+	float radius = m_base_radius * geom::max(scale.x, scale.y, scale.z);
 
-	m_transforms.push_back(glm::vec4(position, radius));
+	m_cull_spheres.push_back(glm::vec4(position, radius));
 
 	struct DrawElementsCommand command;
-	command.count = (m_primitive.index_count > 0) ? m_primitive.index_count : m_primitive.vertex_count;
+	command.count = m_primitive.index_count;
 	command.instance_count = 1;
 	command.first_index = 0;
 	command.base_vertex = 0;
@@ -151,9 +152,9 @@ void Mesh::add_transform(const glm::vec3 &position, const glm::vec3 &scale)
 
 void Mesh::cull_instances_naive(const geom::Frustum &frustum)
 {
-	for (int i = 0; i < m_transforms.size(); i++) {
+	for (int i = 0; i < m_cull_spheres.size(); i++) {
 		auto &cmd = m_draw_commands[i];
-		if (frustum.sphere_intersects(m_transforms[i])) {
+		if (frustum.sphere_intersects(m_cull_spheres[i])) {
 			cmd.instance_count = 1;
 		} else {
 			cmd.instance_count = 0;
@@ -163,7 +164,7 @@ void Mesh::cull_instances_naive(const geom::Frustum &frustum)
 
 void Mesh::update_commands()
 {
-	m_ssbo.store_mutable(sizeof(glm::vec4) * m_transforms.size(), m_transforms.data(), GL_DYNAMIC_DRAW);
+	m_ssbo.store_mutable(sizeof(glm::vec4) * m_cull_spheres.size(), m_cull_spheres.data(), GL_DYNAMIC_DRAW);
 	m_dbo.store_mutable(sizeof(DrawElementsCommand) * m_draw_commands.size(), m_draw_commands.data(), GL_DYNAMIC_DRAW);
 }
 

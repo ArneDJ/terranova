@@ -53,7 +53,6 @@ private:
 class Mesh {
 public: // TODO make private
 	std::vector<DrawElementsCommand> m_draw_commands;
-	std::vector<glm::vec4> m_transforms; // needs to be vec4 to fit in SSBO
 	BufferObject m_dbo;
 	BufferObject m_ssbo;
 public:
@@ -64,13 +63,15 @@ public:
 	void draw() const;
 	void draw_indirect() const;
 private:
-	// FIXME it's getting a bit too crowded here
-	float m_base_radius = 1.f;
 	BufferObject m_vbo;
 	BufferObject m_ebo;
 	VertexArrayObject m_vao;
 	Primitive m_primitive;
 	GLenum m_index_type = GL_UNSIGNED_INT;
+private:
+	// FIXME it's getting a bit too crowded here
+	std::vector<glm::vec4> m_cull_spheres; // needs to be vec4 to fit in SSBO
+	float m_base_radius = 1.f;
 };
 
 class CubeMesh : public Mesh {
