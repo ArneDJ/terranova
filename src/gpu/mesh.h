@@ -26,16 +26,17 @@ class BufferObject {
 public:
 	BufferObject();
 	~BufferObject();
-	GLuint m_buffer = 0; // TODO make private
 public:
 	void set_target(GLenum target);
 	void bind() const;
 	void bind_base(GLuint index) const;
+	void bind_explicit(GLenum target, GLuint index) const;
 	void store_immutable(GLsizei size, const void *data, GLbitfield flags);
 	void store_mutable(GLsizei size, const void *data, GLenum usage);
 private:
 	GLenum m_target = GL_ARRAY_BUFFER;
 	GLsizei m_size = 0;
+	GLuint m_buffer = 0;
 };
 
 class VertexArrayObject {
@@ -52,17 +53,19 @@ private:
 class Mesh {
 public: // TODO make private
 	std::vector<DrawElementsCommand> m_draw_commands;
-	std::vector<glm::vec3> m_transforms;
+	std::vector<glm::vec4> m_transforms; // needs to be vec4 to fit in SSBO
 	BufferObject m_dbo;
 	BufferObject m_ssbo;
 public:
 	void create(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices);
-	void add_transform(const glm::vec3 &transform);
+	void add_transform(const glm::vec3 &position, const glm::vec3 &scale);
+	void cull_instances_naive(const geom::Frustum &frustum);
 	void update_commands();
 	void draw() const;
 	void draw_indirect() const;
 private:
 	// FIXME it's getting a bit too crowded here
+	float m_base_radius = 1.f;
 	BufferObject m_vbo;
 	BufferObject m_ebo;
 	VertexArrayObject m_vao;

@@ -180,11 +180,14 @@ void Engine::run()
 	culler.compile("shaders/culling.comp", GL_COMPUTE_SHADER);
 	culler.link();
 
+	gpu::BufferObject frustum_ubo;
+	frustum_ubo.set_target(GL_UNIFORM_BUFFER);
+
 	gpu::CubeMesh cube_mesh(glm::vec3(-1.f, -1.f, -1.f), glm::vec3(1.f, 1.f, 1.f));
 	for (int i = 0; i < 50; i++) {
 		for (int j = 0; j < 50; j++) {
 			for (int k = 0; k < 50; k++) {
-				cube_mesh.add_transform(glm::vec3(float(3*i), float(3*j), float(3*k)));
+				cube_mesh.add_transform(glm::vec3(float(3*i), float(3*j), float(3*k)), glm::vec3(1.f));
 			}
 		}
 	}
@@ -199,36 +202,22 @@ void Engine::run()
 		// naive frustum culling
 		/*
 		if (!g_freeze_frustum) {
-			for (int i = 0; i < cube_mesh.m_transforms.size(); i++) {
-				auto &cmd = cube_mesh.m_draw_commands[i];
-				if (camera.frustum.sphere_intersects(cube_mesh.m_transforms[i], 1.f)) {
-					cmd.instance_count = 1;
-				} else {
-					cmd.instance_count = 0;
-				}
-			}
+			cube_mesh.cull_instances_naive(camera.frustum);
 			cube_mesh.update_commands();
 		}
 		*/
 
 		// compute shader culling
-
 		if (!g_freeze_frustum) {
 			culler.use();
-			//culler.bind_block(0, 0);
-			// need to bind draw buffer as ssbo
-			glBindBuffer(GL_SHADER_STORAGE_BUFFER, cube_mesh.m_dbo.m_buffer);
-			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, cube_mesh.m_dbo.m_buffer);
-
-			cube_mesh.m_ssbo.bind_base(1);
 
 			const auto &planes = camera.frustum.planes;
-			culler.uniform_vec4("FRUSTUM_FRONT", planes[5]);
-			culler.uniform_vec4("FRUSTUM_BACK", planes[4]);
-			culler.uniform_vec4("FRUSTUM_LEFT", planes[0]);
-			culler.uniform_vec4("FRUSTUM_RIGHT", planes[1]);
-			culler.uniform_vec4("FRUSTUM_TOP", planes[2]);
-			culler.uniform_vec4("FRUSTUM_BOTTOM", planes[3]);
+			frustum_ubo.store_mutable(planes.size()*sizeof(glm::vec4), planes.data(), GL_STATIC_DRAW);
+
+			// need to bind draw buffer as ssbo
+			cube_mesh.m_dbo.bind_explicit(GL_SHADER_STORAGE_BUFFER, 0);
+			cube_mesh.m_ssbo.bind_base(1);
+			frustum_ubo.bind_base(2);
 
 			glDispatchCompute(cube_mesh.m_draw_commands.size(), 1, 1);
 			glMemoryBarrier(GL_COMMAND_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);

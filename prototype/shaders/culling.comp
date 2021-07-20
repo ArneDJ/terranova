@@ -10,7 +10,6 @@ struct IndexedIndirectCommand {
 	uint firstInstance;
 };
 
-// Binding 1: Multi draw output
 layout (std430, binding = 0) writeonly buffer IndirectDraws
 {
 	IndexedIndirectCommand indirect_draws[];
@@ -18,30 +17,17 @@ layout (std430, binding = 0) writeonly buffer IndirectDraws
 
 layout (std430, binding = 1) readonly buffer transforms
 {
-	float transform_SSBO[];
+	vec4 transform_SSBO[];
 };
 
-// TODO put in UBO
-uniform vec4 FRUSTUM_FRONT;
-uniform vec4 FRUSTUM_BACK;
-uniform vec4 FRUSTUM_LEFT;
-uniform vec4 FRUSTUM_RIGHT;
-uniform vec4 FRUSTUM_TOP;
-uniform vec4 FRUSTUM_BOTTOM;
+layout (binding = 2) uniform UBO {
+	vec4 frustum_planes[6];
+} ubo;
 
 bool sphere_intersection(vec4 pos, float radius)
 {
-	vec4 frustum_planes[6] = {
-		FRUSTUM_FRONT,
-		FRUSTUM_BACK,
-		FRUSTUM_LEFT,
-		FRUSTUM_RIGHT,
-		FRUSTUM_TOP,
-		FRUSTUM_BOTTOM
-	};
-
-	for (int i = 0; i < 6; i++) {
-		if (dot(pos, frustum_planes[i]) + radius < 0.0) {
+	for (int i = 0; i < ubo.frustum_planes.length(); i++) {
+		if (dot(pos, ubo.frustum_planes[i]) + radius < 0.0) {
 			return false;
 		}
 	}
@@ -54,12 +40,9 @@ void main()
 	//uint idx = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * gl_NumWorkGroups.x * gl_WorkGroupSize.x;
 	uint idx = gl_GlobalInvocationID.x;
 
-	vec4 position = vec4(1.0);
-	position.x = transform_SSBO[3 * gl_GlobalInvocationID.x];
-	position.y = transform_SSBO[3 * gl_GlobalInvocationID.x+1];
-	position.z = transform_SSBO[3 * gl_GlobalInvocationID.x+2];
+	vec4 position = transform_SSBO[gl_GlobalInvocationID.x];
 
-	if (sphere_intersection(position, 1.0)) {
+	if (sphere_intersection(position, position.w)) {
 		indirect_draws[idx].instanceCount = 1;
 	} else {
 		indirect_draws[idx].instanceCount = 0;

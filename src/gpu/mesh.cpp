@@ -2,6 +2,7 @@
 #include <fstream>
 #include <vector>
 #include <array>
+#include <algorithm>
 #include <GL/glew.h>
 #include <GL/gl.h>
 #include <glm/vec3.hpp>
@@ -11,6 +12,7 @@
 
 #include "../extern/loguru/loguru.hpp"
 
+#include "../geom/frustum.h"
 #include "mesh.h"
 
 namespace gpu {
@@ -43,6 +45,12 @@ void BufferObject::bind() const
 void BufferObject::bind_base(GLuint index) const
 {
 	glBindBufferBase(m_target, index, m_buffer);
+}
+
+void BufferObject::bind_explicit(GLenum target, GLuint index) const
+{
+	glBindBuffer(target, m_buffer);
+	glBindBufferBase(target, index, m_buffer);
 }
 	
 void BufferObject::store_immutable(GLsizei size, const void *data, GLbitfield flags)
@@ -112,11 +120,24 @@ void Mesh::create(const std::vector<Vertex> &vertices, const std::vector<uint32_
 	m_dbo.set_target(GL_DRAW_INDIRECT_BUFFER);
 
 	m_ssbo.set_target(GL_SHADER_STORAGE_BUFFER);
+
+	// find base bounding radius
+	glm::vec3 min = glm::vec3((std::numeric_limits<float>::max)());
+	glm::vec3 max = glm::vec3((std::numeric_limits<float>::min)());
+	for (const auto &vertex : vertices) {
+		min = (glm::min)(vertex.position, min);
+		max = (glm::max)(vertex.position, max);
+	}
+
+	m_base_radius = 0.5f * glm::distance(min, max);
 }
 	
-void Mesh::add_transform(const glm::vec3 &transform)
+void Mesh::add_transform(const glm::vec3 &position, const glm::vec3 &scale)
 {
-	m_transforms.push_back(transform);
+	// the radius of the cull sphere is max scale multiplied by base scale
+	float radius = m_base_radius * std::max({scale.x, scale.y, scale.z});
+
+	m_transforms.push_back(glm::vec4(position, radius));
 
 	struct DrawElementsCommand command;
 	command.count = (m_primitive.index_count > 0) ? m_primitive.index_count : m_primitive.vertex_count;
@@ -128,9 +149,21 @@ void Mesh::add_transform(const glm::vec3 &transform)
 	m_draw_commands.push_back(command);
 }
 
+void Mesh::cull_instances_naive(const geom::Frustum &frustum)
+{
+	for (int i = 0; i < m_transforms.size(); i++) {
+		auto &cmd = m_draw_commands[i];
+		if (frustum.sphere_intersects(m_transforms[i])) {
+			cmd.instance_count = 1;
+		} else {
+			cmd.instance_count = 0;
+		}
+	}
+}
+
 void Mesh::update_commands()
 {
-	m_ssbo.store_mutable(sizeof(glm::vec3) * m_transforms.size(), m_transforms.data(), GL_DYNAMIC_DRAW);
+	m_ssbo.store_mutable(sizeof(glm::vec4) * m_transforms.size(), m_transforms.data(), GL_DYNAMIC_DRAW);
 	m_dbo.store_mutable(sizeof(DrawElementsCommand) * m_draw_commands.size(), m_draw_commands.data(), GL_DYNAMIC_DRAW);
 }
 
