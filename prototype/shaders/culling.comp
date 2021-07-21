@@ -10,7 +10,7 @@ struct IndexedIndirectCommand {
 	uint firstInstance;
 };
 
-layout (std430, binding = 0) writeonly buffer IndirectDraws
+layout (std430, binding = 0) writeonly buffer commands
 {
 	IndexedIndirectCommand indirect_draws[];
 };
@@ -20,7 +20,16 @@ layout (std430, binding = 1) readonly buffer transforms
 	vec4 transform_SSBO[];
 };
 
-layout (binding = 2) uniform UBO {
+struct MatrixBufferRows {
+	vec4 rows[4];
+};
+
+layout (std430, binding = 2) buffer transform_matrices_SSBO
+{
+	MatrixBufferRows transform_matrices[];
+};
+
+layout (binding = 3) uniform UBO {
 	vec4 frustum_planes[6];
 } ubo;
 
@@ -37,13 +46,13 @@ bool sphere_intersection(vec4 pos, float radius)
 
 void main()
 {
-	//uint idx = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * gl_NumWorkGroups.x * gl_WorkGroupSize.x;
 	uint idx = gl_GlobalInvocationID.x;
 
-	vec4 position = transform_SSBO[gl_GlobalInvocationID.x];
+	vec4 position = transform_SSBO[idx];
 
 	if (sphere_intersection(position, position.w)) {
 		indirect_draws[idx].instanceCount = 1;
+		transform_matrices[idx].rows[3] = position;
 	} else {
 		indirect_draws[idx].instanceCount = 0;
 	}

@@ -18,7 +18,6 @@
 
 static double g_elapsed = 0.0;
 static bool g_freeze_frustum = false;
-static bool g_cull_naive = false;
 
 static const char *GAME_NAME = "terranova";
 
@@ -145,11 +144,6 @@ void Engine::update_state()
 	ImGui::Text("%.2f ms/frame (%.1d fps)", (frame_timer.FPS_UPDATE_TIME / frame_timer.frames_per_second()), frame_timer.frames_per_second());
 	ImGui::Text("%.4f frame delta", frame_timer.delta_seconds());
 	ImGui::Text("%.6f elapsed cull time", g_elapsed);
-	static int e = 0;
-	ImGui::Text("Cull mode:");
-	ImGui::RadioButton("naive", &e, 1);
-	ImGui::RadioButton("compute shader", &e, 0);
-	g_cull_naive = bool(e);
 	if (ImGui::Button("Freeze Frustum")) { g_freeze_frustum = !g_freeze_frustum; }
 	if (ImGui::Button("Exit")) { state = EngineState::EXIT; }
 	ImGui::End();
@@ -193,39 +187,31 @@ void Engine::run()
 	for (int i = 0; i < 50; i++) {
 		for (int j = 0; j < 50; j++) {
 			for (int k = 0; k < 50; k++) {
-				cube_mesh.add_transform(glm::vec3(float(3*i), float(3*j), float(3*k)), glm::vec3(1.f));
+				cube_mesh.attach_transform(glm::vec3(float(3*i), float(3*j), float(3*k)), glm::vec3(1.f));
 			}
 		}
 	}
-	cube_mesh.update_commands();
 
 	while (state == EngineState::TITLE) {
 		frame_timer.begin();
 	
 		update_state();
 
+		cube_mesh.resize_buffers();
+
 		auto start = std::chrono::steady_clock::now();
 
 		if (!g_freeze_frustum) {
-			if (g_cull_naive) {
-				// naive frustum culling
-				cube_mesh.cull_instances_naive(camera.frustum);
-				cube_mesh.update_commands();
-			} else {
-				// compute shader culling
-				culler.use();
+			// compute shader culling
+			culler.use();
 
-				const auto &planes = camera.frustum.planes;
-				frustum_ubo.store_mutable(planes.size()*sizeof(glm::vec4), planes.data(), GL_STATIC_DRAW);
+			const auto &planes = camera.frustum.planes;
+			frustum_ubo.store_mutable(planes.size()*sizeof(glm::vec4), planes.data(), GL_STATIC_DRAW);
+			cube_mesh.bind_for_dispatch(0, 1);
+			frustum_ubo.bind_base(3);
 
-				// need to bind draw buffer as ssbo
-				cube_mesh.m_dbo.bind_explicit(GL_SHADER_STORAGE_BUFFER, 0);
-				cube_mesh.m_ssbo.bind_base(1);
-				frustum_ubo.bind_base(2);
-
-				glDispatchCompute(cube_mesh.m_draw_commands.size(), 1, 1);
-				glMemoryBarrier(GL_COMMAND_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
-			}
+			glDispatchCompute(cube_mesh.instance_count(), 1, 1);
+			glMemoryBarrier(GL_COMMAND_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
 		}
 
 		auto end = std::chrono::steady_clock::now();

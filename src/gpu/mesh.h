@@ -28,11 +28,14 @@ public:
 	~BufferObject();
 public:
 	void set_target(GLenum target);
+	void store_immutable(GLsizei size, const void *data, GLbitfield flags);
+	void store_mutable(GLsizei size, const void *data, GLenum usage);
+	void store_mutable_part(GLintptr offset, GLsizei size, const void *data);
+public:
 	void bind() const;
 	void bind_base(GLuint index) const;
 	void bind_explicit(GLenum target, GLuint index) const;
-	void store_immutable(GLsizei size, const void *data, GLbitfield flags);
-	void store_mutable(GLsizei size, const void *data, GLenum usage);
+	GLsizei size() const;
 private:
 	GLenum m_target = GL_ARRAY_BUFFER;
 	GLsizei m_size = 0;
@@ -50,18 +53,47 @@ private:
 	GLuint m_array = 0;
 };
 
+/*
+template <class T> class BufferDataPair {
+public:
+	BufferObject buffer;
+	std::vector<T> data;
+	GLenum usage = GL_DYNAMIC_DRAW;
+public:
+	// only resize data on GPU if necessary
+	bool resize_necessary()
+	{
+		const auto data_size = sizeof(T) * data.size();
+		if (buffer.size() != data_size) {
+			// size has changed, resize on GPU
+			buffer.store_mutable(data_size, data.data(), usage);
+			return true;
+		}
+
+		// size hasn't changed
+		return false;
+	}
+	// explicit data update to GPU
+	void update_present()
+	{
+		if (!resize_necessary()) {
+			const auto data_size = sizeof(T) * data.size();
+			buffer.store_mutable_part(0, data_size, data.data());
+		}
+	} 
+};
+*/
+
 class Mesh {
-public: // TODO make private
-	std::vector<DrawElementsCommand> m_draw_commands;
-	BufferObject m_dbo;
-	BufferObject m_ssbo;
 public:
 	void create(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices);
-	void add_transform(const glm::vec3 &position, const glm::vec3 &scale);
-	void cull_instances_naive(const geom::Frustum &frustum);
-	void update_commands();
+	void attach_transform(const glm::vec3 &position, const glm::vec3 &scale);
+	void resize_buffers();
 	void draw() const;
 	void draw_indirect() const;
+public:
+	uint32_t instance_count() const;
+	void bind_for_dispatch(GLuint dbo_index, GLuint ssbo_index) const;
 private:
 	BufferObject m_vbo;
 	BufferObject m_ebo;
@@ -70,8 +102,14 @@ private:
 	GLenum m_index_type = GL_UNSIGNED_INT;
 private:
 	// FIXME it's getting a bit too crowded here
-	std::vector<glm::vec4> m_cull_spheres; // needs to be vec4 to fit in SSBO
+	uint32_t m_instance_count = 0;
 	float m_base_radius = 1.f;
+	std::vector<glm::vec4> m_cull_spheres; // needs to be vec4 to fit in SSBO
+	std::vector<glm::mat4> m_transform_matrices;
+	std::vector<DrawElementsCommand> m_draw_commands;
+	BufferObject m_dbo;
+	BufferObject m_ssbo;
+	BufferObject m_matrix_ssbo;
 };
 
 class CubeMesh : public Mesh {
