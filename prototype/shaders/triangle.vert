@@ -4,7 +4,7 @@ layout (location = 0) in vec3 vposition;
 layout (location = 1) in vec3 vnormal;
 layout (location = 2) in vec2 vtexcoords;
 
-layout (std430, binding = 2) buffer ModelMatricesBlock
+layout (std430, binding = 2) readonly buffer ModelMatricesBlock
 {
 	mat4 model_matrices[];
 };

@@ -91,21 +91,27 @@ public:
 class Mesh {
 public:
 	void create(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices);
-	void attach_transform(const geom::Transform *transform);
-	void resize_buffers();
 	void draw() const;
-	void draw_indirect() const;
-public:
-	uint32_t instance_count() const;
-	void bind_for_dispatch(GLuint dbo_index, GLuint ssbo_index) const;
-private:
+protected:
 	BufferObject m_vbo;
 	BufferObject m_ebo;
 	VertexArrayObject m_vao;
 	Primitive m_primitive;
 	GLenum m_index_type = GL_UNSIGNED_INT;
+};
+
+class IndirectMesh : public Mesh {
+public:
+	IndirectMesh();
+public:
+	void find_bounding_sphere(const std::vector<Vertex> &vertices);
+	void attach_transform(const geom::Transform *transform);
+	void update_buffers();
+	void draw() const;
+public:
+	uint32_t instance_count() const;
+	void bind_for_dispatch(GLuint draw_index, GLuint transforms_index, GLuint matrices_index) const;
 private:
-	// FIXME it's getting a bit too crowded here
 	uint32_t m_instance_count = 0;
 	float m_base_radius = 1.f;
 	BufferDataPair<PaddedTransform> m_transforms;
@@ -113,7 +119,7 @@ private:
 	BufferDataPair<DrawElementsCommand> m_draw_commands;
 };
 
-class CubeMesh : public Mesh {
+class CubeMesh : public IndirectMesh {
 public:
 	CubeMesh(const glm::vec3 &min, const glm::vec3 &max);
 };

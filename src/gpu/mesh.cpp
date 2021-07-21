@@ -129,14 +129,29 @@ void Mesh::create(const std::vector<Vertex> &vertices, const std::vector<uint32_
 
 	m_vao.set_attribute(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), BUFFER_OFFSET(offsetof(Vertex, position)));
 	m_vao.set_attribute(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), BUFFER_OFFSET(offsetof(Vertex, normal)));
+}
+	
+void Mesh::draw() const
+{
+	m_vao.bind();
 
-	// indirect draw commands
+	if (m_primitive.indexed) {
+		glDrawElementsBaseVertex(m_primitive.mode, m_primitive.index_count, m_index_type, (GLvoid *)((m_primitive.first_index)*typesize(m_index_type)), m_primitive.first_vertex);
+	} else {
+		glDrawArrays(m_primitive.mode, m_primitive.first_vertex, m_primitive.vertex_count);
+	}
+}
+	
+IndirectMesh::IndirectMesh()
+{
 	m_draw_commands.buffer.set_target(GL_DRAW_INDIRECT_BUFFER);
 
 	m_transforms.buffer.set_target(GL_SHADER_STORAGE_BUFFER);
 	m_model_matrices.buffer.set_target(GL_SHADER_STORAGE_BUFFER);
+}
 
-	// find base bounding radius
+void IndirectMesh::find_bounding_sphere(const std::vector<Vertex> &vertices)
+{
 	glm::vec3 min = glm::vec3((std::numeric_limits<float>::max)());
 	glm::vec3 max = glm::vec3((std::numeric_limits<float>::min)());
 	for (const auto &vertex : vertices) {
@@ -146,16 +161,22 @@ void Mesh::create(const std::vector<Vertex> &vertices, const std::vector<uint32_
 
 	m_base_radius = 0.5f * glm::distance(min, max);
 }
-	
-void Mesh::attach_transform(const geom::Transform *transform)
-{
-	// the radius of the cull sphere is max scale multiplied by base scale
-	float radius = m_base_radius * geom::max(transform->scale.x, transform->scale.y, transform->scale.z);
 
+void IndirectMesh::update_buffers()
+{
+	m_transforms.update_present();
+
+	m_model_matrices.resize_necessary();
+
+	m_draw_commands.resize_necessary();
+}
+
+void IndirectMesh::attach_transform(const geom::Transform *transform)
+{
 	PaddedTransform padded = {
-		glm::vec4(transform->position, radius),
+		glm::vec4(transform->position, 1.f),
 		glm::vec4(transform->rotation.x, transform->rotation.y, transform->rotation.z, transform->rotation.w),
-		glm::vec4(transform->scale, radius)
+		glm::vec4(transform->scale, m_base_radius)
 	};
 	m_transforms.data.push_back(padded);
 
@@ -173,32 +194,11 @@ void Mesh::attach_transform(const geom::Transform *transform)
 	m_instance_count++;
 }
 
-void Mesh::resize_buffers()
-{
-	m_transforms.resize_necessary();
-
-	m_model_matrices.resize_necessary();
-
-	m_draw_commands.resize_necessary();
-}
-
-void Mesh::draw() const
-{
-	m_vao.bind();
-
-	if (m_primitive.indexed) {
-		glDrawElementsBaseVertex(m_primitive.mode, m_primitive.index_count, m_index_type, (GLvoid *)((m_primitive.first_index)*typesize(m_index_type)), m_primitive.first_vertex);
-	} else {
-		glDrawArrays(m_primitive.mode, m_primitive.first_vertex, m_primitive.vertex_count);
-	}
-}
-
-void Mesh::draw_indirect() const
+void IndirectMesh::draw() const
 {
 	m_vao.bind();
 
 	m_draw_commands.buffer.bind();
-	m_transforms.buffer.bind_base(1); // TODO use persistent-Mapping
 	m_model_matrices.buffer.bind_base(2); // TODO use persistent-Mapping
 		
 	if (m_primitive.indexed) {
@@ -207,20 +207,20 @@ void Mesh::draw_indirect() const
 		glMultiDrawArraysIndirect(m_primitive.mode, (GLvoid*)0, GLsizei(instance_count()), 0);
 	}
 }
-	
-uint32_t Mesh::instance_count() const
+
+uint32_t IndirectMesh::instance_count() const
 {
 	return m_instance_count;
 }
 
-void Mesh::bind_for_dispatch(GLuint dbo_index, GLuint ssbo_index) const
+void IndirectMesh::bind_for_dispatch(GLuint draw_index, GLuint transforms_index, GLuint matrices_index) const
 {
 	// need to bind draw buffer as ssbo
-	m_draw_commands.buffer.bind_explicit(GL_SHADER_STORAGE_BUFFER, dbo_index);
-	m_transforms.buffer.bind_base(ssbo_index);
-	m_model_matrices.buffer.bind_base(ssbo_index + 1);
+	m_draw_commands.buffer.bind_explicit(GL_SHADER_STORAGE_BUFFER, draw_index);
+	m_transforms.buffer.bind_base(transforms_index);
+	m_model_matrices.buffer.bind_base(matrices_index);
 }
-
+	
 CubeMesh::CubeMesh(const glm::vec3 &min, const glm::vec3 &max)
 {
 	std::vector<Vertex> vertices = {
@@ -244,6 +244,8 @@ CubeMesh::CubeMesh(const glm::vec3 &min, const glm::vec3 &max)
 	};
 
 	create(vertices, indices);
+
+	find_bounding_sphere(vertices);
 }
 	
 static size_t typesize(GLenum type)

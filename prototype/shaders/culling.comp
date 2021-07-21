@@ -46,15 +46,67 @@ bool sphere_intersection(vec4 pos, float radius)
 	return true;
 }
 
+mat4 quat_to_matrix(vec4 q)
+{
+	mat4 matrix = mat4(1.0);
+
+	float qxx = q.x * q.x;
+	float qyy = q.y * q.y;
+	float qzz = q.z * q.z;
+	float qxz = q.x * q.z;
+	float qxy = q.x * q.y;
+	float qyz = q.y * q.z;
+	float qwx = q.w * q.x;
+	float qwy = q.w * q.y;
+	float qwz = q.w * q.z;
+
+	matrix[0][0] = 1.0 - 2.0 * (qyy +  qzz);
+	matrix[0][1] = 2.0 * (qxy + qwz);
+	matrix[0][2] = 2.0 * (qxz - qwy);
+
+	matrix[1][0] = 2.0 * (qxy - qwz);
+	matrix[1][1] = 1.0 - 2.0 * (qxx +  qzz);
+	matrix[1][2] = 2.0 * (qyz + qwx);
+
+	matrix[2][0] = 2.0 * (qxz + qwy);
+	matrix[2][1] = 2.0 * (qyz - qwx);
+	matrix[2][2] = 1.0 - 2.0 * (qxx +  qyy);
+
+	return matrix;
+}
+
+mat4 transform_to_matrix(vec3 position, vec4 rotation, vec3 scale)
+{
+	mat4 T = mat4(1.0);
+	T[3] = vec4(position, 1.0);
+
+	mat4 R = quat_to_matrix(rotation);
+
+	mat4 S = mat4(1.0);
+	S[0][0] = scale.x;
+	S[1][1] = scale.y;
+	S[2][2] = scale.z;
+
+	return T * R * S;
+}
+
+float max_component(vec3 components)
+{
+	return max(components.x, max(components.y, components.z));
+}
+
 void main()
 {
 	uint idx = gl_GlobalInvocationID.x;
 
-	vec4 position = padded_transforms[idx].position;
+	PaddedTransform padded = padded_transforms[idx];
 
-	if (sphere_intersection(position, position.w)) {
+	// the radius of the cull sphere is max scale multiplied by base scale
+	float radius = padded.scale.w * max_component(padded.scale.xyz);
+
+	if (sphere_intersection(padded.position, radius)) {
 		indirect_draws[idx].instance_count = 1;
-		model_matrices[idx][3] = position;
+		model_matrices[idx] = transform_to_matrix(padded.position.xyz, padded.rotation, padded.scale.xyz);
 	} else {
 		indirect_draws[idx].instance_count = 0;
 	}

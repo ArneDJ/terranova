@@ -144,7 +144,7 @@ void Engine::update_state()
 	ImGui::Text("cam position: %f, %f, %f", camera.position.x, camera.position.y, camera.position.z);
 	ImGui::Text("%.2f ms/frame (%.1d fps)", (frame_timer.FPS_UPDATE_TIME / frame_timer.frames_per_second()), frame_timer.frames_per_second());
 	ImGui::Text("%.4f frame delta", frame_timer.delta_seconds());
-	ImGui::Text("%.6f elapsed cull time", g_elapsed);
+	ImGui::Text("%f elapsed cull time", g_elapsed);
 	if (ImGui::Button("Freeze Frustum")) { g_freeze_frustum = !g_freeze_frustum; }
 	if (ImGui::Button("Exit")) { state = EngineState::EXIT; }
 	ImGui::End();
@@ -203,7 +203,7 @@ void Engine::run()
 	
 		update_state();
 
-		cube_mesh.resize_buffers();
+		cube_mesh.update_buffers();
 
 		auto start = std::chrono::steady_clock::now();
 
@@ -213,7 +213,7 @@ void Engine::run()
 
 			const auto &planes = camera.frustum.planes;
 			frustum_ubo.store_mutable(planes.size()*sizeof(glm::vec4), planes.data(), GL_STATIC_DRAW);
-			cube_mesh.bind_for_dispatch(0, 1);
+			cube_mesh.bind_for_dispatch(0, 1, 2);
 			frustum_ubo.bind_base(3);
 
 			glDispatchCompute(cube_mesh.instance_count(), 1, 1);
@@ -235,11 +235,11 @@ void Engine::run()
 
 		shader.uniform_bool("WIRED_MODE", false);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-		cube_mesh.draw_indirect();
+		cube_mesh.draw();
 
 		shader.uniform_bool("WIRED_MODE", true);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		cube_mesh.draw_indirect();
+		cube_mesh.draw();
 
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
