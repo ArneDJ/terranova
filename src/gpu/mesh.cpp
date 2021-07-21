@@ -14,6 +14,7 @@
 
 #include "../geom/frustum.h"
 #include "../geom/geom.h"
+#include "../geom/transform.h"
 #include "mesh.h"
 
 namespace gpu {
@@ -130,10 +131,10 @@ void Mesh::create(const std::vector<Vertex> &vertices, const std::vector<uint32_
 	m_vao.set_attribute(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), BUFFER_OFFSET(offsetof(Vertex, normal)));
 
 	// indirect draw commands
-	m_dbo.set_target(GL_DRAW_INDIRECT_BUFFER);
+	m_draw_commands.buffer.set_target(GL_DRAW_INDIRECT_BUFFER);
 
-	m_ssbo.set_target(GL_SHADER_STORAGE_BUFFER);
-	m_matrix_ssbo.set_target(GL_SHADER_STORAGE_BUFFER);
+	m_transforms.buffer.set_target(GL_SHADER_STORAGE_BUFFER);
+	m_model_matrices.buffer.set_target(GL_SHADER_STORAGE_BUFFER);
 
 	// find base bounding radius
 	glm::vec3 min = glm::vec3((std::numeric_limits<float>::max)());
@@ -146,40 +147,39 @@ void Mesh::create(const std::vector<Vertex> &vertices, const std::vector<uint32_
 	m_base_radius = 0.5f * glm::distance(min, max);
 }
 	
-void Mesh::attach_transform(const glm::vec3 &position, const glm::vec3 &scale)
+void Mesh::attach_transform(const geom::Transform *transform)
 {
 	// the radius of the cull sphere is max scale multiplied by base scale
-	float radius = m_base_radius * geom::max(scale.x, scale.y, scale.z);
+	float radius = m_base_radius * geom::max(transform->scale.x, transform->scale.y, transform->scale.z);
 
-	m_cull_spheres.push_back(glm::vec4(position, radius));
+	PaddedTransform padded = {
+		glm::vec4(transform->position, radius),
+		glm::vec4(transform->rotation.x, transform->rotation.y, transform->rotation.z, transform->rotation.w),
+		glm::vec4(transform->scale, radius)
+	};
+	m_transforms.data.push_back(padded);
 
 	struct DrawElementsCommand command;
 	command.count = m_primitive.index_count;
 	command.instance_count = 1;
 	command.first_index = 0;
 	command.base_vertex = 0;
-	command.base_instance = m_draw_commands.size();
+	command.base_instance = m_instance_count;
 
-	m_draw_commands.push_back(command);
+	m_draw_commands.data.push_back(command);
 
-	glm::mat4 T = glm::translate(glm::mat4(1.f), position);
-	glm::mat4 S = glm::scale(glm::mat4(1.f), scale);
-	m_transform_matrices.push_back(T * S);
+	m_model_matrices.data.push_back(transform->to_matrix());
 
 	m_instance_count++;
 }
 
 void Mesh::resize_buffers()
 {
-	if (m_dbo.size() != sizeof(DrawElementsCommand) * m_draw_commands.size()) {
-		m_dbo.store_mutable(sizeof(DrawElementsCommand) * m_draw_commands.size(), m_draw_commands.data(), GL_DYNAMIC_DRAW);
-	}
-	if (m_ssbo.size() != sizeof(glm::vec4) * m_cull_spheres.size()) {
-		m_ssbo.store_mutable(sizeof(glm::vec4) * m_cull_spheres.size(), m_cull_spheres.data(), GL_DYNAMIC_DRAW);
-	}
-	if (m_matrix_ssbo.size() != sizeof(glm::mat4) * m_transform_matrices.size()) {
-		m_matrix_ssbo.store_mutable(sizeof(glm::mat4) * m_transform_matrices.size(), m_transform_matrices.data(), GL_DYNAMIC_DRAW);
-	}
+	m_transforms.resize_necessary();
+
+	m_model_matrices.resize_necessary();
+
+	m_draw_commands.resize_necessary();
 }
 
 void Mesh::draw() const
@@ -197,14 +197,14 @@ void Mesh::draw_indirect() const
 {
 	m_vao.bind();
 
-	m_dbo.bind();
-	m_ssbo.bind_base(1); // TODO use persistent-Mapping
-	m_matrix_ssbo.bind_base(2); // TODO use persistent-Mapping
+	m_draw_commands.buffer.bind();
+	m_transforms.buffer.bind_base(1); // TODO use persistent-Mapping
+	m_model_matrices.buffer.bind_base(2); // TODO use persistent-Mapping
 		
 	if (m_primitive.indexed) {
-		glMultiDrawElementsIndirect(m_primitive.mode, m_index_type, (GLvoid*)0, GLsizei(m_draw_commands.size()), 0);
+		glMultiDrawElementsIndirect(m_primitive.mode, m_index_type, (GLvoid*)0, GLsizei(m_instance_count), 0);
 	} else {
-		glMultiDrawArraysIndirect(m_primitive.mode, (GLvoid*)0, GLsizei(m_draw_commands.size()), 0);
+		glMultiDrawArraysIndirect(m_primitive.mode, (GLvoid*)0, GLsizei(instance_count()), 0);
 	}
 }
 	
@@ -216,9 +216,9 @@ uint32_t Mesh::instance_count() const
 void Mesh::bind_for_dispatch(GLuint dbo_index, GLuint ssbo_index) const
 {
 	// need to bind draw buffer as ssbo
-	m_dbo.bind_explicit(GL_SHADER_STORAGE_BUFFER, dbo_index);
-	m_ssbo.bind_base(ssbo_index);
-	m_matrix_ssbo.bind_base(ssbo_index + 1);
+	m_draw_commands.buffer.bind_explicit(GL_SHADER_STORAGE_BUFFER, dbo_index);
+	m_transforms.buffer.bind_base(ssbo_index);
+	m_model_matrices.buffer.bind_base(ssbo_index + 1);
 }
 
 CubeMesh::CubeMesh(const glm::vec3 &min, const glm::vec3 &max)

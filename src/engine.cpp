@@ -1,6 +1,7 @@
 #include <iostream>
 #include <chrono>
 #include <unordered_map>
+#include <memory>
 #include <SDL2/SDL.h>
 #include <GL/glew.h>
 #include <GL/gl.h>
@@ -183,11 +184,16 @@ void Engine::run()
 	gpu::BufferObject frustum_ubo;
 	frustum_ubo.set_target(GL_UNIFORM_BUFFER);
 
+	std::vector<std::unique_ptr<geom::Transform>> transforms;
 	gpu::CubeMesh cube_mesh(glm::vec3(-1.f, -1.f, -1.f), glm::vec3(1.f, 1.f, 1.f));
 	for (int i = 0; i < 50; i++) {
 		for (int j = 0; j < 50; j++) {
 			for (int k = 0; k < 50; k++) {
-				cube_mesh.attach_transform(glm::vec3(float(3*i), float(3*j), float(3*k)), glm::vec3(1.f));
+				auto transform = std::make_unique<geom::Transform>();
+				transform->position = glm::vec3(float(3*i), float(3*j), float(3*k));
+				transform->scale = glm::vec3(0.3f);
+				cube_mesh.attach_transform(transform.get());
+				transforms.push_back(std::move(transform));
 			}
 		}
 	}

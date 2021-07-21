@@ -3,40 +3,42 @@
 layout(local_size_x = 16, local_size_y = 1, local_size_z = 1) in;
 
 struct IndexedIndirectCommand {
-	uint indexCount;
-	uint instanceCount;
-	uint firstIndex;
-	uint vertexOffset;
-	uint firstInstance;
+	uint index_count;
+	uint instance_count;
+	uint first_index;
+	uint vertex_offset;
+	uint first_instance;
 };
 
-layout (std430, binding = 0) writeonly buffer commands
+layout (std430, binding = 0) writeonly buffer DrawCommandsBlock
 {
 	IndexedIndirectCommand indirect_draws[];
 };
 
-layout (std430, binding = 1) readonly buffer transforms
+struct PaddedTransform {
+	vec4 position;
+	vec4 rotation;
+	vec4 scale;
+};
+
+layout (std430, binding = 1) readonly buffer PaddedTransformBlock
 {
-	vec4 transform_SSBO[];
+	PaddedTransform padded_transforms[];
 };
 
-struct MatrixBufferRows {
-	vec4 rows[4];
-};
-
-layout (std430, binding = 2) buffer transform_matrices_SSBO
+layout (std430, binding = 2) writeonly buffer ModelMatricesBlock
 {
-	MatrixBufferRows transform_matrices[];
+	mat4 model_matrices[];
 };
 
-layout (binding = 3) uniform UBO {
+layout (binding = 3) uniform CameraBlock {
 	vec4 frustum_planes[6];
-} ubo;
+} camera;
 
 bool sphere_intersection(vec4 pos, float radius)
 {
-	for (int i = 0; i < ubo.frustum_planes.length(); i++) {
-		if (dot(pos, ubo.frustum_planes[i]) + radius < 0.0) {
+	for (int i = 0; i < camera.frustum_planes.length(); i++) {
+		if (dot(pos, camera.frustum_planes[i]) + radius < 0.0) {
 			return false;
 		}
 	}
@@ -48,12 +50,12 @@ void main()
 {
 	uint idx = gl_GlobalInvocationID.x;
 
-	vec4 position = transform_SSBO[idx];
+	vec4 position = padded_transforms[idx].position;
 
 	if (sphere_intersection(position, position.w)) {
-		indirect_draws[idx].instanceCount = 1;
-		transform_matrices[idx].rows[3] = position;
+		indirect_draws[idx].instance_count = 1;
+		model_matrices[idx][3] = position;
 	} else {
-		indirect_draws[idx].instanceCount = 0;
+		indirect_draws[idx].instance_count = 0;
 	}
 }

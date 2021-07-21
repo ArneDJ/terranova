@@ -22,6 +22,13 @@ struct DrawElementsCommand {
 	GLuint base_instance = 0;
 };
 
+// these have to be padded to vec4 to be used in an SSBO properly
+struct PaddedTransform {
+	glm::vec4 position;
+	glm::vec4 rotation;
+	glm::vec4 scale;
+};
+
 class BufferObject {
 public:
 	BufferObject();
@@ -53,12 +60,10 @@ private:
 	GLuint m_array = 0;
 };
 
-/*
 template <class T> class BufferDataPair {
 public:
 	BufferObject buffer;
 	std::vector<T> data;
-	GLenum usage = GL_DYNAMIC_DRAW;
 public:
 	// only resize data on GPU if necessary
 	bool resize_necessary()
@@ -66,7 +71,7 @@ public:
 		const auto data_size = sizeof(T) * data.size();
 		if (buffer.size() != data_size) {
 			// size has changed, resize on GPU
-			buffer.store_mutable(data_size, data.data(), usage);
+			buffer.store_mutable(data_size, data.data(), GL_DYNAMIC_DRAW);
 			return true;
 		}
 
@@ -82,12 +87,11 @@ public:
 		}
 	} 
 };
-*/
 
 class Mesh {
 public:
 	void create(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices);
-	void attach_transform(const glm::vec3 &position, const glm::vec3 &scale);
+	void attach_transform(const geom::Transform *transform);
 	void resize_buffers();
 	void draw() const;
 	void draw_indirect() const;
@@ -104,12 +108,9 @@ private:
 	// FIXME it's getting a bit too crowded here
 	uint32_t m_instance_count = 0;
 	float m_base_radius = 1.f;
-	std::vector<glm::vec4> m_cull_spheres; // needs to be vec4 to fit in SSBO
-	std::vector<glm::mat4> m_transform_matrices;
-	std::vector<DrawElementsCommand> m_draw_commands;
-	BufferObject m_dbo;
-	BufferObject m_ssbo;
-	BufferObject m_matrix_ssbo;
+	BufferDataPair<PaddedTransform> m_transforms;
+	BufferDataPair<glm::mat4> m_model_matrices;
+	BufferDataPair<DrawElementsCommand> m_draw_commands;
 };
 
 class CubeMesh : public Mesh {
