@@ -25,6 +25,8 @@
 
 namespace gpu {
 
+static void append_buffer(const cgltf_accessor *accessor,  std::vector<uint8_t> &buffer);
+static inline GLenum primitive_mode(cgltf_primitive_type type);
 static void print_gltf_error(cgltf_result error);
 
 Model::Model(const std::string &filepath)
@@ -53,10 +55,27 @@ Model::Model(const std::string &filepath)
 		
 	cgltf_free(data);
 }
+	
+void Model::display() const
+{
+	for (auto &mesh : m_meshes) {
+		mesh->draw();
+	}
+}
 
 void Model::load(const cgltf_data *data)
 {
 	load_nodes(data);
+
+	// load mesh data
+	for (int i = 0; i < data->meshes_count; i++) {
+		const cgltf_mesh *mesh = &data->meshes[i];
+		std::string mesh_name = mesh->name ? mesh->name : std::to_string(i);
+		std::cout << "Mesh: " + mesh_name << std::endl;
+		load_visual_mesh(mesh);
+	}
+
+	std::cout << "Mesh count: " << m_meshes.size() << std::endl;
 }
 
 void Model::load_nodes(const cgltf_data *data)
@@ -120,6 +139,124 @@ void Model::load_nodes(const cgltf_data *data)
 		}
 	}
 	*/
+}
+	
+void Model::load_visual_mesh(const cgltf_mesh *mesh_data)
+{
+	MeshBufferData buffer_data;
+	std::vector<Primitive> primitives;
+
+	uint32_t vertex_start = 0;
+	uint32_t index_start = 0;
+
+	// load the mesh primitives
+	for (int i = 0; i < mesh_data->primitives_count; i++) {
+		const auto &primitive_data = mesh_data->primitives[i];
+
+		// import index data
+		uint32_t index_count = 0;
+		if (primitive_data.indices) {
+			index_count = primitive_data.indices->count;
+			append_buffer(primitive_data.indices, buffer_data.indices);
+		}
+
+		geom::AABB bounds = {
+			glm::vec3((std::numeric_limits<float>::max)()),
+			glm::vec3((std::numeric_limits<float>::min)())
+		};
+		bool found_bounds = false;
+
+		// FIXME getting too crowded here
+		// import vertex data and bounding box
+		uint32_t vertex_count = 0;
+		for (int j = 0; j < primitive_data.attributes_count; j++) {
+			const auto &attribute = primitive_data.attributes[j];
+			const auto &accessor = attribute.data;
+			switch (attribute.type) {
+			case cgltf_attribute_type_position:
+				vertex_count = accessor->count;
+				append_buffer(accessor, buffer_data.positions);
+				break;
+			case cgltf_attribute_type_normal:
+				append_buffer(accessor, buffer_data.normals);
+				break;
+			case cgltf_attribute_type_texcoord:
+				append_buffer(accessor, buffer_data.texcoords);
+				break;
+			case cgltf_attribute_type_joints:
+				append_buffer(accessor, buffer_data.joints);
+				break;
+			case cgltf_attribute_type_weights:
+				append_buffer(accessor, buffer_data.weights);
+				break;
+			}
+		
+			// An accessor also contains min and max properties. In the case of vertex positions, the min and max properties thus define the bounding box of an object.
+			if (accessor->has_min && accessor->has_max) {
+				found_bounds = true;
+				bounds.min = (glm::min)(glm::make_vec3(accessor->min), bounds.min);
+				bounds.max = (glm::max)(glm::make_vec3(accessor->max), bounds.max);
+			}
+		}
+
+		Primitive primitive;
+		primitive.first_index = index_start;
+		primitive.index_count = index_count;
+		primitive.first_vertex = vertex_start;
+		primitive.vertex_count = vertex_count;
+		primitive.mode = primitive_mode(primitive_data.type);
+		primitive.index_type = GL_UNSIGNED_SHORT; // TODO automate this
+
+		if (found_bounds) {
+			primitive.bounds = bounds;
+		} else {
+			primitive.bounds.min = glm::vec3(-1.f);
+			primitive.bounds.max = glm::vec3(1.f);
+		}
+
+		primitives.push_back(primitive);
+
+		vertex_start += vertex_count;
+		index_start += index_count;
+	}
+
+	auto indirect_mesh = std::make_unique<Mesh>();
+	indirect_mesh->create(buffer_data, primitives);
+
+	m_meshes.push_back(std::move(indirect_mesh));
+}
+
+// according to glTF docs: 
+// A buffer is data stored as a binary blob. The buffer can contain a combination of geometry, animation, and skins.
+// Binary blobs allow efficient creation of GPU buffers and textures since they require no additional parsing, except perhaps decompression.
+static void append_buffer(const cgltf_accessor *accessor,  std::vector<uint8_t> &buffer)
+{
+	const auto view = accessor->buffer_view;
+	size_t type_size = cgltf_component_size(accessor->component_type) * cgltf_num_components(accessor->type); // example: vec3 = 4 byte * 3 float
+
+	uint8_t *data = (uint8_t*)view->buffer->data + view->offset;
+	if (view->stride > 0) { // attribute data is interleaved
+		for (size_t stride = accessor->offset; stride < view->size; stride += view->stride) {
+			buffer.insert(buffer.end(), data + stride, data + stride + type_size);
+		}
+	} else { // attribute data is tightly packed
+		buffer.insert(buffer.end(), data, data  + view->size);
+	}
+}
+
+
+static inline GLenum primitive_mode(cgltf_primitive_type type)
+{
+	switch (type) {
+	case cgltf_primitive_type_points: return GL_POINTS;
+	case cgltf_primitive_type_lines: return GL_LINES;
+	case cgltf_primitive_type_line_loop: return GL_LINE_LOOP;
+	case cgltf_primitive_type_line_strip: return GL_LINE_STRIP;
+	case cgltf_primitive_type_triangles: return GL_TRIANGLES;
+	case cgltf_primitive_type_triangle_strip: return GL_TRIANGLE_STRIP;
+	case cgltf_primitive_type_triangle_fan: return GL_TRIANGLE_FAN;
+	default: return GL_POINTS;
+	}
 }
 
 static void print_gltf_error(cgltf_result error)

@@ -102,6 +102,12 @@ void VertexArrayObject::set_attribute(GLuint index, GLint size, GLenum type, GLb
 	glEnableVertexAttribArray(index);
 	glVertexAttribPointer(index, size, type, normalized, stride, pointer);
 }
+
+void VertexArrayObject::set_integer_attribute(GLuint index, GLint size, GLenum type, GLsizei stride, GLvoid *pointer)
+{
+	glEnableVertexAttribArray(index);
+	glVertexAttribIPointer(index, size, type, stride, pointer);
+}
 	
 IndirectDrawer::IndirectDrawer(const Primitive &primitive)
 {
@@ -206,13 +212,51 @@ void Mesh::create(const std::vector<Vertex> &vertices, const std::vector<uint32_
 	m_primitives.push_back(primitive);
 }
 	
+void Mesh::create(const MeshBufferData &data, const std::vector<Primitive> &primitives)
+{
+	m_primitives = primitives;
+
+	// TODO upload directly
+	std::vector<GLubyte> buffer;
+	buffer.insert(buffer.end(), data.positions.begin(), data.positions.end());
+	buffer.insert(buffer.end(), data.normals.begin(), data.normals.end());
+	buffer.insert(buffer.end(), data.texcoords.begin(), data.texcoords.end());
+	buffer.insert(buffer.end(), data.joints.begin(), data.joints.end());
+	buffer.insert(buffer.end(), data.weights.begin(), data.weights.end());
+
+	const GLbitfield flags = 0;
+	
+	m_vao.bind();
+
+	// add index buffer
+	if (data.indices.size() > 0) {
+		m_ebo.set_target(GL_ELEMENT_ARRAY_BUFFER);
+		m_ebo.store_immutable(data.indices.size(), data.indices.data(), flags);
+	}
+
+	// add position buffer
+	m_vbo.set_target(GL_ARRAY_BUFFER);
+	m_vbo.store_immutable(buffer.size(), buffer.data(), flags);
+	
+	// positions
+	m_vao.set_attribute(0, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0));
+	// normals
+	m_vao.set_attribute(1, 3, GL_FLOAT, GL_TRUE, 0, BUFFER_OFFSET(data.positions.size()));
+	// texcoords
+	m_vao.set_attribute(2, 2, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(data.positions.size() + data.normals.size()));
+	// joints
+	m_vao.set_integer_attribute(3, 4, GL_UNSIGNED_BYTE, 0, BUFFER_OFFSET(data.positions.size() + data.normals.size() + data.texcoords.size()));
+	// weights
+	m_vao.set_attribute(4, 4, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(data.positions.size() + data.normals.size() + data.texcoords.size() + data.joints.size()));
+}
+	
 void Mesh::draw() const
 {
 	m_vao.bind();
 
 	for (const auto &primitive : m_primitives) {
 		if (primitive.index_count > 0) {
-			glDrawElementsBaseVertex(primitive.mode, primitive.index_count, m_index_type, (GLvoid *)((primitive.first_index)*typesize(m_index_type)), primitive.first_vertex);
+			glDrawElementsBaseVertex(primitive.mode, primitive.index_count, primitive.index_type, (GLvoid *)((primitive.first_index)*typesize(primitive.index_type)), primitive.first_vertex);
 		} else {
 			glDrawArrays(primitive.mode, primitive.first_vertex, primitive.vertex_count);
 		}

@@ -5,6 +5,16 @@ struct Vertex {
 	glm::vec3 normal = {};
 };
 
+// raw unparsed buffer data to be sent directly to GPU
+struct MeshBufferData {
+	std::vector<uint8_t> indices;
+	std::vector<uint8_t> positions;
+	std::vector<uint8_t> normals;
+	std::vector<uint8_t> texcoords;
+	std::vector<uint8_t> joints;
+	std::vector<uint8_t> weights;
+};
+
 struct Primitive {
 	GLuint first_index = 0;
 	GLsizei index_count = 0;
@@ -57,6 +67,7 @@ public:
 public:
 	void bind() const;
 	void set_attribute(GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, GLvoid *pointer);
+	void set_integer_attribute(GLuint index, GLint size, GLenum type, GLsizei stride, GLvoid *pointer);
 private:
 	GLuint m_array = 0;
 };
@@ -109,6 +120,7 @@ private:
 class Mesh {
 public:
 	void create(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices);
+	void create(const MeshBufferData &data, const std::vector<Primitive> &primitives);
 	void draw() const;
 protected:
 	geom::AABB m_bounding_box;

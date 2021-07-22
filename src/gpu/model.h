@@ -22,10 +22,12 @@ struct Skin {
 class Model {
 public:
 	Model(const std::string &filepath);
+public:
+	void display() const;
 private:
 	geom::AABB m_bounds;
 	std::vector<std::unique_ptr<Node>> m_nodes;
-	std::vector<std::unique_ptr<IndirectMesh>> m_meshes;
+	std::vector<std::unique_ptr<Mesh>> m_meshes;
 private:
 	void load(const cgltf_data *data);
 	void load_nodes(const cgltf_data *data);
