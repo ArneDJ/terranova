@@ -11,7 +11,7 @@ struct Primitive {
 	GLuint first_vertex = 0;
 	GLsizei vertex_count = 0;
 	GLenum mode = GL_TRIANGLES; // rendering mode (GL_TRIANGLES, GL_PATCHES, etc)
-	bool indexed = false;
+	geom::AABB bounding_box;
 };
 
 struct DrawElementsCommand {
@@ -111,7 +111,7 @@ public:
 	void draw() const;
 public:
 	uint32_t instance_count() const;
-	void bind_for_dispatch(GLuint draw_index, GLuint transforms_index, GLuint matrices_index) const;
+	void bind_for_dispatch() const;
 private:
 	uint32_t m_instance_count = 0;
 	geom::Sphere m_bounding_sphere;

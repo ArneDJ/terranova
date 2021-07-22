@@ -26,18 +26,18 @@ layout (std430, binding = 1) readonly buffer PaddedTransformBlock
 	PaddedTransform padded_transforms[];
 };
 
-layout (std430, binding = 2) writeonly buffer ModelMatricesBlock
+layout (std430, binding = 2) buffer ModelMatricesBlock
 {
 	mat4 model_matrices[];
 };
 
-layout (binding = 3) uniform CameraBlock {
-	vec4 frustum_planes[6];
-} camera;
-
-layout (binding = 4) uniform CullShapeBlock {
+layout (binding = 3) uniform CullShapeBlock {
 	vec4 sphere; // xyz: center position, w: radius
 } cull_shape;
+
+layout (binding = 4) uniform CameraBlock {
+	vec4 frustum_planes[6];
+} camera;
 
 bool sphere_intersection(vec4 pos, float radius)
 {
@@ -107,6 +107,7 @@ void main()
 
 	mat4 model_matrix = transform_to_matrix(padded.position.xyz, padded.rotation, padded.scale.xyz);
 
+	// transform the bounding sphere with the model matrix
 	vec4 sphere_center = model_matrix * vec4(cull_shape.sphere.xyz, 1.0);
 	float sphere_radius = cull_shape.sphere.w * max_component(padded.scale.xyz);
 

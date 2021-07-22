@@ -57,7 +57,7 @@ Engine::Engine()
 		if (config.load("default.ini")) {
 			// save default settings to user path
 			if (!config.save(settings_filepath)) {
-				LOG_F(ERROR, "Could not save user settings %s", settings_filepath);
+				LOG_F(ERROR, "Could not save user settings %s", settings_filepath.c_str());
 			}
 		} else {
 			LOG_F(ERROR, "Could not open default settings!");
@@ -184,6 +184,8 @@ void Engine::run()
 	gpu::BufferObject frustum_ubo;
 	frustum_ubo.set_target(GL_UNIFORM_BUFFER);
 
+	gpu::Model sphere_model = gpu::Model("media/models/sphere.glb");
+
 	std::vector<std::unique_ptr<geom::Transform>> transforms;
 	gpu::CubeMesh cube_mesh(glm::vec3(1.f, 1.f, 1.f), glm::vec3(2.f, 2.f, 2.f));
 	for (int i = 0; i < 50; i++) {
@@ -213,8 +215,8 @@ void Engine::run()
 
 			const auto &planes = camera.frustum.planes;
 			frustum_ubo.store_mutable(planes.size()*sizeof(glm::vec4), planes.data(), GL_STATIC_DRAW);
-			cube_mesh.bind_for_dispatch(0, 1, 2);
-			frustum_ubo.bind_base(3);
+			cube_mesh.bind_for_dispatch();
+			frustum_ubo.bind_base(4);
 
 			glDispatchCompute(cube_mesh.instance_count(), 1, 1);
 			glMemoryBarrier(GL_COMMAND_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);

@@ -40,5 +40,14 @@ inline glm::vec3 midpoint(const glm::vec3 &a, const glm::vec3 &b)
 	return glm::vec3(0.5f * (a.x + b.x), 0.5f * (a.y + b.y), 0.5 * (a.z + b.z));
 }
 
+inline Sphere AABB_to_sphere(const AABB &aabb)
+{
+	Sphere sphere = {
+		midpoint(aabb.min, aabb.max),
+		glm::distance(aabb.min, aabb.max)
+	};
+
+	return sphere;
+}
 
 };

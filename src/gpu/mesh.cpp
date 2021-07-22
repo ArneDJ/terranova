@@ -13,8 +13,8 @@
 #include "../extern/loguru/loguru.hpp"
 
 #include "../geom/frustum.h"
-#include "../geom/geom.h"
 #include "../geom/transform.h"
+#include "../geom/geom.h"
 #include "mesh.h"
 
 namespace gpu {
@@ -112,12 +112,11 @@ void Mesh::create(const std::vector<Vertex> &vertices, const std::vector<uint32_
 	m_primitive.first_vertex = 0;
 	m_primitive.vertex_count = GLsizei(vertices.size());
 	m_primitive.mode = GL_TRIANGLES;
-	m_primitive.indexed = (indices.size() > 0);
 
 	m_vao.bind();
 
 	// add index buffer
-	if (m_primitive.indexed) {
+	if (indices.size() > 0) {
 		m_ebo.set_target(GL_ELEMENT_ARRAY_BUFFER);
 		m_ebo.store_immutable(indices_size, indices.data(), 0);
 		m_index_type = GL_UNSIGNED_INT;
@@ -138,15 +137,17 @@ void Mesh::create(const std::vector<Vertex> &vertices, const std::vector<uint32_
 		max = (glm::max)(vertex.position, max);
 	}
 
-	m_bounding_box.min = min;
-	m_bounding_box.max = max;
+	m_primitive.bounding_box.min = min;
+	m_primitive.bounding_box.max = max;
+
+	m_bounding_box = m_primitive.bounding_box;
 }
 	
 void Mesh::draw() const
 {
 	m_vao.bind();
 
-	if (m_primitive.indexed) {
+	if (m_primitive.index_count > 0) {
 		glDrawElementsBaseVertex(m_primitive.mode, m_primitive.index_count, m_index_type, (GLvoid *)((m_primitive.first_index)*typesize(m_index_type)), m_primitive.first_vertex);
 	} else {
 		glDrawArrays(m_primitive.mode, m_primitive.first_vertex, m_primitive.vertex_count);
@@ -165,9 +166,9 @@ IndirectMesh::IndirectMesh()
 
 void IndirectMesh::set_bounding_sphere()
 {
-	m_bounding_sphere.center = geom::midpoint(m_bounding_box.min, m_bounding_box.max);
-	m_bounding_sphere.radius = 0.5f * glm::distance(m_bounding_box.min, m_bounding_box.max);
+	m_bounding_sphere = AABB_to_sphere(m_bounding_box);
 
+	// send the base bounding sphere as an UBO to the GPU
 	m_sphere_ubo.store_mutable(sizeof(geom::Sphere), &m_bounding_sphere, GL_STATIC_DRAW);
 }
 
@@ -210,7 +211,7 @@ void IndirectMesh::draw() const
 	m_draw_commands.buffer.bind();
 	m_model_matrices.buffer.bind_base(2); // TODO use persistent-Mapping
 		
-	if (m_primitive.indexed) {
+	if (m_primitive.index_count > 0) {
 		glMultiDrawElementsIndirect(m_primitive.mode, m_index_type, (GLvoid*)0, GLsizei(m_instance_count), 0);
 	} else {
 		glMultiDrawArraysIndirect(m_primitive.mode, (GLvoid*)0, GLsizei(instance_count()), 0);
@@ -222,13 +223,13 @@ uint32_t IndirectMesh::instance_count() const
 	return m_instance_count;
 }
 
-void IndirectMesh::bind_for_dispatch(GLuint draw_index, GLuint transforms_index, GLuint matrices_index) const
+void IndirectMesh::bind_for_dispatch() const
 {
 	// need to bind draw buffer as ssbo
-	m_draw_commands.buffer.bind_explicit(GL_SHADER_STORAGE_BUFFER, draw_index);
-	m_transforms.buffer.bind_base(transforms_index);
-	m_model_matrices.buffer.bind_base(matrices_index);
-	m_sphere_ubo.bind_base(4);
+	m_draw_commands.buffer.bind_explicit(GL_SHADER_STORAGE_BUFFER, 0);
+	m_transforms.buffer.bind_base(1);
+	m_model_matrices.buffer.bind_base(2);
+	m_sphere_ubo.bind_base(3);
 }
 	
 CubeMesh::CubeMesh(const glm::vec3 &min, const glm::vec3 &max)
