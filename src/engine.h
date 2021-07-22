@@ -4,6 +4,7 @@
 #include "util/camera.h"
 #include "util/timer.h"
 #include "geom/transform.h"
+#include "geom/geom.h"
 #include "gpu/shader.h"
 #include "gpu/mesh.h"
 

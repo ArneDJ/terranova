@@ -35,6 +35,10 @@ layout (binding = 3) uniform CameraBlock {
 	vec4 frustum_planes[6];
 } camera;
 
+layout (binding = 4) uniform CullShapeBlock {
+	vec4 sphere; // xyz: center position, w: radius
+} cull_shape;
+
 bool sphere_intersection(vec4 pos, float radius)
 {
 	for (int i = 0; i < camera.frustum_planes.length(); i++) {
@@ -101,12 +105,14 @@ void main()
 
 	PaddedTransform padded = padded_transforms[idx];
 
-	// the radius of the cull sphere is max scale multiplied by base scale
-	float radius = padded.scale.w * max_component(padded.scale.xyz);
+	mat4 model_matrix = transform_to_matrix(padded.position.xyz, padded.rotation, padded.scale.xyz);
 
-	if (sphere_intersection(padded.position, radius)) {
+	vec4 sphere_center = model_matrix * vec4(cull_shape.sphere.xyz, 1.0);
+	float sphere_radius = cull_shape.sphere.w * max_component(padded.scale.xyz);
+
+	if (sphere_intersection(sphere_center, sphere_radius)) {
 		indirect_draws[idx].instance_count = 1;
-		model_matrices[idx] = transform_to_matrix(padded.position.xyz, padded.rotation, padded.scale.xyz);
+		model_matrices[idx] = model_matrix;
 	} else {
 		indirect_draws[idx].instance_count = 0;
 	}

@@ -93,6 +93,7 @@ public:
 	void create(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices);
 	void draw() const;
 protected:
+	geom::AABB m_bounding_box;
 	BufferObject m_vbo;
 	BufferObject m_ebo;
 	VertexArrayObject m_vao;
@@ -104,7 +105,7 @@ class IndirectMesh : public Mesh {
 public:
 	IndirectMesh();
 public:
-	void find_bounding_sphere(const std::vector<Vertex> &vertices);
+	void set_bounding_sphere();
 	void attach_transform(const geom::Transform *transform);
 	void update_buffers();
 	void draw() const;
@@ -113,7 +114,8 @@ public:
 	void bind_for_dispatch(GLuint draw_index, GLuint transforms_index, GLuint matrices_index) const;
 private:
 	uint32_t m_instance_count = 0;
-	float m_base_radius = 1.f;
+	geom::Sphere m_bounding_sphere;
+	gpu::BufferObject m_sphere_ubo;
 	BufferDataPair<PaddedTransform> m_transforms;
 	BufferDataPair<glm::mat4> m_model_matrices;
 	BufferDataPair<DrawElementsCommand> m_draw_commands;

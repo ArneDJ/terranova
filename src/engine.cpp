@@ -185,13 +185,13 @@ void Engine::run()
 	frustum_ubo.set_target(GL_UNIFORM_BUFFER);
 
 	std::vector<std::unique_ptr<geom::Transform>> transforms;
-	gpu::CubeMesh cube_mesh(glm::vec3(-1.f, -1.f, -1.f), glm::vec3(1.f, 1.f, 1.f));
+	gpu::CubeMesh cube_mesh(glm::vec3(1.f, 1.f, 1.f), glm::vec3(2.f, 2.f, 2.f));
 	for (int i = 0; i < 50; i++) {
 		for (int j = 0; j < 50; j++) {
 			for (int k = 0; k < 50; k++) {
 				auto transform = std::make_unique<geom::Transform>();
 				transform->position = glm::vec3(float(3*i), float(3*j), float(3*k));
-				transform->scale = glm::vec3(0.3f);
+				transform->scale = glm::vec3(0.5f);
 				cube_mesh.attach_transform(transform.get());
 				transforms.push_back(std::move(transform));
 			}

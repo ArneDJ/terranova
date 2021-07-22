@@ -119,16 +119,27 @@ void Mesh::create(const std::vector<Vertex> &vertices, const std::vector<uint32_
 	// add index buffer
 	if (m_primitive.indexed) {
 		m_ebo.set_target(GL_ELEMENT_ARRAY_BUFFER);
-		m_ebo.store_mutable(indices_size, indices.data(), GL_STATIC_DRAW);
+		m_ebo.store_immutable(indices_size, indices.data(), 0);
 		m_index_type = GL_UNSIGNED_INT;
 	}
 
 	// add position buffer
 	m_vbo.set_target(GL_ARRAY_BUFFER);
-	m_vbo.store_mutable(vertices_size, vertices.data(), GL_STATIC_DRAW);
+	m_vbo.store_immutable(vertices_size, vertices.data(), 0);
 
 	m_vao.set_attribute(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), BUFFER_OFFSET(offsetof(Vertex, position)));
 	m_vao.set_attribute(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), BUFFER_OFFSET(offsetof(Vertex, normal)));
+
+	// find bounding box and sphere
+	glm::vec3 min = glm::vec3((std::numeric_limits<float>::max)());
+	glm::vec3 max = glm::vec3((std::numeric_limits<float>::min)());
+	for (const auto &vertex : vertices) {
+		min = (glm::min)(vertex.position, min);
+		max = (glm::max)(vertex.position, max);
+	}
+
+	m_bounding_box.min = min;
+	m_bounding_box.max = max;
 }
 	
 void Mesh::draw() const
@@ -148,18 +159,16 @@ IndirectMesh::IndirectMesh()
 
 	m_transforms.buffer.set_target(GL_SHADER_STORAGE_BUFFER);
 	m_model_matrices.buffer.set_target(GL_SHADER_STORAGE_BUFFER);
+	
+	m_sphere_ubo.set_target(GL_UNIFORM_BUFFER);
 }
 
-void IndirectMesh::find_bounding_sphere(const std::vector<Vertex> &vertices)
+void IndirectMesh::set_bounding_sphere()
 {
-	glm::vec3 min = glm::vec3((std::numeric_limits<float>::max)());
-	glm::vec3 max = glm::vec3((std::numeric_limits<float>::min)());
-	for (const auto &vertex : vertices) {
-		min = (glm::min)(vertex.position, min);
-		max = (glm::max)(vertex.position, max);
-	}
+	m_bounding_sphere.center = geom::midpoint(m_bounding_box.min, m_bounding_box.max);
+	m_bounding_sphere.radius = 0.5f * glm::distance(m_bounding_box.min, m_bounding_box.max);
 
-	m_base_radius = 0.5f * glm::distance(min, max);
+	m_sphere_ubo.store_mutable(sizeof(geom::Sphere), &m_bounding_sphere, GL_STATIC_DRAW);
 }
 
 void IndirectMesh::update_buffers()
@@ -176,7 +185,7 @@ void IndirectMesh::attach_transform(const geom::Transform *transform)
 	PaddedTransform padded = {
 		glm::vec4(transform->position, 1.f),
 		glm::vec4(transform->rotation.x, transform->rotation.y, transform->rotation.z, transform->rotation.w),
-		glm::vec4(transform->scale, m_base_radius)
+		glm::vec4(transform->scale, 1.f)
 	};
 	m_transforms.data.push_back(padded);
 
@@ -219,6 +228,7 @@ void IndirectMesh::bind_for_dispatch(GLuint draw_index, GLuint transforms_index,
 	m_draw_commands.buffer.bind_explicit(GL_SHADER_STORAGE_BUFFER, draw_index);
 	m_transforms.buffer.bind_base(transforms_index);
 	m_model_matrices.buffer.bind_base(matrices_index);
+	m_sphere_ubo.bind_base(4);
 }
 	
 CubeMesh::CubeMesh(const glm::vec3 &min, const glm::vec3 &max)
@@ -244,8 +254,7 @@ CubeMesh::CubeMesh(const glm::vec3 &min, const glm::vec3 &max)
 	};
 
 	create(vertices, indices);
-
-	find_bounding_sphere(vertices);
+	set_bounding_sphere();
 }
 	
 static size_t typesize(GLenum type)
