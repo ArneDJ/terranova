@@ -11,7 +11,8 @@ struct Primitive {
 	GLuint first_vertex = 0;
 	GLsizei vertex_count = 0;
 	GLenum mode = GL_TRIANGLES; // rendering mode (GL_TRIANGLES, GL_PATCHES, etc)
-	geom::AABB bounding_box;
+	GLenum index_type = GL_UNSIGNED_INT;
+	geom::AABB bounds;
 };
 
 struct DrawElementsCommand {
@@ -88,6 +89,23 @@ public:
 	} 
 };
 
+// manages indirect draw commands
+class IndirectDrawer {
+public:
+	IndirectDrawer(const Primitive &primitive);
+	void add_command();
+	void pop_command();
+	void update_buffer();
+	void bind_for_culling(GLuint commands_index, GLuint sphere_index) const;
+	void draw() const;
+private:
+	uint32_t m_instance_count = 0;
+	Primitive m_primitive;
+	geom::Sphere m_bounding_sphere;
+	BufferObject m_sphere_ubo;
+	BufferDataPair<DrawElementsCommand> m_commands;
+};
+
 class Mesh {
 public:
 	void create(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices);
@@ -97,28 +115,26 @@ protected:
 	BufferObject m_vbo;
 	BufferObject m_ebo;
 	VertexArrayObject m_vao;
-	Primitive m_primitive;
+	std::vector<Primitive> m_primitives;
 	GLenum m_index_type = GL_UNSIGNED_INT;
 };
 
+// TODO remove this class and create seperate indirect scene draw manager
 class IndirectMesh : public Mesh {
 public:
 	IndirectMesh();
 public:
-	void set_bounding_sphere();
 	void attach_transform(const geom::Transform *transform);
 	void update_buffers();
-	void draw() const;
 public:
 	uint32_t instance_count() const;
 	void bind_for_dispatch() const;
-private:
+	void draw() const;
+protected:
 	uint32_t m_instance_count = 0;
-	geom::Sphere m_bounding_sphere;
-	gpu::BufferObject m_sphere_ubo;
+	std::vector<std::unique_ptr<IndirectDrawer>> m_indirect_drawers;
 	BufferDataPair<PaddedTransform> m_transforms;
 	BufferDataPair<glm::mat4> m_model_matrices;
-	BufferDataPair<DrawElementsCommand> m_draw_commands;
 };
 
 class CubeMesh : public IndirectMesh {

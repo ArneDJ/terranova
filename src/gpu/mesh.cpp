@@ -3,6 +3,7 @@
 #include <vector>
 #include <array>
 #include <algorithm>
+#include <memory>
 #include <GL/glew.h>
 #include <GL/gl.h>
 #include <glm/vec3.hpp>
@@ -101,17 +102,77 @@ void VertexArrayObject::set_attribute(GLuint index, GLint size, GLenum type, GLb
 	glEnableVertexAttribArray(index);
 	glVertexAttribPointer(index, size, type, normalized, stride, pointer);
 }
+	
+IndirectDrawer::IndirectDrawer(const Primitive &primitive)
+{
+	m_primitive = primitive;
+
+	m_commands.buffer.set_target(GL_DRAW_INDIRECT_BUFFER);
+
+	m_bounding_sphere = AABB_to_sphere(primitive.bounds);
+
+	// send the base bounding sphere as an UBO to the GPU
+	m_sphere_ubo.set_target(GL_UNIFORM_BUFFER);
+	m_sphere_ubo.store_mutable(sizeof(geom::Sphere), &m_bounding_sphere, GL_STATIC_DRAW);
+}
+
+void IndirectDrawer::add_command()
+{
+	m_instance_count = m_commands.data.size();
+
+	struct DrawElementsCommand command;
+	command.count = m_primitive.index_count;
+	command.instance_count = 1;
+	command.first_index = m_primitive.first_index;
+	command.base_vertex = m_primitive.first_vertex;
+	command.base_instance = m_instance_count;
+
+	m_commands.data.push_back(command);
+}
+
+void IndirectDrawer::pop_command()
+{
+	m_commands.data.pop_back();
+
+	m_instance_count = m_commands.data.size();
+}
+
+void IndirectDrawer::update_buffer()
+{
+	m_commands.resize_necessary();
+}
+
+// need to bind command buffer as SSBO to edit in compute shader for culling
+void IndirectDrawer::bind_for_culling(GLuint commands_index, GLuint sphere_index) const
+{
+	m_commands.buffer.bind_explicit(GL_SHADER_STORAGE_BUFFER, commands_index);
+	m_sphere_ubo.bind_base(sphere_index);
+}
+
+void IndirectDrawer::draw() const
+{
+	m_commands.buffer.bind();
+		
+	if (m_primitive.index_count > 0) {
+		glMultiDrawElementsIndirect(m_primitive.mode, m_primitive.index_type, (GLvoid*)0, m_instance_count, 0);
+	} else {
+		glMultiDrawArraysIndirect(m_primitive.mode, (GLvoid*)0, m_instance_count, 0);
+	}
+}
 
 void Mesh::create(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices)
 {
+	m_primitives.clear();
+
 	const size_t vertices_size = sizeof(Vertex) * vertices.size();
 	const size_t indices_size = sizeof(uint32_t) * indices.size();
 
-	m_primitive.first_index = 0;
-	m_primitive.index_count = GLsizei(indices.size());
-	m_primitive.first_vertex = 0;
-	m_primitive.vertex_count = GLsizei(vertices.size());
-	m_primitive.mode = GL_TRIANGLES;
+	Primitive primitive;
+	primitive.first_index = 0;
+	primitive.index_count = GLsizei(indices.size());
+	primitive.first_vertex = 0;
+	primitive.vertex_count = GLsizei(vertices.size());
+	primitive.mode = GL_TRIANGLES;
 
 	m_vao.bind();
 
@@ -137,39 +198,31 @@ void Mesh::create(const std::vector<Vertex> &vertices, const std::vector<uint32_
 		max = (glm::max)(vertex.position, max);
 	}
 
-	m_primitive.bounding_box.min = min;
-	m_primitive.bounding_box.max = max;
+	primitive.bounds.min = min;
+	primitive.bounds.max = max;
 
-	m_bounding_box = m_primitive.bounding_box;
+	m_bounding_box = primitive.bounds;
+
+	m_primitives.push_back(primitive);
 }
 	
 void Mesh::draw() const
 {
 	m_vao.bind();
 
-	if (m_primitive.index_count > 0) {
-		glDrawElementsBaseVertex(m_primitive.mode, m_primitive.index_count, m_index_type, (GLvoid *)((m_primitive.first_index)*typesize(m_index_type)), m_primitive.first_vertex);
-	} else {
-		glDrawArrays(m_primitive.mode, m_primitive.first_vertex, m_primitive.vertex_count);
+	for (const auto &primitive : m_primitives) {
+		if (primitive.index_count > 0) {
+			glDrawElementsBaseVertex(primitive.mode, primitive.index_count, m_index_type, (GLvoid *)((primitive.first_index)*typesize(m_index_type)), primitive.first_vertex);
+		} else {
+			glDrawArrays(primitive.mode, primitive.first_vertex, primitive.vertex_count);
+		}
 	}
 }
 	
 IndirectMesh::IndirectMesh()
 {
-	m_draw_commands.buffer.set_target(GL_DRAW_INDIRECT_BUFFER);
-
 	m_transforms.buffer.set_target(GL_SHADER_STORAGE_BUFFER);
 	m_model_matrices.buffer.set_target(GL_SHADER_STORAGE_BUFFER);
-	
-	m_sphere_ubo.set_target(GL_UNIFORM_BUFFER);
-}
-
-void IndirectMesh::set_bounding_sphere()
-{
-	m_bounding_sphere = AABB_to_sphere(m_bounding_box);
-
-	// send the base bounding sphere as an UBO to the GPU
-	m_sphere_ubo.store_mutable(sizeof(geom::Sphere), &m_bounding_sphere, GL_STATIC_DRAW);
 }
 
 void IndirectMesh::update_buffers()
@@ -178,7 +231,9 @@ void IndirectMesh::update_buffers()
 
 	m_model_matrices.resize_necessary();
 
-	m_draw_commands.resize_necessary();
+	for (auto &drawer : m_indirect_drawers) {
+		drawer->update_buffer();
+	}
 }
 
 void IndirectMesh::attach_transform(const geom::Transform *transform)
@@ -190,14 +245,9 @@ void IndirectMesh::attach_transform(const geom::Transform *transform)
 	};
 	m_transforms.data.push_back(padded);
 
-	struct DrawElementsCommand command;
-	command.count = m_primitive.index_count;
-	command.instance_count = 1;
-	command.first_index = 0;
-	command.base_vertex = 0;
-	command.base_instance = m_instance_count;
-
-	m_draw_commands.data.push_back(command);
+	for (auto &drawer : m_indirect_drawers) {
+		drawer->add_command();
+	}
 
 	m_model_matrices.data.push_back(transform->to_matrix());
 
@@ -208,13 +258,10 @@ void IndirectMesh::draw() const
 {
 	m_vao.bind();
 
-	m_draw_commands.buffer.bind();
 	m_model_matrices.buffer.bind_base(2); // TODO use persistent-Mapping
 		
-	if (m_primitive.index_count > 0) {
-		glMultiDrawElementsIndirect(m_primitive.mode, m_index_type, (GLvoid*)0, GLsizei(m_instance_count), 0);
-	} else {
-		glMultiDrawArraysIndirect(m_primitive.mode, (GLvoid*)0, GLsizei(instance_count()), 0);
+	for (auto &drawer : m_indirect_drawers) {
+		drawer->draw();
 	}
 }
 
@@ -226,10 +273,11 @@ uint32_t IndirectMesh::instance_count() const
 void IndirectMesh::bind_for_dispatch() const
 {
 	// need to bind draw buffer as ssbo
-	m_draw_commands.buffer.bind_explicit(GL_SHADER_STORAGE_BUFFER, 0);
+	for (const auto &drawer : m_indirect_drawers) {
+		drawer->bind_for_culling(0, 3);
+	}
 	m_transforms.buffer.bind_base(1);
 	m_model_matrices.buffer.bind_base(2);
-	m_sphere_ubo.bind_base(3);
 }
 	
 CubeMesh::CubeMesh(const glm::vec3 &min, const glm::vec3 &max)
@@ -255,7 +303,11 @@ CubeMesh::CubeMesh(const glm::vec3 &min, const glm::vec3 &max)
 	};
 
 	create(vertices, indices);
-	set_bounding_sphere();
+
+	for (const auto &primitive : m_primitives) {
+		auto indirect_drawer = std::make_unique<IndirectDrawer>(primitive);
+		m_indirect_drawers.push_back(std::move(indirect_drawer));
+	}
 }
 	
 static size_t typesize(GLenum type)
