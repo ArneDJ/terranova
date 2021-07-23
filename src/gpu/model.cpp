@@ -62,6 +62,11 @@ void Model::display() const
 		mesh->draw();
 	}
 }
+	
+const std::vector<std::unique_ptr<Mesh>>& Model::meshes() const
+{
+	return m_meshes;
+}
 
 void Model::load(const cgltf_data *data)
 {

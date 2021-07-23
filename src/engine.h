@@ -8,6 +8,7 @@
 #include "gpu/shader.h"
 #include "gpu/mesh.h"
 #include "gpu/model.h"
+#include "gpu/scene.h"
 
 struct VideoSettings {
 	glm::ivec2 canvas = {};

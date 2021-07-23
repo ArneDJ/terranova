@@ -24,6 +24,7 @@ public:
 	Model(const std::string &filepath);
 public:
 	void display() const;
+	const std::vector<std::unique_ptr<Mesh>>& meshes() const;
 private:
 	geom::AABB m_bounds;
 	std::vector<std::unique_ptr<Node>> m_nodes;

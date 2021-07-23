@@ -181,32 +181,37 @@ void Engine::run()
 	culler.compile("shaders/culling.comp", GL_COMPUTE_SHADER);
 	culler.link();
 
+	// TODO put in SceneGroup
 	gpu::BufferObject frustum_ubo;
 	frustum_ubo.set_target(GL_UNIFORM_BUFFER);
 
+	gpu::Model sphere_model = gpu::Model("media/models/icosphere.glb");
+
+	gpu::SceneGroup scene;
+
+	auto scene_object = scene.find_object(&sphere_model);
+
 	std::vector<std::unique_ptr<geom::Transform>> transforms;
-	gpu::CubeMesh cube_mesh(glm::vec3(1.f, 1.f, 1.f), glm::vec3(2.f, 2.f, 2.f));
 	for (int i = 0; i < 50; i++) {
 		for (int j = 0; j < 50; j++) {
 			for (int k = 0; k < 50; k++) {
 				auto transform = std::make_unique<geom::Transform>();
 				transform->position = glm::vec3(float(3*i), float(3*j), float(3*k));
 				transform->scale = glm::vec3(0.5f);
-				cube_mesh.attach_transform(transform.get());
+				scene_object->add_transform(transform.get());
 				transforms.push_back(std::move(transform));
 			}
 		}
 	}
 	
-	gpu::Model sphere_model = gpu::Model("media/models/sphere.glb");
-
 
 	while (state == EngineState::TITLE) {
 		frame_timer.begin();
 	
 		update_state();
 
-		cube_mesh.update_buffers();
+		//scene_object->update_buffers();
+		scene.update();
 
 		auto start = std::chrono::steady_clock::now();
 
@@ -218,10 +223,8 @@ void Engine::run()
 			frustum_ubo.store_mutable(planes.size()*sizeof(glm::vec4), planes.data(), GL_STATIC_DRAW);
 			frustum_ubo.bind_base(4);
 
-			cube_mesh.bind_for_dispatch();
-
-			glDispatchCompute(cube_mesh.instance_count(), 1, 1);
-			glMemoryBarrier(GL_COMMAND_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
+		//	scene_object->dispatch_frustum_cull();
+			scene.cull_frustum();
 		}
 
 		auto end = std::chrono::steady_clock::now();
@@ -238,23 +241,16 @@ void Engine::run()
 		shader.uniform_mat4("VP", camera.VP);
 
 		shader.uniform_bool("WIRED_MODE", false);
-		shader.uniform_bool("INDIRECT_DRAW", false);
-		sphere_model.display();
-
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		shader.uniform_bool("WIRED_MODE", true);
-		shader.uniform_bool("INDIRECT_DRAW", false);
-		sphere_model.display();
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
-		shader.uniform_bool("WIRED_MODE", false);
 		shader.uniform_bool("INDIRECT_DRAW", true);
-		cube_mesh.draw();
+		scene.display();
 
+		/*
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		shader.uniform_bool("WIRED_MODE", true);
-		cube_mesh.draw();
+		shader.uniform_bool("INDIRECT_DRAW", false);
+		sphere_model.display();
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		*/
 
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

@@ -263,65 +263,14 @@ void Mesh::draw() const
 	}
 }
 	
-IndirectMesh::IndirectMesh()
-{
-	m_transforms.buffer.set_target(GL_SHADER_STORAGE_BUFFER);
-	m_model_matrices.buffer.set_target(GL_SHADER_STORAGE_BUFFER);
-}
-
-void IndirectMesh::update_buffers()
-{
-	m_transforms.update_present();
-
-	m_model_matrices.resize_necessary();
-
-	for (auto &drawer : m_indirect_drawers) {
-		drawer->update_buffer();
-	}
-}
-
-void IndirectMesh::attach_transform(const geom::Transform *transform)
-{
-	PaddedTransform padded = {
-		glm::vec4(transform->position, 1.f),
-		glm::vec4(transform->rotation.x, transform->rotation.y, transform->rotation.z, transform->rotation.w),
-		glm::vec4(transform->scale, 1.f)
-	};
-	m_transforms.data.push_back(padded);
-
-	for (auto &drawer : m_indirect_drawers) {
-		drawer->add_command();
-	}
-
-	m_model_matrices.data.push_back(transform->to_matrix());
-
-	m_instance_count++;
-}
-
-void IndirectMesh::draw() const
+void Mesh::bind_vao() const
 {
 	m_vao.bind();
-
-	m_model_matrices.buffer.bind_base(2); // TODO use persistent-Mapping
-		
-	for (auto &drawer : m_indirect_drawers) {
-		drawer->draw();
-	}
 }
-
-uint32_t IndirectMesh::instance_count() const
+	
+const std::vector<Primitive>& Mesh::primitives() const
 {
-	return m_instance_count;
-}
-
-void IndirectMesh::bind_for_dispatch() const
-{
-	// need to bind draw buffer as ssbo
-	for (const auto &drawer : m_indirect_drawers) {
-		drawer->bind_for_culling(0, 3);
-	}
-	m_transforms.buffer.bind_base(1);
-	m_model_matrices.buffer.bind_base(2);
+	return m_primitives;
 }
 	
 CubeMesh::CubeMesh(const glm::vec3 &min, const glm::vec3 &max)
@@ -347,11 +296,6 @@ CubeMesh::CubeMesh(const glm::vec3 &min, const glm::vec3 &max)
 	};
 
 	create(vertices, indices);
-
-	for (const auto &primitive : m_primitives) {
-		auto indirect_drawer = std::make_unique<IndirectDrawer>(primitive);
-		m_indirect_drawers.push_back(std::move(indirect_drawer));
-	}
 }
 	
 static size_t typesize(GLenum type)

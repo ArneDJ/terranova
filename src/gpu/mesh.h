@@ -122,6 +122,8 @@ public:
 	void create(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices);
 	void create(const MeshBufferData &data, const std::vector<Primitive> &primitives);
 	void draw() const;
+	void bind_vao() const;
+	const std::vector<Primitive>& primitives() const;
 protected:
 	geom::AABB m_bounding_box;
 	BufferObject m_vbo;
@@ -131,25 +133,7 @@ protected:
 	GLenum m_index_type = GL_UNSIGNED_INT;
 };
 
-// TODO remove this class and create seperate indirect scene draw manager
-class IndirectMesh : public Mesh {
-public:
-	IndirectMesh();
-public:
-	void attach_transform(const geom::Transform *transform);
-	void update_buffers();
-public:
-	uint32_t instance_count() const;
-	void bind_for_dispatch() const;
-	void draw() const;
-protected:
-	uint32_t m_instance_count = 0;
-	std::vector<std::unique_ptr<IndirectDrawer>> m_indirect_drawers;
-	BufferDataPair<PaddedTransform> m_transforms;
-	BufferDataPair<glm::mat4> m_model_matrices;
-};
-
-class CubeMesh : public IndirectMesh {
+class CubeMesh : public Mesh {
 public:
 	CubeMesh(const glm::vec3 &min, const glm::vec3 &max);
 };
