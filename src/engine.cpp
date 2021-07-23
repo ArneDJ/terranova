@@ -181,49 +181,45 @@ void Engine::run()
 	culler.compile("shaders/culling.comp", GL_COMPUTE_SHADER);
 	culler.link();
 
-	// TODO put in SceneGroup
-	gpu::BufferObject frustum_ubo;
-	frustum_ubo.set_target(GL_UNIFORM_BUFFER);
-
 	gpu::Model sphere_model = gpu::Model("media/models/icosphere.glb");
+	gpu::Model cube_model = gpu::Model("media/models/cube.glb");
+	gpu::Model teapot_model = gpu::Model("media/models/teapot.glb");
 
-	gpu::SceneGroup scene;
+	gpu::SceneGroup scene = gpu::SceneGroup(&shader, &culler);
 
-	auto scene_object = scene.find_object(&sphere_model);
+	auto sphere_object = scene.find_object(&sphere_model);
+	auto cube_object = scene.find_object(&cube_model);
+	auto teapot_object = scene.find_object(&teapot_model);
 
 	std::vector<std::unique_ptr<geom::Transform>> transforms;
-	for (int i = 0; i < 50; i++) {
-		for (int j = 0; j < 50; j++) {
-			for (int k = 0; k < 50; k++) {
+	for (int i = 0; i < 30; i++) {
+		for (int j = 0; j < 30; j++) {
+			for (int k = 0; k < 30; k++) {
 				auto transform = std::make_unique<geom::Transform>();
 				transform->position = glm::vec3(float(3*i), float(3*j), float(3*k));
 				transform->scale = glm::vec3(0.5f);
-				scene_object->add_transform(transform.get());
+				if (k % 10 == 0) {
+					teapot_object->add_transform(transform.get());
+				} else if (k % 2 == 0) {
+					cube_object->add_transform(transform.get());
+				} else {
+					sphere_object->add_transform(transform.get());
+				}
 				transforms.push_back(std::move(transform));
 			}
 		}
 	}
-	
 
 	while (state == EngineState::TITLE) {
 		frame_timer.begin();
 	
 		update_state();
 
-		//scene_object->update_buffers();
-		scene.update();
+		scene.update(camera);
 
 		auto start = std::chrono::steady_clock::now();
 
 		if (!g_freeze_frustum) {
-			// compute shader culling
-			culler.use();
-
-			const auto &planes = camera.frustum.planes;
-			frustum_ubo.store_mutable(planes.size()*sizeof(glm::vec4), planes.data(), GL_STATIC_DRAW);
-			frustum_ubo.bind_base(4);
-
-		//	scene_object->dispatch_frustum_cull();
 			scene.cull_frustum();
 		}
 
@@ -234,11 +230,10 @@ void Engine::run()
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glViewport(0, 0, video_settings.canvas.x, video_settings.canvas.y);
 
-		//const glm::mat4 m = glm::rotate(glm::mat4(1.0f), 0.001f*SDL_GetTicks(), glm::vec3(1.0f, 1.0f, 1.0f));
+		const glm::mat4 m = glm::rotate(glm::mat4(1.0f), 0.001f*SDL_GetTicks(), glm::vec3(1.0f, 1.0f, 1.0f));
 
 		shader.use();
-		shader.uniform_mat4("MODEL", glm::mat4(1.0));
-		shader.uniform_mat4("VP", camera.VP);
+		shader.uniform_mat4("MODEL", m);
 
 		shader.uniform_bool("WIRED_MODE", false);
 		shader.uniform_bool("INDIRECT_DRAW", true);

@@ -1,9 +1,16 @@
 namespace gpu {
 
-// TODO rename to IndirectMesh
-class IndirectObject {
+struct CameraBlock {
+	glm::mat4 view;
+	glm::mat4 projection;
+	glm::mat4 view_projection;
+	glm::vec4 position;
+	std::array<glm::vec4, 6> frustum;
+};
+
+class IndirectMesh {
 public:
-	IndirectObject(const Mesh *mesh);
+	IndirectMesh(const Mesh *mesh);
 public:
 	void add(const Primitive &primimtive);
 	void add_instance();
@@ -31,20 +38,26 @@ private:
 	const Model *m_model = nullptr;
 	std::vector<const geom::Transform*> m_transforms;
 	uint32_t m_instance_count = 0;
-	std::vector<std::unique_ptr<IndirectObject>> m_indirect_meshes;
+	std::vector<std::unique_ptr<IndirectMesh>> m_indirect_meshes;
 	BufferDataPair<PaddedTransform> m_padded_transforms;
 	BufferDataPair<glm::mat4> m_model_matrices;
 };
 
 class SceneGroup {
 public:
+	SceneGroup(const Shader *visual_shader, const Shader *culling_shader);
+public:
 	SceneObject* find_object(const Model *model);
 public:
-	void update();
+	void update(const util::Camera &camera);
 	void cull_frustum();
 	void display() const;
 private:
 	std::unordered_map<const Model*, std::unique_ptr<SceneObject>> m_objects;
+	gpu::BufferObject m_camera_ubo;
+private:
+	const Shader *m_visual_shader = nullptr;
+	const Shader *m_culling_shader = nullptr;
 };
 
 };

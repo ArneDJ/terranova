@@ -36,7 +36,11 @@ layout (binding = 3) uniform CullShapeBlock {
 } cull_shape;
 
 layout (binding = 4) uniform CameraBlock {
-	vec4 frustum_planes[6];
+	mat4 view;
+	mat4 projection;
+	mat4 view_projection;
+	vec4 position;
+	vec4[6] frustum_planes;
 } camera;
 
 bool sphere_intersection(vec4 pos, float radius)

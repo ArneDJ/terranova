@@ -124,16 +124,16 @@ IndirectDrawer::IndirectDrawer(const Primitive &primitive)
 
 void IndirectDrawer::add_command()
 {
-	m_instance_count = m_commands.data.size();
-
 	struct DrawElementsCommand command;
 	command.count = m_primitive.index_count;
 	command.instance_count = 1;
 	command.first_index = m_primitive.first_index;
 	command.base_vertex = m_primitive.first_vertex;
-	command.base_instance = m_instance_count;
+	command.base_instance = m_commands.data.size();
 
 	m_commands.data.push_back(command);
+
+	m_instance_count = m_commands.data.size();
 }
 
 void IndirectDrawer::pop_command()

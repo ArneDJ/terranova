@@ -9,8 +9,15 @@ layout (std430, binding = 2) readonly buffer ModelMatricesBlock
 	mat4 model_matrices[];
 };
 
+layout (binding = 4) uniform CameraBlock {
+	mat4 view;
+	mat4 projection;
+	mat4 view_projection;
+	vec4 position;
+	vec4[6] frustum_planes;
+} camera;
+
 uniform mat4 MODEL;
-uniform mat4 VP;
 uniform bool WIRED_MODE;
 uniform bool INDIRECT_DRAW;
 
@@ -25,7 +32,7 @@ void main()
 		translation = MODEL;
 	}
 		
-	gl_Position = VP * translation * vec4(vposition, 1.0);
+	gl_Position = camera.view_projection * translation * MODEL * vec4(vposition, 1.0);
 
 	color = WIRED_MODE == true ? vec3(0.0) : vnormal;
 }

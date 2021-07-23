@@ -17,25 +17,27 @@
 #include "../geom/frustum.h"
 #include "../geom/transform.h"
 #include "../geom/geom.h"
+#include "../util/camera.h"
 #include "mesh.h"
 #include "model.h"
+#include "shader.h"
 
 #include "scene.h"
 
 namespace gpu {
 
-IndirectObject::IndirectObject(const Mesh *mesh)
+IndirectMesh::IndirectMesh(const Mesh *mesh)
 	: m_mesh(mesh)
 {
 }
 	
-void IndirectObject::add(const Primitive &primitive)
+void IndirectMesh::add(const Primitive &primitive)
 {
 	auto indirect_drawer = std::make_unique<IndirectDrawer>(primitive);
 	m_drawers.push_back(std::move(indirect_drawer));
 }
 	
-void IndirectObject::add_instance()
+void IndirectMesh::add_instance()
 {
 	for (auto &drawer : m_drawers) {
 		drawer->add_command();
@@ -44,14 +46,14 @@ void IndirectObject::add_instance()
 	m_group_count++;
 }
 	
-void IndirectObject::update()
+void IndirectMesh::update()
 {
 	for (auto &drawer : m_drawers) {
 		drawer->update_buffer();
 	}
 }
 
-void IndirectObject::dispatch()
+void IndirectMesh::dispatch()
 {
 	for (const auto &drawer : m_drawers) {
 		drawer->bind_for_culling(0, 3);
@@ -60,7 +62,7 @@ void IndirectObject::dispatch()
 	}
 }
 	
-void IndirectObject::draw() const
+void IndirectMesh::draw() const
 {
 	m_mesh->bind_vao();
 
@@ -76,7 +78,7 @@ SceneObject::SceneObject(const Model *model)
 	m_model_matrices.buffer.set_target(GL_SHADER_STORAGE_BUFFER);
 
 	for (const auto &mesh : model->meshes()) {
-		auto indirect_mesh = std::make_unique<IndirectObject>(mesh.get());
+		auto indirect_mesh = std::make_unique<IndirectMesh>(mesh.get());
 		for (const auto &primitive : mesh->primitives()) {
 			indirect_mesh->add(primitive);
 		}
@@ -138,6 +140,12 @@ void SceneObject::display() const
 		indirect_mesh->draw();
 	}
 }
+	
+SceneGroup::SceneGroup(const Shader *visual_shader, const Shader *culling_shader)
+	: m_visual_shader(visual_shader), m_culling_shader(culling_shader)
+{
+	m_camera_ubo.set_target(GL_UNIFORM_BUFFER);
+}
 
 SceneObject* SceneGroup::find_object(const Model *model)
 {
@@ -152,8 +160,15 @@ SceneObject* SceneGroup::find_object(const Model *model)
 	return m_objects[model].get();
 }
 
-void SceneGroup::update()
+void SceneGroup::update(const util::Camera &camera)
 {
+	struct CameraBlock block = {
+		camera.viewing, camera.projection, camera.VP,
+		glm::vec4(camera.position, 1.f),
+		camera.frustum.planes
+	};
+	m_camera_ubo.store_mutable(sizeof(CameraBlock), &block, GL_STATIC_DRAW);
+
 	for (const auto &object : m_objects) {
 		object.second->update_buffers();
 	}
@@ -161,6 +176,10 @@ void SceneGroup::update()
 
 void SceneGroup::cull_frustum()
 {
+	m_culling_shader->use();
+
+	m_camera_ubo.bind_base(4);
+
 	for (const auto &object : m_objects) {
 		object.second->dispatch_frustum_cull();
 	}
@@ -168,6 +187,10 @@ void SceneGroup::cull_frustum()
 	
 void SceneGroup::display() const
 {
+	m_visual_shader->use();
+	
+	m_camera_ubo.bind_base(4);
+
 	for (const auto &object : m_objects) {
 		object.second->display();
 	}
