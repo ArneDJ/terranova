@@ -5,10 +5,10 @@
 #include "util/timer.h"
 #include "geom/transform.h"
 #include "geom/geom.h"
-#include "gpu/shader.h"
-#include "gpu/mesh.h"
-#include "gpu/model.h"
-#include "gpu/scene.h"
+#include "graphics/shader.h"
+#include "graphics/mesh.h"
+#include "graphics/model.h"
+#include "graphics/scene.h"
 
 struct VideoSettings {
 	glm::ivec2 canvas = {};

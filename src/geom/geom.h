@@ -50,4 +50,14 @@ inline Sphere AABB_to_sphere(const AABB &aabb)
 	return sphere;
 }
 
+inline AABB confined_bounds(const AABB &a, const AABB &b)
+{
+	AABB bounds = {
+		(glm::min)(a.min, b.min),
+		(glm::max)(a.max, b.max)
+	};
+
+	return bounds;
+}
+
 };

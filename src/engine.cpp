@@ -181,15 +181,17 @@ void Engine::run()
 	culler.compile("shaders/culling.comp", GL_COMPUTE_SHADER);
 	culler.link();
 
-	gpu::Model sphere_model = gpu::Model("media/models/icosphere.glb");
-	gpu::Model cube_model = gpu::Model("media/models/cube.glb");
+	gpu::Model sphere_model = gpu::Model("media/models/primitives/icosphere.glb");
+	gpu::Model cube_model = gpu::Model("media/models/primitives/cube.glb");
 	gpu::Model teapot_model = gpu::Model("media/models/teapot.glb");
+	gpu::Model dragon_model = gpu::Model("media/models/dragon.glb");
 
 	gpu::SceneGroup scene = gpu::SceneGroup(&shader, &culler);
 
 	auto sphere_object = scene.find_object(&sphere_model);
 	auto cube_object = scene.find_object(&cube_model);
 	auto teapot_object = scene.find_object(&teapot_model);
+	auto dragon_object = scene.find_object(&dragon_model);
 
 	std::vector<std::unique_ptr<geom::Transform>> transforms;
 	for (int i = 0; i < 30; i++) {
@@ -208,6 +210,14 @@ void Engine::run()
 				transforms.push_back(std::move(transform));
 			}
 		}
+	}
+
+	for (int i = 0; i < 10; i++) {
+		auto transform = std::make_unique<geom::Transform>();
+		transform->position = glm::vec3(float(10*i), 10.f, -10.f);
+		transform->scale = glm::vec3(0.2f);
+		dragon_object->add_transform(transform.get());
+		transforms.push_back(std::move(transform));
 	}
 
 	while (state == EngineState::TITLE) {
