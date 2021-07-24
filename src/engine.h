@@ -9,6 +9,8 @@
 #include "graphics/model.h"
 #include "graphics/scene.h"
 
+#include "debugger.h"
+
 struct VideoSettings {
 	glm::ivec2 canvas = {};
 	float fov = 90.f;

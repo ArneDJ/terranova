@@ -188,6 +188,8 @@ void Engine::run()
 
 	gfx::SceneGroup scene = gfx::SceneGroup(&shader, &culler);
 
+	Debugger debugger = Debugger(&shader, &culler);
+
 	auto sphere_object = scene.find_object(&sphere_model);
 	auto cube_object = scene.find_object(&cube_model);
 	auto teapot_object = scene.find_object(&teapot_model);
@@ -202,6 +204,7 @@ void Engine::run()
 				transform->scale = glm::vec3(0.5f);
 				if (k % 10 == 0) {
 					teapot_object->add_transform(transform.get());
+					debugger.add_cube(teapot_model.bounds(), transform.get());
 				} else if (k % 2 == 0) {
 					cube_object->add_transform(transform.get());
 				} else {
@@ -217,12 +220,15 @@ void Engine::run()
 		transform->position = glm::vec3(float(10*i), 10.f, -10.f);
 		transform->scale = glm::vec3(0.2f);
 		dragon_object->add_transform(transform.get());
+		debugger.add_sphere(AABB_to_sphere(dragon_model.bounds()), transform.get());
 	}
 
 	while (state == EngineState::TITLE) {
 		frame_timer.begin();
 	
 		update_state();
+
+		debugger.update(camera);
 
 		scene.update(camera);
 
@@ -249,6 +255,8 @@ void Engine::run()
 		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		scene.display();
 		//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+		debugger.display();
 
 		/*
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
