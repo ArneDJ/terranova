@@ -217,7 +217,6 @@ void Engine::run()
 		transform->position = glm::vec3(float(10*i), 10.f, -10.f);
 		transform->scale = glm::vec3(0.2f);
 		dragon_object->add_transform(transform.get());
-		transforms.push_back(std::move(transform));
 	}
 
 	while (state == EngineState::TITLE) {
@@ -243,11 +242,13 @@ void Engine::run()
 		const glm::mat4 m = glm::rotate(glm::mat4(1.0f), 0.001f*SDL_GetTicks(), glm::vec3(1.0f, 1.0f, 1.0f));
 
 		shader.use();
-		shader.uniform_mat4("MODEL", m);
+		shader.uniform_mat4("MODEL", glm::mat4(1.f));
 
 		shader.uniform_bool("WIRED_MODE", false);
 		shader.uniform_bool("INDIRECT_DRAW", true);
+		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		scene.display();
+		//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 		/*
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);

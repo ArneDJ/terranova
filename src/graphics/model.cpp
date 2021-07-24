@@ -19,7 +19,6 @@
 #define CGLTF_IMPLEMENTATION
 
 #include "../geom/transform.h"
-#include "../geom/geom.h"
 #include "mesh.h"
 #include "model.h"
 
@@ -29,6 +28,14 @@ static void append_buffer(const cgltf_accessor *accessor,  std::vector<uint8_t> 
 static inline GLenum primitive_mode(cgltf_primitive_type type);
 static void print_gltf_error(cgltf_result error);
 static geom::AABB primitive_bounds(const cgltf_primitive &primitive);
+
+Model::Model(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices)
+{
+	auto mesh = std::make_unique<Mesh>();
+	mesh->create(vertices, indices);
+
+	m_meshes.push_back(std::move(mesh));
+}
 
 Model::Model(const std::string &filepath)
 {
@@ -66,6 +73,11 @@ void Model::display() const
 const std::vector<std::unique_ptr<Mesh>>& Model::meshes() const
 {
 	return m_meshes;
+}
+
+const geom::AABB& Model::bounds() const
+{
+	return m_bounds;
 }
 
 void Model::load(const cgltf_data *data)
@@ -211,10 +223,10 @@ void Model::load_visual_mesh(const cgltf_mesh *mesh_data)
 		index_start += index_count;
 	}
 
-	auto indirect_mesh = std::make_unique<Mesh>();
-	indirect_mesh->create(buffer_data, primitives);
+	auto mesh = std::make_unique<Mesh>();
+	mesh->create(buffer_data, primitives);
 
-	m_meshes.push_back(std::move(indirect_mesh));
+	m_meshes.push_back(std::move(mesh));
 }
 
 // according to glTF docs: 

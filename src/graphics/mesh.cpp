@@ -14,8 +14,6 @@
 #include "../extern/loguru/loguru.hpp"
 
 #include "../geom/frustum.h"
-#include "../geom/transform.h"
-#include "../geom/geom.h"
 #include "mesh.h"
 
 namespace gpu {
@@ -285,6 +283,7 @@ const geom::AABB& Mesh::bounds() const
 	return m_bounding_box;
 }
 	
+/*
 CubeMesh::CubeMesh(const glm::vec3 &min, const glm::vec3 &max)
 {
 	std::vector<Vertex> vertices = {
@@ -309,6 +308,7 @@ CubeMesh::CubeMesh(const glm::vec3 &min, const glm::vec3 &max)
 
 	create(vertices, indices);
 }
+*/
 
 GLenum index_type(size_t size)
 {

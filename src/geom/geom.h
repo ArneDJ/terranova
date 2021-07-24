@@ -3,14 +3,16 @@
 
 namespace geom {
 
+template <class T> struct Bounds {
+	T min = {};
+	T max = {};
+};
+
+using AABB = Bounds<glm::vec3>;
+
 struct Sphere {
 	glm::vec3 center = {};
 	float radius = 1.f;
-};
-
-struct AABB {
-	glm::vec3 min = {};
-	glm::vec3 max = {};
 };
 
 template<typename T>
@@ -44,7 +46,7 @@ inline Sphere AABB_to_sphere(const AABB &aabb)
 {
 	Sphere sphere = {
 		midpoint(aabb.min, aabb.max),
-		glm::distance(aabb.min, aabb.max)
+		0.5f * glm::distance(aabb.min, aabb.max)
 	};
 
 	return sphere;

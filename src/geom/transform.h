@@ -21,4 +21,18 @@ struct Transform {
 	}
 };
 
+inline Transform bounds_to_transform(const glm::vec3 &min, const glm::vec3 &max)
+{
+	Transform transform;
+
+	// position is the center of bounding box
+	transform.position = 0.5f * (max + min);
+	// scale
+	transform.scale.x = 0.5f * glm::distance(min.x, max.x);
+	transform.scale.y = 0.5f * glm::distance(min.y, max.y);
+	transform.scale.z = 0.5f * glm::distance(min.z, max.z);
+
+	return transform;
+}
+
 };

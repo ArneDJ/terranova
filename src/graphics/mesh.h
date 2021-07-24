@@ -1,3 +1,6 @@
+#pragma once 
+#include "../geom/geom.h"
+
 namespace gpu {
 
 struct Vertex {
@@ -134,10 +137,12 @@ protected:
 	GLenum m_index_type = GL_UNSIGNED_INT;
 };
 
+/*
 class CubeMesh : public Mesh {
 public:
 	CubeMesh(const glm::vec3 &min, const glm::vec3 &max);
 };
+*/
 
 GLenum index_type(size_t size);
 

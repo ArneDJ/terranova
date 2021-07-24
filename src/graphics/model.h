@@ -22,9 +22,11 @@ struct Skin {
 class Model {
 public:
 	Model(const std::string &filepath);
+	Model(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices);
 public:
 	void display() const;
 	const std::vector<std::unique_ptr<Mesh>>& meshes() const;
+	const geom::AABB& bounds() const;
 private:
 	geom::AABB m_bounds;
 	std::vector<std::unique_ptr<Node>> m_nodes;
