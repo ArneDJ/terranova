@@ -24,7 +24,7 @@
 
 #include "scene.h"
 
-namespace gpu {
+namespace gfx {
 
 IndirectMesh::IndirectMesh(const Mesh *mesh)
 	: m_mesh(mesh)

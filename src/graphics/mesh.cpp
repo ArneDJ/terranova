@@ -16,7 +16,7 @@
 #include "../geom/frustum.h"
 #include "mesh.h"
 
-namespace gpu {
+namespace gfx {
 
 #define BUFFER_OFFSET(i) ((char *)NULL + (i))
 
@@ -221,38 +221,46 @@ void Mesh::create(const MeshBufferData &data, const std::vector<Primitive> &prim
 		m_bounding_box = geom::confined_bounds(primitive.bounds, m_bounding_box);
 	}
 
-	// TODO upload directly
-	std::vector<GLubyte> buffer;
-	buffer.insert(buffer.end(), data.positions.begin(), data.positions.end());
-	buffer.insert(buffer.end(), data.normals.begin(), data.normals.end());
-	buffer.insert(buffer.end(), data.texcoords.begin(), data.texcoords.end());
-	buffer.insert(buffer.end(), data.joints.begin(), data.joints.end());
-	buffer.insert(buffer.end(), data.weights.begin(), data.weights.end());
-
-	const GLbitfield flags = 0;
-	
 	m_vao.bind();
 
 	// add index buffer
 	if (data.indices.size() > 0) {
 		m_ebo.set_target(GL_ELEMENT_ARRAY_BUFFER);
-		m_ebo.store_immutable(data.indices.size(), data.indices.data(), flags);
+		m_ebo.store_immutable(data.indices.size(), data.indices.data(), 0);
 	}
 
 	// add position buffer
 	m_vbo.set_target(GL_ARRAY_BUFFER);
-	m_vbo.store_immutable(buffer.size(), buffer.data(), flags);
-	
+
+	size_t total_size = data.positions.size() + data.normals.size() + data.texcoords.size() + data.joints.size() + data.weights.size();
+	size_t offset = 0;
+
+	m_vbo.store_mutable(total_size, nullptr, GL_STATIC_DRAW);
+
 	// positions
-	m_vao.set_attribute(0, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0));
+	m_vao.set_attribute(0, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(offset));
+	m_vbo.store_mutable_part(offset, data.positions.size(), data.positions.data());
+	offset += data.positions.size();
+
 	// normals
-	m_vao.set_attribute(1, 3, GL_FLOAT, GL_TRUE, 0, BUFFER_OFFSET(data.positions.size()));
+	m_vao.set_attribute(1, 3, GL_FLOAT, GL_TRUE, 0, BUFFER_OFFSET(offset));
+	m_vbo.store_mutable_part(offset, data.normals.size(), data.normals.data());
+	offset += data.normals.size();
+
 	// texcoords
-	m_vao.set_attribute(2, 2, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(data.positions.size() + data.normals.size()));
+	m_vao.set_attribute(2, 2, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(offset));
+	m_vbo.store_mutable_part(offset, data.texcoords.size(), data.texcoords.data());
+	offset += data.texcoords.size();
+
 	// joints
-	m_vao.set_integer_attribute(3, 4, GL_UNSIGNED_BYTE, 0, BUFFER_OFFSET(data.positions.size() + data.normals.size() + data.texcoords.size()));
+	m_vao.set_integer_attribute(3, 4, GL_UNSIGNED_BYTE, 0, BUFFER_OFFSET(offset));
+	m_vbo.store_mutable_part(offset, data.joints.size(), data.joints.data());
+	offset += data.joints.size();
+
 	// weights
-	m_vao.set_attribute(4, 4, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(data.positions.size() + data.normals.size() + data.texcoords.size() + data.joints.size()));
+	m_vao.set_attribute(4, 4, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(offset));
+	m_vbo.store_mutable_part(offset, data.weights.size(), data.weights.data());
+	offset += data.weights.size();
 }
 	
 void Mesh::draw() const
@@ -283,33 +291,6 @@ const geom::AABB& Mesh::bounds() const
 	return m_bounding_box;
 }
 	
-/*
-CubeMesh::CubeMesh(const glm::vec3 &min, const glm::vec3 &max)
-{
-	std::vector<Vertex> vertices = {
-		{ { min.x, min.y, max.z }, { 1.f, 0.f, 1.f } },
-		{ { max.x, min.y, max.z }, { 1.f, 0.f, 1.f } },
-		{ { max.x, max.y, max.z }, { 1.f, 0.f, 1.f } },
-		{ { min.x, max.y, max.z }, { 1.f, 0.f, 1.f } },
-		{ { min.x, min.y, min.z }, { 1.f, 0.f, 1.f } },
-		{ { max.x, min.y, min.z }, { 1.f, 0.f, 1.f } },
-		{ { max.x, max.y, min.z }, { 1.f, 0.f, 1.f } },
-		{ { min.x, max.y, min.z }, { 1.f, 0.f, 1.f } }
-	};
-	// indices
-	const std::vector<uint32_t> indices = {
-		0, 1, 2, 2, 3, 0,
-		1, 5, 6, 6, 2, 1,
-		7, 6, 5, 5, 4, 7,
-		4, 0, 3, 3, 7, 4,
-		4, 5, 1, 1, 0, 4,
-		3, 2, 6, 6, 7, 3
-	};
-
-	create(vertices, indices);
-}
-*/
-
 GLenum index_type(size_t size)
 {
 	switch (size) {

@@ -1,7 +1,7 @@
 #pragma once 
 #include "../geom/geom.h"
 
-namespace gpu {
+namespace gfx {
 
 struct Vertex {
 	glm::vec3 position = {};

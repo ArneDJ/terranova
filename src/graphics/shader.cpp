@@ -13,7 +13,7 @@
 
 #include "shader.h"
 
-namespace gpu {
+namespace gfx {
 
 Shader::Shader()
 {

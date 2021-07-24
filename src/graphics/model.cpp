@@ -22,7 +22,7 @@
 #include "mesh.h"
 #include "model.h"
 
-namespace gpu {
+namespace gfx {
 
 static void append_buffer(const cgltf_accessor *accessor,  std::vector<uint8_t> &buffer);
 static inline GLenum primitive_mode(cgltf_primitive_type type);
@@ -148,18 +148,6 @@ void Model::load_nodes(const cgltf_data *data)
 			}
 		}
 	}
-
-	/*
-	for (const auto &node : m_nodes) {
-		std::cout << "Node: " + node->name << std::endl;
-		if (node->parent) {
-			std::cout << "Node parent: " << node->parent->name << std::endl;
-		}
-		for (const auto &child : node->children) {
-			std::cout << "Node child: " << child->name << std::endl;
-		}
-	}
-	*/
 }
 	
 void Model::load_visual_mesh(const cgltf_mesh *mesh_data)

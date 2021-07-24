@@ -1,7 +1,7 @@
 #pragma once
 #include "../extern/cgltf/cgltf.h"
 
-namespace gpu {
+namespace gfx {
 
 struct Node {
 	std::string name;

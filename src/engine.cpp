@@ -172,21 +172,21 @@ void Engine::run()
 	camera.teleport(glm::vec3(10.f));
 	camera.target(glm::vec3(0.f));
 
-	gpu::Shader shader;
+	gfx::Shader shader;
 	shader.compile("shaders/triangle.vert", GL_VERTEX_SHADER);
 	shader.compile("shaders/triangle.frag", GL_FRAGMENT_SHADER);
 	shader.link();
 
-	gpu::Shader culler;
+	gfx::Shader culler;
 	culler.compile("shaders/culling.comp", GL_COMPUTE_SHADER);
 	culler.link();
 
-	gpu::Model sphere_model = gpu::Model("media/models/primitives/icosphere.glb");
-	gpu::Model cube_model = gpu::Model("media/models/primitives/cube.glb");
-	gpu::Model teapot_model = gpu::Model("media/models/teapot.glb");
-	gpu::Model dragon_model = gpu::Model("media/models/dragon.glb");
+	gfx::Model sphere_model = gfx::Model("media/models/primitives/icosphere.glb");
+	gfx::Model cube_model = gfx::Model("media/models/primitives/cube.glb");
+	gfx::Model teapot_model = gfx::Model("media/models/teapot.glb");
+	gfx::Model dragon_model = gfx::Model("media/models/dragon.glb");
 
-	gpu::SceneGroup scene = gpu::SceneGroup(&shader, &culler);
+	gfx::SceneGroup scene = gfx::SceneGroup(&shader, &culler);
 
 	auto sphere_object = scene.find_object(&sphere_model);
 	auto cube_object = scene.find_object(&cube_model);

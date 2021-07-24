@@ -1,4 +1,4 @@
-namespace gpu {
+namespace gfx {
 
 struct CameraBlock {
 	glm::mat4 view;
@@ -54,7 +54,7 @@ public:
 	void display() const;
 private:
 	std::unordered_map<const Model*, std::unique_ptr<SceneObject>> m_objects;
-	gpu::BufferObject m_camera_ubo;
+	BufferObject m_camera_ubo;
 private:
 	const Shader *m_visual_shader = nullptr;
 	const Shader *m_culling_shader = nullptr;

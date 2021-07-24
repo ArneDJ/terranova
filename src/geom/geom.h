@@ -3,12 +3,12 @@
 
 namespace geom {
 
-template <class T> struct Bounds {
+template <class T> struct Bounding {
 	T min = {};
 	T max = {};
 };
 
-using AABB = Bounds<glm::vec3>;
+using AABB = Bounding<glm::vec3>;
 
 struct Sphere {
 	glm::vec3 center = {};
