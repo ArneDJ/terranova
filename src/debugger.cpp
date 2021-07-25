@@ -10,7 +10,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include "util/camera.h"
-#include "geom/transform.h"
+#include "geometry/transform.h"
 #include "graphics/shader.h"
 #include "graphics/mesh.h"
 #include "graphics/model.h"

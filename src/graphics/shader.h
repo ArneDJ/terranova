@@ -18,11 +18,18 @@ public:
 	void uniform_vec4(const GLchar *name, glm::vec4 vector) const;
 	void uniform_mat4(const GLchar *name, glm::mat4 matrix) const;
 	void uniform_mat4_array(const GLchar *name, const std::vector<glm::mat4> &matrices) const;
+public:
 	GLint uniform_location(const GLchar *name) const;
-	void bind_block(GLuint index, GLuint binding) const;
+	GLuint uniform_block_index(const GLchar *name) const;
+	GLuint resource_index(GLenum interface, const GLchar *name) const;
+	void bind_uniform_block(GLuint index, GLuint binding) const;
+	void bind_storage_block(GLuint index, GLuint binding) const;
+public:
+	void set_storage_block(const GLchar *name, GLuint binding) const;
+	void set_uniform_block(const GLchar *name, GLuint binding) const;
 private:
-	GLuint program = 0;
-	std::vector<GLuint> shaders;
+	GLuint m_program = 0;
+	std::vector<GLuint> m_shaders;
 };
 
 };

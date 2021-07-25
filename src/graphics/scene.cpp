@@ -14,9 +14,9 @@
 
 #include "../extern/loguru/loguru.hpp"
 
-#include "../geom/frustum.h"
-#include "../geom/transform.h"
-#include "../geom/geom.h"
+#include "../geometry/frustum.h"
+#include "../geometry/transform.h"
+#include "../geometry/geometry.h"
 #include "../util/camera.h"
 #include "mesh.h"
 #include "model.h"
@@ -25,6 +25,20 @@
 #include "scene.h"
 
 namespace gfx {
+
+struct BindingBlock {
+	const GLchar *name;
+	GLuint index;
+};
+
+// shader storage buffers
+static const BindingBlock BLOCK_COMMANDS = { "DrawCommandsBlock", 0 };
+static const BindingBlock BLOCK_PADDED_TRANSFORMS = { "PaddedTransformBlock", 1 };
+static const BindingBlock BLOCK_MODEL_MATRICES = { "ModelMatricesBlock", 2 };
+
+// uniform buffers 
+static const BindingBlock BLOCK_CULL_SHAPE = { "CullShapeBlock", 3 };
+static const BindingBlock BLOCK_CAMERA = { "CameraBlock", 4 };
 
 IndirectMesh::IndirectMesh(const Mesh *mesh)
 	: m_mesh(mesh)
@@ -56,7 +70,7 @@ void IndirectMesh::update()
 void IndirectMesh::dispatch()
 {
 	for (const auto &drawer : m_drawers) {
-		drawer->bind_for_culling(0, 3);
+		drawer->bind_for_culling(BLOCK_COMMANDS.index, BLOCK_CULL_SHAPE.index);
 		glDispatchCompute(m_group_count, 1, 1);
 		glMemoryBarrier(GL_COMMAND_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
 	}
@@ -124,8 +138,8 @@ uint32_t SceneObject::instance_count() const
 
 void SceneObject::dispatch_frustum_cull()
 {
-	m_padded_transforms.buffer.bind_base(1);
-	m_model_matrices.buffer.bind_base(2);
+	m_padded_transforms.buffer.bind_base(BLOCK_PADDED_TRANSFORMS.index);
+	m_model_matrices.buffer.bind_base(BLOCK_MODEL_MATRICES.index);
 
 	for (auto &indirect_mesh : m_indirect_meshes) {
 		indirect_mesh->dispatch();
@@ -134,7 +148,7 @@ void SceneObject::dispatch_frustum_cull()
 
 void SceneObject::display() const
 {
-	m_model_matrices.buffer.bind_base(2); // TODO use persistent-Mapping
+	m_model_matrices.buffer.bind_base(BLOCK_MODEL_MATRICES.index);
 
 	//m_model->bind_textures();
 		
@@ -147,6 +161,16 @@ SceneGroup::SceneGroup(const Shader *visual_shader, const Shader *culling_shader
 	: m_visual_shader(visual_shader), m_culling_shader(culling_shader)
 {
 	m_camera_ubo.set_target(GL_UNIFORM_BUFFER);
+
+	culling_shader->set_storage_block(BLOCK_COMMANDS.name, BLOCK_COMMANDS.index);
+	culling_shader->set_storage_block(BLOCK_PADDED_TRANSFORMS.name, BLOCK_PADDED_TRANSFORMS.index);
+	culling_shader->set_storage_block(BLOCK_MODEL_MATRICES.name, BLOCK_MODEL_MATRICES.index);
+	
+	culling_shader->set_uniform_block(BLOCK_CULL_SHAPE.name, BLOCK_CULL_SHAPE.index);
+	culling_shader->set_uniform_block(BLOCK_CAMERA.name, BLOCK_CAMERA.index);
+	
+	visual_shader->set_storage_block(BLOCK_MODEL_MATRICES.name, BLOCK_MODEL_MATRICES.index);
+	visual_shader->set_uniform_block(BLOCK_CAMERA.name, BLOCK_CAMERA.index);
 }
 
 SceneObject* SceneGroup::find_object(const Model *model)
@@ -180,7 +204,7 @@ void SceneGroup::cull_frustum()
 {
 	m_culling_shader->use();
 
-	m_camera_ubo.bind_base(4);
+	m_camera_ubo.bind_base(BLOCK_CAMERA.index);
 
 	for (const auto &object : m_objects) {
 		object.second->dispatch_frustum_cull();
@@ -191,7 +215,7 @@ void SceneGroup::display() const
 {
 	m_visual_shader->use();
 	
-	m_camera_ubo.bind_base(4);
+	m_camera_ubo.bind_base(BLOCK_CAMERA.index);
 
 	for (const auto &object : m_objects) {
 		object.second->display();

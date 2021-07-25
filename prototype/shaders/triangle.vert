@@ -4,12 +4,12 @@ layout (location = 0) in vec3 vposition;
 layout (location = 1) in vec3 vnormal;
 layout (location = 2) in vec2 vtexcoords;
 
-layout (std430, binding = 2) readonly buffer ModelMatricesBlock
+layout (std430) readonly buffer ModelMatricesBlock
 {
 	mat4 model_matrices[];
 };
 
-layout (binding = 4) uniform CameraBlock {
+uniform CameraBlock {
 	mat4 view;
 	mat4 projection;
 	mat4 view_projection;

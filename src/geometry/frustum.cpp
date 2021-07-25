@@ -37,15 +37,4 @@ bool Frustum::sphere_intersects(const glm::vec3 &position, float radius) const
 	return true;
 }
 
-bool Frustum::sphere_intersects(const glm::vec4 &sphere) const
-{
-	for (const auto &plane : planes) {
-		if (glm::dot(sphere, plane) + sphere.w < 0.0) {
-			return false;
-		}
-	}
-
-	return true;
-}
-
 };

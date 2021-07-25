@@ -10,7 +10,7 @@ struct IndexedIndirectCommand {
 	uint first_instance;
 };
 
-layout (std430, binding = 0) writeonly buffer DrawCommandsBlock
+layout (std430) writeonly buffer DrawCommandsBlock
 {
 	IndexedIndirectCommand indirect_draws[];
 };
@@ -21,21 +21,21 @@ struct PaddedTransform {
 	vec4 scale;
 };
 
-layout (std430, binding = 1) readonly buffer PaddedTransformBlock
+layout (std430) readonly buffer PaddedTransformBlock
 {
 	PaddedTransform padded_transforms[];
 };
 
-layout (std430, binding = 2) buffer ModelMatricesBlock
+layout (std430) buffer ModelMatricesBlock
 {
 	mat4 model_matrices[];
 };
 
-layout (binding = 3) uniform CullShapeBlock {
+uniform CullShapeBlock {
 	vec4 sphere; // xyz: center position, w: radius
 } cull_shape;
 
-layout (binding = 4) uniform CameraBlock {
+uniform CameraBlock {
 	mat4 view;
 	mat4 projection;
 	mat4 view_projection;

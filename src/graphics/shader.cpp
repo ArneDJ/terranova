@@ -17,21 +17,21 @@ namespace gfx {
 
 Shader::Shader()
 {
-	program = glCreateProgram();
+	m_program = glCreateProgram();
 }
 
 Shader::~Shader()
 {
 	// detach and delete shader objects
-	for (GLuint object : shaders) {
+	for (GLuint object : m_shaders) {
 		if (glIsShader(object) == GL_TRUE) {
-			glDetachShader(program, object);
+			glDetachShader(m_program, object);
 			glDeleteShader(object);
 		}
 	}
 
 	// delete shader program
-	if (glIsProgram(program) == GL_TRUE) { glDeleteProgram(program); }
+	if (glIsProgram(m_program) == GL_TRUE) { glDeleteProgram(m_program); }
 }
 
 void Shader::compile(const std::string &filepath, GLenum type)
@@ -76,32 +76,32 @@ void Shader::compile_source(const GLchar *source, GLenum type)
 		return;
 	}
 
-	shaders.push_back(shader);
+	m_shaders.push_back(shader);
 }
 
 void Shader::link()
 {
 	// attach the shaders to the shader program
-	for (GLuint object : shaders) {
+	for (GLuint object : m_shaders) {
 		if (glIsShader(object) == GL_TRUE) {
-			glAttachShader(program, object);
+			glAttachShader(m_program, object);
 		}
 	}
 
-	glLinkProgram(program);
+	glLinkProgram(m_program);
 
 	// check if shader program was linked
 	GLint linked;
-	glGetProgramiv(program, GL_LINK_STATUS, &linked);
+	glGetProgramiv(m_program, GL_LINK_STATUS, &linked);
 	if (!linked) {
 		GLsizei len;
-		glGetProgramiv(program, GL_INFO_LOG_LENGTH, &len);
+		glGetProgramiv(m_program, GL_INFO_LOG_LENGTH, &len);
 		std::vector<GLchar> log(len);
-		glGetProgramInfoLog(program, len, &len, log.data());
+		glGetProgramInfoLog(m_program, len, &len, log.data());
 		LOG_F(ERROR, "Program linking failed: %s", log.data());
 
-		for (GLuint object : shaders) {
-			glDetachShader(program, object);
+		for (GLuint object : m_shaders) {
+			glDetachShader(m_program, object);
 			glDeleteShader(object);
 		}
 	}
@@ -109,57 +109,94 @@ void Shader::link()
 
 void Shader::use() const
 {
-	glUseProgram(program);
+	glUseProgram(m_program);
 }
 
 void Shader::uniform_bool(const GLchar *name, bool boolean) const
 {
-	glUniform1i(glGetUniformLocation(program, name), boolean);
+	glUniform1i(glGetUniformLocation(m_program, name), boolean);
 }
 
 void Shader::uniform_int(const GLchar *name, int integer) const
 {
-	glUniform1i(glGetUniformLocation(program, name), integer);
+	glUniform1i(glGetUniformLocation(m_program, name), integer);
 }
 
 void Shader::uniform_float(const GLchar *name, GLfloat scalar) const
 {
-	glUniform1f(glGetUniformLocation(program, name), scalar);
+	glUniform1f(glGetUniformLocation(m_program, name), scalar);
 }
 
 void Shader::uniform_vec2(const GLchar *name, glm::vec2 vector) const
 {
-	glUniform2fv(glGetUniformLocation(program, name), 1, glm::value_ptr(vector));
+	glUniform2fv(glGetUniformLocation(m_program, name), 1, glm::value_ptr(vector));
 }
 
 void Shader::uniform_vec3(const GLchar *name, glm::vec3 vector) const
 {
-	glUniform3fv(glGetUniformLocation(program, name), 1, glm::value_ptr(vector));
+	glUniform3fv(glGetUniformLocation(m_program, name), 1, glm::value_ptr(vector));
 }
 
 void Shader::uniform_vec4(const GLchar *name, glm::vec4 vector) const
 {
-	glUniform4fv(glGetUniformLocation(program, name), 1, glm::value_ptr(vector));
+	glUniform4fv(glGetUniformLocation(m_program, name), 1, glm::value_ptr(vector));
 }
 
 void Shader::uniform_mat4(const GLchar *name, glm::mat4 matrix) const
 {
-	glUniformMatrix4fv(glGetUniformLocation(program, name), 1, GL_FALSE, glm::value_ptr(matrix));
+	glUniformMatrix4fv(glGetUniformLocation(m_program, name), 1, GL_FALSE, glm::value_ptr(matrix));
 }
 
 void Shader::uniform_mat4_array(const GLchar *name, const std::vector<glm::mat4> &matrices) const
 {
-	glUniformMatrix4fv(glGetUniformLocation(program, name), matrices.size(), GL_FALSE, glm::value_ptr(matrices[0]));
+	glUniformMatrix4fv(glGetUniformLocation(m_program, name), matrices.size(), GL_FALSE, glm::value_ptr(matrices[0]));
 }
 
 GLint Shader::uniform_location(const GLchar *name) const
 {
-	return glGetUniformLocation(program, name);
+	return glGetUniformLocation(m_program, name);
 }
 	
-void Shader::bind_block(GLuint index, GLuint binding) const
+GLuint Shader::uniform_block_index(const GLchar *name) const
 {
-	glShaderStorageBlockBinding(program, index, binding);
+	return glGetUniformBlockIndex(m_program, name);
+}
+	
+GLuint Shader::resource_index(GLenum interface, const GLchar *name) const
+{
+	return glGetProgramResourceIndex(m_program, interface, name);
+}
+	
+void Shader::bind_uniform_block(GLuint index, GLuint binding) const
+{
+	glUniformBlockBinding(m_program, index, binding);
+}
+	
+void Shader::bind_storage_block(GLuint index, GLuint binding) const
+{
+	glShaderStorageBlockBinding(m_program, index, binding);
+}
+
+void Shader::set_storage_block(const GLchar *name, GLuint binding) const
+{
+	GLuint index = resource_index(GL_SHADER_STORAGE_BLOCK, name);
+
+	if (index == GL_INVALID_INDEX) {
+		LOG_F(ERROR, "Shader storage block binding error: invalid index for %s", name);
+	}
+
+	bind_storage_block(index, binding);
+}
+
+void Shader::set_uniform_block(const GLchar *name, GLuint binding) const
+{
+	GLuint index = uniform_block_index(name);
+
+	if (index == GL_INVALID_INDEX) {
+		LOG_F(ERROR, "Shader uniform block binding error: invalid index for %s", name);
+	}
+
+	bind_uniform_block(index, binding);
 }
 
 };

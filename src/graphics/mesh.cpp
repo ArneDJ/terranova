@@ -13,7 +13,7 @@
 
 #include "../extern/loguru/loguru.hpp"
 
-#include "../geom/frustum.h"
+#include "../geometry/frustum.h"
 #include "mesh.h"
 
 namespace gfx {

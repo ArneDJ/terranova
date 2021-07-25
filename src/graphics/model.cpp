@@ -18,7 +18,7 @@
 
 #define CGLTF_IMPLEMENTATION
 
-#include "../geom/transform.h"
+#include "../geometry/transform.h"
 #include "mesh.h"
 #include "model.h"
 

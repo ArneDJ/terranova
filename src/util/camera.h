@@ -1,5 +1,5 @@
 #pragma once
-#include "../geom/frustum.h"
+#include "../geometry/frustum.h"
 
 namespace util {
 

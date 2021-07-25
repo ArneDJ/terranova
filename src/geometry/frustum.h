@@ -10,8 +10,6 @@ public:
 public:
 	void update(const glm::mat4 &matrix);
 	bool sphere_intersects(const glm::vec3 &position, float radius) const;
-	// thightly packed sphere data: xyz = position, w = radius
-	bool sphere_intersects(const glm::vec4 &sphere) const;
 };
 
 };
