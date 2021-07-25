@@ -29,6 +29,7 @@ public:
 	SceneObject(const Model *model);
 public:
 	void add_transform(const geom::Transform *transform);
+	void update_transforms();
 	void update_buffers();
 	void dispatch_frustum_cull();
 public:
@@ -49,7 +50,8 @@ public:
 public:
 	SceneObject* find_object(const Model *model);
 public:
-	void update(const util::Camera &camera);
+	void update_transforms();
+	void update_buffers(const util::Camera &camera);
 	void cull_frustum();
 	void display() const;
 private:

@@ -17,6 +17,101 @@
 
 #include "engine.h"
 
+class PropEntity {
+public:
+	PropEntity(const glm::vec3 &origin)
+	{
+		m_shape = std::make_unique<btBoxShape>(btVector3(1,1,1));
+
+		/// Create Dynamic Objects
+		btTransform startTransform;
+		startTransform.setIdentity();
+
+		btScalar mass(1.f);
+
+		//rigidbody is dynamic if and only if mass is non zero, otherwise static
+		bool isDynamic = (mass != 0.f);
+
+		btVector3 localInertia(0, 0, 0);
+		if (isDynamic) {
+			m_shape->calculateLocalInertia(mass, localInertia);
+		}
+
+		startTransform.setOrigin(btVector3(origin.x, origin.y, origin.z));
+
+		m_motion = std::make_unique<btDefaultMotionState>(startTransform);
+		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, m_motion.get(), m_shape.get(), localInertia);
+		m_body = std::make_unique<btRigidBody>(rbInfo);
+
+		m_transform = std::make_unique<geom::Transform>();
+		m_transform->position = origin;
+	}
+public:
+	btRigidBody* body()
+	{
+		return m_body.get();
+	}
+	void update()
+	{
+		btTransform transform;
+		m_motion->getWorldTransform(transform);
+
+		m_transform->position = fysx::bt_to_vec3(transform.getOrigin());
+		m_transform->rotation = fysx::bt_to_quat(transform.getRotation());
+	}
+public:
+	const geom::Transform* transform()
+	{
+		return m_transform.get();
+	}
+private:
+	std::unique_ptr<btDefaultMotionState> m_motion;
+	std::unique_ptr<btCollisionShape> m_shape;
+	std::unique_ptr<btRigidBody> m_body;
+private:
+	std::unique_ptr<geom::Transform> m_transform;
+};
+
+class FixedEntity {
+public:
+	FixedEntity()
+	{
+		m_shape = std::make_unique<btStaticPlaneShape>(btVector3(0.f, 1.f, 0.f), 0.f);
+
+		btTransform transform;
+		transform.setIdentity();
+		transform.setOrigin(btVector3(0, 0, 0));
+
+		btScalar mass(0.);
+
+		btVector3 inertia(0, 0, 0);
+
+		//using motionstate is optional, it provides interpolation capabilities, and only synchronizes 'active' objects
+		m_motion = std::make_unique<btDefaultMotionState>(transform);
+		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, m_motion.get(), m_shape.get(), inertia);
+		m_body = std::make_unique<btRigidBody>(rbInfo);
+
+		m_transform = std::make_unique<geom::Transform>();
+		m_transform->position = glm::vec3(0.f, 0.f, 0.f);
+	}
+public:
+	btRigidBody* body()
+	{
+		return m_body.get();
+	}
+public:
+	const geom::Transform* transform()
+	{
+		return m_transform.get();
+	}
+private:
+	std::unique_ptr<btDefaultMotionState> m_motion;
+	std::unique_ptr<btCollisionShape> m_shape;
+	std::unique_ptr<btRigidBody> m_body;
+private:
+	std::unique_ptr<geom::Transform> m_transform;
+};
+
 static double g_elapsed = 0.0;
 static bool g_freeze_frustum = false;
 
@@ -181,6 +276,7 @@ void Engine::run()
 	culler.compile("shaders/culling.comp", GL_COMPUTE_SHADER);
 	culler.link();
 
+	gfx::Model plane_model = gfx::Model("media/models/primitives/plane.glb");
 	gfx::Model sphere_model = gfx::Model("media/models/primitives/icosphere.glb");
 	gfx::Model cube_model = gfx::Model("media/models/primitives/cube.glb");
 	gfx::Model teapot_model = gfx::Model("media/models/teapot.glb");
@@ -190,30 +286,13 @@ void Engine::run()
 
 	Debugger debugger = Debugger(&shader, &culler);
 
+	auto plane_object = scene.find_object(&plane_model);
 	auto sphere_object = scene.find_object(&sphere_model);
 	auto cube_object = scene.find_object(&cube_model);
 	auto teapot_object = scene.find_object(&teapot_model);
 	auto dragon_object = scene.find_object(&dragon_model);
 
 	std::vector<std::unique_ptr<geom::Transform>> transforms;
-	for (int i = 0; i < 30; i++) {
-		for (int j = 0; j < 30; j++) {
-			for (int k = 0; k < 30; k++) {
-				auto transform = std::make_unique<geom::Transform>();
-				transform->position = glm::vec3(float(3*i), float(3*j), float(3*k));
-				transform->scale = glm::vec3(0.5f);
-				if (k % 10 == 0) {
-					teapot_object->add_transform(transform.get());
-					debugger.add_cube(teapot_model.bounds(), transform.get());
-				} else if (k % 2 == 0) {
-					cube_object->add_transform(transform.get());
-				} else {
-					sphere_object->add_transform(transform.get());
-				}
-				transforms.push_back(std::move(transform));
-			}
-		}
-	}
 
 	for (int i = 0; i < 10; i++) {
 		auto transform = std::make_unique<geom::Transform>();
@@ -221,6 +300,26 @@ void Engine::run()
 		transform->scale = glm::vec3(0.2f);
 		dragon_object->add_transform(transform.get());
 		debugger.add_sphere(AABB_to_sphere(dragon_model.bounds()), transform.get());
+		transforms.push_back(std::move(transform));
+	}
+
+	FixedEntity plane;
+	physics.add_body(plane.body());
+	plane_object->add_transform(plane.transform());
+
+	std::vector<std::unique_ptr<PropEntity>> cubes;
+	for (int i = 0; i < 10; i++) {
+		auto cube_prop = std::make_unique<PropEntity>(glm::vec3(-10.f, 10.f + (5*i), -10.f));
+		physics.add_body(cube_prop->body());
+						
+		geom::AABB bounds = {
+			glm::vec3(-1.f),
+			glm::vec3(1.f)
+		};
+
+		debugger.add_cube(bounds, cube_prop->transform());
+		sphere_object->add_transform(cube_prop->transform());
+		cubes.push_back(std::move(cube_prop));
 	}
 
 	while (state == EngineState::TITLE) {
@@ -228,9 +327,16 @@ void Engine::run()
 	
 		update_state();
 
+		physics.update(frame_timer.delta_seconds());
+
+		for (auto &cube_prop : cubes) {
+			cube_prop->update();
+		}
+
 		debugger.update(camera);
 
-		scene.update(camera);
+		scene.update_transforms();
+		scene.update_buffers(camera);
 
 		auto start = std::chrono::steady_clock::now();
 
@@ -256,6 +362,7 @@ void Engine::run()
 		scene.display();
 		//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
+		shader.uniform_bool("WIRED_MODE", true);
 		debugger.display();
 
 		/*
@@ -277,5 +384,6 @@ void Engine::run()
 			state = EngineState::EXIT;
 		}
 	}
-
+	
+	physics.clear_objects();
 }

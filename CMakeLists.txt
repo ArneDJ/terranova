@@ -13,6 +13,8 @@ find_package(OpenGL REQUIRED COMPONENTS OpenGL)
 find_package(GLEW REQUIRED)
 include_directories(GLEW::GLEW)
 
+include_directories("src/extern/bullet")
+
 file(GLOB all_SRCS
         "${PROJECT_SOURCE_DIR}/src/*.cpp"
         "${PROJECT_SOURCE_DIR}/src/*.h"
@@ -22,6 +24,8 @@ file(GLOB all_SRCS
         "${PROJECT_SOURCE_DIR}/src/util/*.h"
         "${PROJECT_SOURCE_DIR}/src/graphics/*.cpp"
         "${PROJECT_SOURCE_DIR}/src/graphics/*.h"
+        "${PROJECT_SOURCE_DIR}/src/physics/*.cpp"
+        "${PROJECT_SOURCE_DIR}/src/physics/*.h"
         "${PROJECT_SOURCE_DIR}/src/extern/loguru/*.cpp"
         "${PROJECT_SOURCE_DIR}/src/extern/loguru/*.h"
 	"${PROJECT_SOURCE_DIR}/src/extern/imgui/*.cpp"
@@ -34,3 +38,7 @@ target_link_libraries(${PROJECT_NAME} dl)
 target_link_libraries(${PROJECT_NAME} SDL2::SDL2 SDL2::SDL2main)
 target_link_libraries(${PROJECT_NAME} GLEW::GLEW)
 target_link_libraries(${PROJECT_NAME} OpenGL::OpenGL)
+
+target_link_libraries(${PROJECT_NAME}  ${CMAKE_SOURCE_DIR}/lib/libBulletDynamics.a)
+target_link_libraries(${PROJECT_NAME}  ${CMAKE_SOURCE_DIR}/lib/libBulletCollision.a)
+target_link_libraries(${PROJECT_NAME}  ${CMAKE_SOURCE_DIR}/lib/libLinearMath.a)

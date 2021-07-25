@@ -34,6 +34,7 @@ void Debugger::add_cube(const geom::AABB &bounds, const geom::Transform *transfo
 
 	entity->original = transform;
 
+	// FIXME put in function
 	entity->final_transform = std::make_unique<geom::Transform>();
 	entity->final_transform->position = transform->position + (transform->scale * entity->shape.position);
 	entity->final_transform->rotation = transform->rotation;
@@ -54,6 +55,7 @@ void Debugger::add_sphere(const geom::Sphere &sphere, const geom::Transform *tra
 
 	entity->original = transform;
 
+	// FIXME put in function
 	entity->final_transform = std::make_unique<geom::Transform>();
 	entity->final_transform->position = transform->position + (transform->scale * entity->shape.position);
 	entity->final_transform->rotation = transform->rotation;
@@ -67,7 +69,15 @@ void Debugger::add_sphere(const geom::Sphere &sphere, const geom::Transform *tra
 	
 void Debugger::update(const util::Camera &camera)
 {
-	m_scene.update(camera);
+	for (auto &entity : m_entities) {
+	// FIXME put in function
+		entity->final_transform->position = entity->original->position + (entity->original->scale * entity->shape.position);
+		entity->final_transform->rotation = entity->original->rotation;
+		entity->final_transform->scale = entity->shape.scale * entity->original->scale;
+	}
+	m_scene.update_transforms();
+
+	m_scene.update_buffers(camera);
 	m_scene.cull_frustum();
 }
 		

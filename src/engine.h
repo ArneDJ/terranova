@@ -8,6 +8,7 @@
 #include "graphics/mesh.h"
 #include "graphics/model.h"
 #include "graphics/scene.h"
+#include "physics/physical.h"
 
 #include "debugger.h"
 
@@ -49,6 +50,7 @@ private:
 	util::Config config;
 	VideoSettings video_settings;
 	util::Camera camera;
+	fysx::PhysicalSystem physics;
 private:
 	void init_opengl();
 	void init_imgui();

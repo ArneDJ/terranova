@@ -119,6 +119,25 @@ void SceneObject::add_transform(const geom::Transform *transform)
 
 	m_instance_count++;
 }
+	
+void SceneObject::update_transforms()
+{
+	if (m_padded_transforms.data.size() == m_transforms.size()) {
+		for (int i = 0; i < m_transforms.size(); i++) {
+			// FIXME better assigment
+			m_padded_transforms.data[i].position.x = m_transforms[i]->position.x;
+			m_padded_transforms.data[i].position.y = m_transforms[i]->position.y;
+			m_padded_transforms.data[i].position.z = m_transforms[i]->position.z;
+			m_padded_transforms.data[i].rotation.x = m_transforms[i]->rotation.x;
+			m_padded_transforms.data[i].rotation.y = m_transforms[i]->rotation.y;
+			m_padded_transforms.data[i].rotation.z = m_transforms[i]->rotation.z;
+			m_padded_transforms.data[i].rotation.w = m_transforms[i]->rotation.w;
+			m_padded_transforms.data[i].scale.x = m_transforms[i]->scale.x;
+			m_padded_transforms.data[i].scale.y = m_transforms[i]->scale.y;
+			m_padded_transforms.data[i].scale.z = m_transforms[i]->scale.z;
+		}
+	}
+}
 
 void SceneObject::update_buffers()
 {
@@ -186,7 +205,14 @@ SceneObject* SceneGroup::find_object(const Model *model)
 	return m_objects[model].get();
 }
 
-void SceneGroup::update(const util::Camera &camera)
+void SceneGroup::update_transforms()
+{
+	for (const auto &object : m_objects) {
+		object.second->update_transforms();
+	}
+}
+
+void SceneGroup::update_buffers(const util::Camera &camera)
 {
 	struct CameraBlock block = {
 		camera.viewing, camera.projection, camera.VP,
@@ -199,7 +225,7 @@ void SceneGroup::update(const util::Camera &camera)
 		object.second->update_buffers();
 	}
 }
-
+	
 void SceneGroup::cull_frustum()
 {
 	m_culling_shader->use();
