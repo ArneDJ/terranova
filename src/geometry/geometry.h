@@ -27,6 +27,16 @@ inline T min(const T &a, const T &b, const T &c)
 	return std::min(a, std::min(b, c));
 }
 
+inline float max_component(const glm::vec3 &v)
+{
+	return max(v.x, v.y, v.z);
+}
+
+inline float min_component(const glm::vec3 &v)
+{
+	return min(v.x, v.y, v.z);
+}
+
 inline float midpoint(float a, float b)
 {
 	return 0.5f * (a + b);

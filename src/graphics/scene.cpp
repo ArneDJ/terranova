@@ -240,12 +240,33 @@ void SceneGroup::cull_frustum()
 void SceneGroup::display() const
 {
 	m_visual_shader->use();
+
+	m_visual_shader->uniform_bool("INDIRECT_DRAW", true);
+	m_visual_shader->uniform_bool("WIRED_MODE", false);
 	
 	m_camera_ubo.bind_base(BLOCK_CAMERA.index);
 
 	for (const auto &object : m_objects) {
 		object.second->display();
 	}
+}
+
+void SceneGroup::display_wireframe() const
+{
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+	m_visual_shader->use();
+
+	m_visual_shader->uniform_bool("INDIRECT_DRAW", true);
+	m_visual_shader->uniform_bool("WIRED_MODE", true);
+	
+	m_camera_ubo.bind_base(BLOCK_CAMERA.index);
+
+	for (const auto &object : m_objects) {
+		object.second->display();
+	}
+	
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
 };

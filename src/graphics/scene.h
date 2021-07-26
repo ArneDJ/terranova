@@ -54,6 +54,7 @@ public:
 	void update_buffers(const util::Camera &camera);
 	void cull_frustum();
 	void display() const;
+	void display_wireframe() const;
 private:
 	std::unordered_map<const Model*, std::unique_ptr<SceneObject>> m_objects;
 	BufferObject m_camera_ubo;

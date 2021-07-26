@@ -17,39 +17,48 @@
 
 #include "engine.h"
 
-class PropEntity {
+// FIXME remove
+class PhysicalCube {
 public:
-	PropEntity(const glm::vec3 &origin)
+	PhysicalCube(const geom::Transform &origin, const glm::vec3 &extents)
 	{
-		m_shape = std::make_unique<btBoxShape>(btVector3(1,1,1));
+		m_shape = std::make_unique<btBoxShape>(fysx::vec3_to_bt(extents));
 
 		/// Create Dynamic Objects
-		btTransform startTransform;
-		startTransform.setIdentity();
+		btTransform start;
+		start.setIdentity();
 
 		btScalar mass(1.f);
 
-		//rigidbody is dynamic if and only if mass is non zero, otherwise static
-		bool isDynamic = (mass != 0.f);
-
-		btVector3 localInertia(0, 0, 0);
-		if (isDynamic) {
-			m_shape->calculateLocalInertia(mass, localInertia);
+		btVector3 intertia(0, 0, 0);
+		if (mass != 0.f) {
+			m_shape->calculateLocalInertia(mass, intertia);
 		}
 
-		startTransform.setOrigin(btVector3(origin.x, origin.y, origin.z));
+		start.setOrigin(fysx::vec3_to_bt(origin.position));
+		start.setRotation(fysx::quat_to_bt(origin.rotation));
 
-		m_motion = std::make_unique<btDefaultMotionState>(startTransform);
-		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, m_motion.get(), m_shape.get(), localInertia);
-		m_body = std::make_unique<btRigidBody>(rbInfo);
+		m_motion = std::make_unique<btDefaultMotionState>(start);
+		btRigidBody::btRigidBodyConstructionInfo body_info(mass, m_motion.get(), m_shape.get(), intertia);
+		m_body = std::make_unique<btRigidBody>(body_info);
 
 		m_transform = std::make_unique<geom::Transform>();
-		m_transform->position = origin;
+		m_transform->position = origin.position;
+		m_transform->rotation = origin.rotation;
+		m_transform->scale = origin.scale;
 	}
 public:
+	glm::vec3 shape_extents()
+	{
+		return fysx::bt_to_vec3(m_shape->getHalfExtentsWithoutMargin());
+	}
 	btRigidBody* body()
 	{
 		return m_body.get();
+	}
+	const geom::Transform* transform()
+	{
+		return m_transform.get();
 	}
 	void update()
 	{
@@ -59,22 +68,179 @@ public:
 		m_transform->position = fysx::bt_to_vec3(transform.getOrigin());
 		m_transform->rotation = fysx::bt_to_quat(transform.getRotation());
 	}
-public:
-	const geom::Transform* transform()
-	{
-		return m_transform.get();
-	}
 private:
 	std::unique_ptr<btDefaultMotionState> m_motion;
-	std::unique_ptr<btCollisionShape> m_shape;
+	std::unique_ptr<btBoxShape> m_shape;
 	std::unique_ptr<btRigidBody> m_body;
 private:
 	std::unique_ptr<geom::Transform> m_transform;
 };
 
-class FixedEntity {
+class PhysicalCylinder {
 public:
-	FixedEntity()
+	PhysicalCylinder(const geom::Transform &origin, const glm::vec3 &extents)
+	{
+		m_shape = std::make_unique<btCylinderShape>(fysx::vec3_to_bt(extents));
+
+		/// Create Dynamic Objects
+		btTransform start;
+		start.setIdentity();
+
+		btScalar mass(1.f);
+
+		btVector3 intertia(0, 0, 0);
+		if (mass != 0.f) {
+			m_shape->calculateLocalInertia(mass, intertia);
+		}
+
+		start.setOrigin(fysx::vec3_to_bt(origin.position));
+		start.setRotation(fysx::quat_to_bt(origin.rotation));
+
+		m_motion = std::make_unique<btDefaultMotionState>(start);
+		btRigidBody::btRigidBodyConstructionInfo body_info(mass, m_motion.get(), m_shape.get(), intertia);
+		m_body = std::make_unique<btRigidBody>(body_info);
+
+		m_transform = std::make_unique<geom::Transform>();
+		m_transform->position = origin.position;
+		m_transform->rotation = origin.rotation;
+		m_transform->scale = origin.scale;
+	}
+public:
+	btRigidBody* body()
+	{
+		return m_body.get();
+	}
+	const geom::Transform* transform()
+	{
+		return m_transform.get();
+	}
+	void update()
+	{
+		btTransform transform;
+		m_motion->getWorldTransform(transform);
+
+		m_transform->position = fysx::bt_to_vec3(transform.getOrigin());
+		m_transform->rotation = fysx::bt_to_quat(transform.getRotation());
+	}
+private:
+	std::unique_ptr<btDefaultMotionState> m_motion;
+	std::unique_ptr<btCylinderShape> m_shape;
+	std::unique_ptr<btRigidBody> m_body;
+private:
+	std::unique_ptr<geom::Transform> m_transform;
+};
+
+class PhysicalSphere {
+public:
+	PhysicalSphere(const geom::Transform &origin, float radius)
+	{
+		m_shape = std::make_unique<btSphereShape>(radius);
+
+		/// Create Dynamic Objects
+		btTransform start;
+		start.setIdentity();
+
+		btScalar mass(1.f);
+
+		btVector3 intertia(0, 0, 0);
+		if (mass != 0.f) {
+			m_shape->calculateLocalInertia(mass, intertia);
+		}
+
+		start.setOrigin(fysx::vec3_to_bt(origin.position));
+		start.setRotation(fysx::quat_to_bt(origin.rotation));
+
+		m_motion = std::make_unique<btDefaultMotionState>(start);
+		btRigidBody::btRigidBodyConstructionInfo body_info(mass, m_motion.get(), m_shape.get(), intertia);
+		m_body = std::make_unique<btRigidBody>(body_info);
+
+		m_transform = std::make_unique<geom::Transform>();
+		m_transform->position = origin.position;
+		m_transform->rotation = origin.rotation;
+		m_transform->scale = origin.scale;
+	}
+public:
+	btRigidBody* body()
+	{
+		return m_body.get();
+	}
+	const geom::Transform* transform()
+	{
+		return m_transform.get();
+	}
+	void update()
+	{
+		btTransform transform;
+		m_motion->getWorldTransform(transform);
+
+		m_transform->position = fysx::bt_to_vec3(transform.getOrigin());
+		m_transform->rotation = fysx::bt_to_quat(transform.getRotation());
+	}
+private:
+	std::unique_ptr<btDefaultMotionState> m_motion;
+	std::unique_ptr<btSphereShape> m_shape;
+	std::unique_ptr<btRigidBody> m_body;
+private:
+	std::unique_ptr<geom::Transform> m_transform;
+};
+
+class PhysicalCapsule {
+public:
+	PhysicalCapsule(const geom::Transform &origin, float radius, float height)
+	{
+		m_shape = std::make_unique<btCapsuleShape>(radius, height);
+
+		/// Create Dynamic Objects
+		btTransform start;
+		start.setIdentity();
+
+		btScalar mass(1.f);
+
+		btVector3 intertia(0, 0, 0);
+		if (mass != 0.f) {
+			m_shape->calculateLocalInertia(mass, intertia);
+		}
+
+		start.setOrigin(fysx::vec3_to_bt(origin.position));
+		start.setRotation(fysx::quat_to_bt(origin.rotation));
+
+		m_motion = std::make_unique<btDefaultMotionState>(start);
+		btRigidBody::btRigidBodyConstructionInfo body_info(mass, m_motion.get(), m_shape.get(), intertia);
+		m_body = std::make_unique<btRigidBody>(body_info);
+
+		m_transform = std::make_unique<geom::Transform>();
+		m_transform->position = origin.position;
+		m_transform->rotation = origin.rotation;
+		m_transform->scale = origin.scale;
+	}
+public:
+	btRigidBody* body()
+	{
+		return m_body.get();
+	}
+	const geom::Transform* transform()
+	{
+		return m_transform.get();
+	}
+	void update()
+	{
+		btTransform transform;
+		m_motion->getWorldTransform(transform);
+
+		m_transform->position = fysx::bt_to_vec3(transform.getOrigin());
+		m_transform->rotation = fysx::bt_to_quat(transform.getRotation());
+	}
+private:
+	std::unique_ptr<btDefaultMotionState> m_motion;
+	std::unique_ptr<btCapsuleShape> m_shape;
+	std::unique_ptr<btRigidBody> m_body;
+private:
+	std::unique_ptr<geom::Transform> m_transform;
+};
+
+class PhysicalPlane {
+public:
+	PhysicalPlane()
 	{
 		m_shape = std::make_unique<btStaticPlaneShape>(btVector3(0.f, 1.f, 0.f), 0.f);
 
@@ -86,7 +252,6 @@ public:
 
 		btVector3 inertia(0, 0, 0);
 
-		//using motionstate is optional, it provides interpolation capabilities, and only synchronizes 'active' objects
 		m_motion = std::make_unique<btDefaultMotionState>(transform);
 		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, m_motion.get(), m_shape.get(), inertia);
 		m_body = std::make_unique<btRigidBody>(rbInfo);
@@ -99,14 +264,13 @@ public:
 	{
 		return m_body.get();
 	}
-public:
 	const geom::Transform* transform()
 	{
 		return m_transform.get();
 	}
 private:
 	std::unique_ptr<btDefaultMotionState> m_motion;
-	std::unique_ptr<btCollisionShape> m_shape;
+	std::unique_ptr<btStaticPlaneShape> m_shape;
 	std::unique_ptr<btRigidBody> m_body;
 private:
 	std::unique_ptr<geom::Transform> m_transform;
@@ -299,27 +463,64 @@ void Engine::run()
 		transform->position = glm::vec3(float(10*i), 10.f, -10.f);
 		transform->scale = glm::vec3(0.2f);
 		dragon_object->add_transform(transform.get());
-		debugger.add_sphere(AABB_to_sphere(dragon_model.bounds()), transform.get());
 		transforms.push_back(std::move(transform));
 	}
 
-	FixedEntity plane;
+	PhysicalPlane plane;
 	physics.add_body(plane.body());
 	plane_object->add_transform(plane.transform());
 
-	std::vector<std::unique_ptr<PropEntity>> cubes;
+	std::vector<std::unique_ptr<PhysicalCube>> cubes;
 	for (int i = 0; i < 10; i++) {
-		auto cube_prop = std::make_unique<PropEntity>(glm::vec3(-10.f, 10.f + (5*i), -10.f));
+		geom::Transform origin;
+		origin.position = glm::vec3(-10.f, 10.f + (5*i), -10.f);
+		glm::vec3 extents = glm::vec3(1.f, 1.f + float(i), 10.f);
+		auto cube_prop = std::make_unique<PhysicalCube>(origin, extents);
 		physics.add_body(cube_prop->body());
 						
 		geom::AABB bounds = {
-			glm::vec3(-1.f),
-			glm::vec3(1.f)
+			glm::vec3(0.f) - cube_prop->shape_extents(),
+			cube_prop->shape_extents()
 		};
-
 		debugger.add_cube(bounds, cube_prop->transform());
-		sphere_object->add_transform(cube_prop->transform());
 		cubes.push_back(std::move(cube_prop));
+	}
+	std::vector<std::unique_ptr<PhysicalSphere>> spheres;
+	for (int i = 0; i < 10; i++) {
+		float radius = 1 + i;
+		geom::Transform origin;
+		origin.position = glm::vec3(-10.f, 30.f + (5*i), -10.f);
+		auto sphere_prop = std::make_unique<PhysicalSphere>(origin, radius);
+		physics.add_body(sphere_prop->body());
+						
+		geom::Sphere sphere = {
+			glm::vec3(0.f),
+			radius
+		};
+		debugger.add_sphere(sphere, sphere_prop->transform());
+		spheres.push_back(std::move(sphere_prop));
+	}
+	std::vector<std::unique_ptr<PhysicalCapsule>> capsules;
+	for (int i = 0; i < 10; i++) {
+		float radius = 0.5f * (1 + i);
+		geom::Transform origin;
+		origin.position = glm::vec3(-10.f, 50.f + (5*i), -10.f);
+		auto capsule_prop = std::make_unique<PhysicalCapsule>(origin, radius, 2.f * radius);
+		physics.add_body(capsule_prop->body());
+						
+		debugger.add_capsule(radius, 2.f * radius, capsule_prop->transform());
+		capsules.push_back(std::move(capsule_prop));
+	}
+	std::vector<std::unique_ptr<PhysicalCylinder>> cylinders;
+	for (int i = 0; i < 10; i++) {
+		geom::Transform origin;
+		origin.position = glm::vec3(-10.f, 65.f + (5*i), -10.f);
+		glm::vec3 extents = { 1.f, (i+i) + 2.f, 1.f };
+		auto cylinder_prop = std::make_unique<PhysicalCylinder>(origin, extents);
+		physics.add_body(cylinder_prop->body());
+						
+		debugger.add_cylinder(extents, cylinder_prop->transform());
+		cylinders.push_back(std::move(cylinder_prop));
 	}
 
 	while (state == EngineState::TITLE) {
@@ -331,6 +532,15 @@ void Engine::run()
 
 		for (auto &cube_prop : cubes) {
 			cube_prop->update();
+		}
+		for (auto &sphere_prop : spheres) {
+			sphere_prop->update();
+		}
+		for (auto &prop : capsules) {
+			prop->update();
+		}
+		for (auto &prop : cylinders) {
+			prop->update();
 		}
 
 		debugger.update(camera);
@@ -351,27 +561,13 @@ void Engine::run()
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glViewport(0, 0, video_settings.canvas.x, video_settings.canvas.y);
 
-		const glm::mat4 m = glm::rotate(glm::mat4(1.0f), 0.001f*SDL_GetTicks(), glm::vec3(1.0f, 1.0f, 1.0f));
-
 		shader.use();
 		shader.uniform_mat4("MODEL", glm::mat4(1.f));
 
-		shader.uniform_bool("WIRED_MODE", false);
-		shader.uniform_bool("INDIRECT_DRAW", true);
-		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		scene.display();
-		//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-		shader.uniform_bool("WIRED_MODE", true);
 		debugger.display();
-
-		/*
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		shader.uniform_bool("WIRED_MODE", true);
-		shader.uniform_bool("INDIRECT_DRAW", false);
-		sphere_model.display();
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-		*/
+		debugger.display_wireframe();
 
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

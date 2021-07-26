@@ -7,8 +7,8 @@
 namespace geom {
 
 struct Transform {
-	glm::vec3 position = {};
-	glm::quat rotation = {};
+	glm::vec3 position = { 0.F, 0.F, 0.F };
+	glm::quat rotation = { 1.F, 0.F, 0.F, 0.F };
 	glm::vec3 scale = { 1.F, 1.F, 1.F };
 
 	inline glm::mat4 to_matrix() const
