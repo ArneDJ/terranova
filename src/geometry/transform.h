@@ -11,6 +11,17 @@ struct Transform {
 	glm::quat rotation = { 1.F, 0.F, 0.F, 0.F };
 	glm::vec3 scale = { 1.F, 1.F, 1.F };
 
+	Transform()
+	{
+	}
+
+	Transform(const Transform &transform)
+	{
+		position = transform.position;
+		rotation = transform.rotation;
+		scale = transform.scale;
+	}
+
 	inline glm::mat4 to_matrix() const
 	{
 		glm::mat4 T = glm::translate(glm::mat4(1.f), position);

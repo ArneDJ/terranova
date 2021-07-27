@@ -1,5 +1,11 @@
 namespace gfx {
 
+// in dynamic scenes the tranforms will be changed every update
+enum class SceneType {
+	FIXED,
+	DYNAMIC
+};
+
 struct CameraBlock {
 	glm::mat4 view;
 	glm::mat4 projection;
@@ -48,14 +54,16 @@ class SceneGroup {
 public:
 	SceneGroup(const Shader *visual_shader, const Shader *culling_shader);
 public:
+	void set_scene_type(enum SceneType type);
+public:
 	SceneObject* find_object(const Model *model);
 public:
-	void update_transforms();
-	void update_buffers(const util::Camera &camera);
+	void update(const util::Camera &camera);
 	void cull_frustum();
 	void display() const;
 	void display_wireframe() const;
 private:
+	enum SceneType m_scene_type = SceneType::FIXED;
 	std::unordered_map<const Model*, std::unique_ptr<SceneObject>> m_objects;
 	BufferObject m_camera_ubo;
 private:

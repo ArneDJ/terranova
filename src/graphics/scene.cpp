@@ -191,6 +191,11 @@ SceneGroup::SceneGroup(const Shader *visual_shader, const Shader *culling_shader
 	visual_shader->set_storage_block(BLOCK_MODEL_MATRICES.name, BLOCK_MODEL_MATRICES.index);
 	visual_shader->set_uniform_block(BLOCK_CAMERA.name, BLOCK_CAMERA.index);
 }
+	
+void SceneGroup::set_scene_type(enum SceneType type)
+{
+	m_scene_type = type;
+}
 
 SceneObject* SceneGroup::find_object(const Model *model)
 {
@@ -205,15 +210,14 @@ SceneObject* SceneGroup::find_object(const Model *model)
 	return m_objects[model].get();
 }
 
-void SceneGroup::update_transforms()
+void SceneGroup::update(const util::Camera &camera)
 {
-	for (const auto &object : m_objects) {
-		object.second->update_transforms();
+	if (m_scene_type == SceneType::DYNAMIC) {
+		for (const auto &object : m_objects) {
+			object.second->update_transforms();
+		}
 	}
-}
 
-void SceneGroup::update_buffers(const util::Camera &camera)
-{
 	struct CameraBlock block = {
 		camera.viewing, camera.projection, camera.VP,
 		glm::vec4(camera.position, 1.f),

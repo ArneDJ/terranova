@@ -47,6 +47,8 @@ Debugger::Debugger(const gfx::Shader *visual_shader, const gfx::Shader *culling_
 	m_sphere = std::make_unique<gfx::Model>("media/models/primitives/sphere.glb");
 	m_cube = std::make_unique<gfx::Model>("media/models/primitives/cube.glb");
 	m_cylinder = std::make_unique<gfx::Model>("media/models/primitives/cylinder.glb");
+
+	m_scene.set_scene_type(gfx::SceneType::DYNAMIC);
 }
 	
 void Debugger::add_cube(const geom::AABB &bounds, const geom::Transform *transform)
@@ -117,9 +119,8 @@ void Debugger::update(const util::Camera &camera)
 		entity->update();
 	}
 
-	m_scene.update_transforms();
+	m_scene.update(camera);
 
-	m_scene.update_buffers(camera);
 	m_scene.cull_frustum();
 }
 		
