@@ -234,13 +234,13 @@ void Mesh::create(const std::vector<Vertex> &vertices, const std::vector<uint32_
 	// add index buffer
 	if (indices.size() > 0) {
 		m_ebo.set_target(GL_ELEMENT_ARRAY_BUFFER);
-		m_ebo.store_immutable(indices_size, indices.data(), 0);
+		m_ebo.store_mutable(indices_size, indices.data(), GL_STATIC_DRAW);
 		m_index_type = GL_UNSIGNED_INT;
 	}
 
 	// add position buffer
 	m_vbo.set_target(GL_ARRAY_BUFFER);
-	m_vbo.store_immutable(vertices_size, vertices.data(), 0);
+	m_vbo.store_mutable(vertices_size, vertices.data(), GL_STATIC_DRAW);
 
 	m_vao.set_attribute(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), BUFFER_OFFSET(offsetof(Vertex, position)));
 	m_vao.set_attribute(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), BUFFER_OFFSET(offsetof(Vertex, normal)));

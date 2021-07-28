@@ -12,6 +12,8 @@
 #include "graphics/scene.h"
 #include "physics/physical.h"
 
+#include "campaign/world.h"
+
 #include "debugger.h"
 
 struct VideoSettings {

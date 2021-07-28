@@ -8,6 +8,8 @@ template <class T> struct Bounding {
 	T max = {};
 };
 
+using Rectangle = Bounding<glm::vec2>;
+
 using AABB = Bounding<glm::vec3>;
 
 struct Sphere {

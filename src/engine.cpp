@@ -20,6 +20,7 @@
 
 static double g_elapsed = 0.0;
 static bool g_freeze_frustum = false;
+static bool g_generate = false;
 
 static const char *GAME_NAME = "terranova";
 
@@ -135,6 +136,8 @@ void Engine::init_imgui()
 	
 void Engine::update_state()
 {
+	g_generate = false;
+
 	util::InputManager::update();
 
 	ImGui_ImplOpenGL3_NewFrame();
@@ -147,6 +150,7 @@ void Engine::update_state()
 	ImGui::Text("%.4f frame delta", frame_timer.delta_seconds());
 	ImGui::Text("%f elapsed cull time", g_elapsed);
 	if (ImGui::Button("Freeze Frustum")) { g_freeze_frustum = !g_freeze_frustum; }
+	if (ImGui::Button("Generate World")) { g_generate = true; }
 	if (ImGui::Button("Exit")) { state = EngineState::EXIT; }
 	ImGui::End();
 
@@ -210,63 +214,20 @@ void Engine::run()
 		transforms.push_back(std::move(transform));
 	}
 
-	geom::Bounding<glm::vec2> bounds = {
-		{ 0.f, 0.f}, { 64.f, 64.f }
-	};
-	std::random_device rd;
-	std::mt19937 gen(rd());
-	std::uniform_real_distribution<float> dis_x(bounds.min.x, bounds.max.x);
-	std::uniform_real_distribution<float> dis_y(bounds.min.y, bounds.max.y);
-	
-	std::vector<glm::vec2> points;
-	for (int i = 0; i < 100; i++) {
-		glm::vec2 point = { dis_x(gen), dis_y(gen) };
-		points.push_back(point);
-	}
-
-	geom::VoronoiGraph voronoi;
-	voronoi.generate(points, bounds, 1);
-
-	std::vector<gfx::Vertex> vertices;
-	std::vector<uint32_t> indices;
-
-	std::uniform_real_distribution<float> dis_color(0.2f, 1.2f);
-	for (const auto &tile : voronoi.cells) {
-		glm::vec3 color = { dis_color(gen), dis_color(gen), dis_color(gen) };
-		for (const auto &edge : tile.edges) {
-			gfx::Vertex vertex_a = {
-				{ edge->left_vertex->position.x, 0.f, edge->left_vertex->position.y },
-				color
-			};
-			gfx::Vertex vertex_b = {
-				{ edge->right_vertex->position.x, 0.f, edge->right_vertex->position.y },
-				color
-			};
-			gfx::Vertex vertex_c = {
-				{ tile.center.x, 0.f, tile.center.y },
-				color
-			};
-			if (geom::clockwise(edge->left_vertex->position, edge->right_vertex->position, tile.center)) {
-				vertices.push_back(vertex_a);
-				vertices.push_back(vertex_b);
-				vertices.push_back(vertex_c);
-			} else {
-				vertices.push_back(vertex_b);
-				vertices.push_back(vertex_a);
-				vertices.push_back(vertex_c);
-			}
-		}
-	}
-	gfx::Model diagram_model;
-	diagram_model.add_mesh(vertices, indices);
-	auto diagram_transform = std::make_unique<geom::Transform>();
-	auto diagram_object = scene.find_object(&diagram_model);
-	diagram_object->add_transform(diagram_transform.get());
+	std::random_device rd;  //Will be used to obtain a seed for the random number engine
+	std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
+	std::uniform_int_distribution<int> distrib;
+	WorldMap world;
+	world.generate(distrib(gen));
 
 	while (state == EngineState::TITLE) {
 		frame_timer.begin();
 	
 		update_state();
+	
+		if (g_generate) {
+			world.generate(distrib(gen));
+		}
 
 		physics.update(frame_timer.delta_seconds());
 
@@ -291,7 +252,7 @@ void Engine::run()
 		shader.uniform_mat4("MODEL", glm::mat4(1.f));
 		shader.uniform_bool("INDIRECT_DRAW", false);
 		shader.uniform_bool("WIRED_MODE", false);
-		//diagram_model.display();
+		world.display();
 
 		scene.display();
 

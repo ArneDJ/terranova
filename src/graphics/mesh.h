@@ -110,7 +110,7 @@ public:
 	} 
 };
 
-// manages indirect draw commands
+// manages indirect draw commands of glDrawArrays
 class IndirectDrawer {
 public:
 	IndirectDrawer(const Primitive &primitive);
@@ -127,7 +127,7 @@ private:
 	BufferDataPair<DrawArraysCommand> m_commands;
 };
 
-// manages indirect draw commands
+// manages indirect draw commands of glDrawElements
 class IndirectElementsDrawer {
 public:
 	IndirectElementsDrawer(const Primitive &primitive);
