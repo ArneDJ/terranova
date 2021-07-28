@@ -122,11 +122,11 @@ IndirectDrawer::IndirectDrawer(const Primitive &primitive)
 
 void IndirectDrawer::add_command()
 {
-	struct DrawElementsCommand command;
-	command.count = m_primitive.index_count;
+	struct DrawArraysCommand command;
+
+	command.count = m_primitive.vertex_count;
 	command.instance_count = 1;
-	command.first_index = m_primitive.first_index;
-	command.base_vertex = m_primitive.first_vertex;
+	command.first_vertex = m_primitive.first_vertex;
 	command.base_instance = m_commands.data.size();
 
 	m_commands.data.push_back(command);
@@ -157,14 +157,64 @@ void IndirectDrawer::draw() const
 {
 	m_commands.buffer.bind();
 		
-	if (m_primitive.index_count > 0) {
-		glMultiDrawElementsIndirect(m_primitive.mode, m_primitive.index_type, (GLvoid*)0, m_instance_count, 0);
-	} else {
-		glMultiDrawArraysIndirect(m_primitive.mode, (GLvoid*)0, m_instance_count, 0);
-	}
+	glMultiDrawArraysIndirect(m_primitive.mode, (GLvoid*)0, m_instance_count, 0);
 }
 
-void Mesh::create(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices)
+IndirectElementsDrawer::IndirectElementsDrawer(const Primitive &primitive)
+{
+	m_primitive = primitive;
+
+	m_commands.buffer.set_target(GL_DRAW_INDIRECT_BUFFER);
+
+	m_bounding_sphere = AABB_to_sphere(primitive.bounds);
+
+	// send the base bounding sphere as an UBO to the GPU
+	m_sphere_ubo.set_target(GL_UNIFORM_BUFFER);
+	m_sphere_ubo.store_mutable(sizeof(geom::Sphere), &m_bounding_sphere, GL_STATIC_DRAW);
+}
+
+void IndirectElementsDrawer::add_command()
+{
+	struct DrawElementsCommand command;
+
+	command.count = m_primitive.index_count;
+	command.instance_count = 1;
+	command.first_index = m_primitive.first_index;
+	command.base_vertex = m_primitive.first_vertex;
+	command.base_instance = m_commands.data.size();
+
+	m_commands.data.push_back(command);
+
+	m_instance_count = m_commands.data.size();
+}
+
+void IndirectElementsDrawer::pop_command()
+{
+	m_commands.data.pop_back();
+
+	m_instance_count = m_commands.data.size();
+}
+
+void IndirectElementsDrawer::update_buffer()
+{
+	m_commands.resize_necessary();
+}
+
+// need to bind command buffer as SSBO to edit in compute shader for culling
+void IndirectElementsDrawer::bind_for_culling(GLuint commands_index, GLuint sphere_index) const
+{
+	m_commands.buffer.bind_explicit(GL_SHADER_STORAGE_BUFFER, commands_index);
+	m_sphere_ubo.bind_base(sphere_index);
+}
+
+void IndirectElementsDrawer::draw() const
+{
+	m_commands.buffer.bind();
+		
+	glMultiDrawElementsIndirect(m_primitive.mode, m_primitive.index_type, (GLvoid*)0, m_instance_count, 0);
+}
+
+void Mesh::create(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices, GLenum mode)
 {
 	m_primitives.clear();
 
@@ -176,7 +226,8 @@ void Mesh::create(const std::vector<Vertex> &vertices, const std::vector<uint32_
 	primitive.index_count = GLsizei(indices.size());
 	primitive.first_vertex = 0;
 	primitive.vertex_count = GLsizei(vertices.size());
-	primitive.mode = GL_TRIANGLES;
+	primitive.mode = mode;
+	primitive.index_type = GL_UNSIGNED_INT;
 
 	m_vao.bind();
 

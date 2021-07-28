@@ -27,6 +27,7 @@ public:
 private:
 	const Mesh *m_mesh = nullptr;
 	std::vector<std::unique_ptr<IndirectDrawer>> m_drawers;
+	std::vector<std::unique_ptr<IndirectElementsDrawer>> m_elements_drawers;
 	uint32_t m_group_count = 0;
 };
 

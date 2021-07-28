@@ -29,12 +29,8 @@ static inline GLenum primitive_mode(cgltf_primitive_type type);
 static void print_gltf_error(cgltf_result error);
 static geom::AABB primitive_bounds(const cgltf_primitive &primitive);
 
-Model::Model(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices)
+Model::Model()
 {
-	auto mesh = std::make_unique<Mesh>();
-	mesh->create(vertices, indices);
-
-	m_meshes.push_back(std::move(mesh));
 }
 
 Model::Model(const std::string &filepath)
@@ -62,6 +58,17 @@ Model::Model(const std::string &filepath)
 		
 	cgltf_free(data);
 }
+
+void Model::add_mesh(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices, GLenum mode)
+{
+	auto mesh = std::make_unique<Mesh>();
+	mesh->create(vertices, indices, mode);
+
+	m_meshes.push_back(std::move(mesh));
+
+	// new mesh added, re-calculate bounding volume
+	calculate_bounds();
+}
 	
 void Model::display() const
 {
@@ -79,6 +86,15 @@ const geom::AABB& Model::bounds() const
 {
 	return m_bounds;
 }
+	
+void Model::calculate_bounds()
+{
+	m_bounds.min = glm::vec3((std::numeric_limits<float>::max)());
+	m_bounds.max = glm::vec3((std::numeric_limits<float>::min)());
+	for (const auto &mesh : m_meshes) {
+		m_bounds = geom::confined_bounds(mesh->bounds(), m_bounds);
+	}
+}
 
 void Model::load(const cgltf_data *data)
 {
@@ -92,11 +108,7 @@ void Model::load(const cgltf_data *data)
 	}
 
 	// model bounding box
-	m_bounds.min = glm::vec3((std::numeric_limits<float>::max)());
-	m_bounds.max = glm::vec3((std::numeric_limits<float>::min)());
-	for (const auto &mesh : m_meshes) {
-		m_bounds = geom::confined_bounds(mesh->bounds(), m_bounds);
-	}
+	calculate_bounds();
 }
 
 void Model::load_nodes(const cgltf_data *data)

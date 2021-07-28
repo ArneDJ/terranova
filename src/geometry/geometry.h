@@ -72,4 +72,11 @@ inline AABB confined_bounds(const AABB &a, const AABB &b)
 	return bounds;
 }
 
+inline bool clockwise(const glm::vec2 &a, const glm::vec2 &b, const glm::vec2 &c)
+{
+	float wise = (b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y);
+
+	return (wise < 0.f);
+}
+
 };

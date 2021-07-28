@@ -28,6 +28,13 @@ struct Primitive {
 	geom::AABB bounds;
 };
 
+struct DrawArraysCommand {
+	GLuint count = 0;
+	GLuint instance_count = 0;
+	GLuint first_vertex = 0;
+	GLuint base_instance = 0;
+};
+
 struct DrawElementsCommand {
 	GLuint count = 0;
 	GLuint instance_count = 0;
@@ -117,12 +124,29 @@ private:
 	Primitive m_primitive;
 	geom::Sphere m_bounding_sphere;
 	BufferObject m_sphere_ubo;
+	BufferDataPair<DrawArraysCommand> m_commands;
+};
+
+// manages indirect draw commands
+class IndirectElementsDrawer {
+public:
+	IndirectElementsDrawer(const Primitive &primitive);
+	void add_command();
+	void pop_command();
+	void update_buffer();
+	void bind_for_culling(GLuint commands_index, GLuint sphere_index) const;
+	void draw() const;
+private:
+	uint32_t m_instance_count = 0;
+	Primitive m_primitive;
+	geom::Sphere m_bounding_sphere;
+	BufferObject m_sphere_ubo;
 	BufferDataPair<DrawElementsCommand> m_commands;
 };
 
 class Mesh {
 public:
-	void create(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices);
+	void create(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices, GLenum mode = GL_TRIANGLES);
 	void create(const MeshBufferData &data, const std::vector<Primitive> &primitives);
 	void draw() const;
 	void bind_vao() const;
@@ -136,13 +160,6 @@ protected:
 	std::vector<Primitive> m_primitives;
 	GLenum m_index_type = GL_UNSIGNED_INT;
 };
-
-/*
-class CubeMesh : public Mesh {
-public:
-	CubeMesh(const glm::vec3 &min, const glm::vec3 &max);
-};
-*/
 
 GLenum index_type(size_t size);
 

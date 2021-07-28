@@ -47,13 +47,21 @@ IndirectMesh::IndirectMesh(const Mesh *mesh)
 	
 void IndirectMesh::add(const Primitive &primitive)
 {
-	auto indirect_drawer = std::make_unique<IndirectDrawer>(primitive);
-	m_drawers.push_back(std::move(indirect_drawer));
+	if (primitive.index_count > 0) {
+		auto drawer = std::make_unique<IndirectElementsDrawer>(primitive);
+		m_elements_drawers.push_back(std::move(drawer));
+	} else {
+		auto drawer = std::make_unique<IndirectDrawer>(primitive);
+		m_drawers.push_back(std::move(drawer));
+	}
 }
 	
 void IndirectMesh::add_instance()
 {
 	for (auto &drawer : m_drawers) {
+		drawer->add_command();
+	}
+	for (auto &drawer : m_elements_drawers) {
 		drawer->add_command();
 	}
 
@@ -65,11 +73,19 @@ void IndirectMesh::update()
 	for (auto &drawer : m_drawers) {
 		drawer->update_buffer();
 	}
+	for (auto &drawer : m_elements_drawers) {
+		drawer->update_buffer();
+	}
 }
 
 void IndirectMesh::dispatch()
 {
 	for (const auto &drawer : m_drawers) {
+		drawer->bind_for_culling(BLOCK_COMMANDS.index, BLOCK_CULL_SHAPE.index);
+		glDispatchCompute(m_group_count, 1, 1);
+		glMemoryBarrier(GL_COMMAND_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
+	}
+	for (const auto &drawer : m_elements_drawers) {
 		drawer->bind_for_culling(BLOCK_COMMANDS.index, BLOCK_CULL_SHAPE.index);
 		glDispatchCompute(m_group_count, 1, 1);
 		glMemoryBarrier(GL_COMMAND_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
@@ -81,6 +97,9 @@ void IndirectMesh::draw() const
 	m_mesh->bind_vao();
 
 	for (auto &drawer : m_drawers) {
+		drawer->draw();
+	}
+	for (auto &drawer : m_elements_drawers) {
 		drawer->draw();
 	}
 }

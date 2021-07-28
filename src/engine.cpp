@@ -2,6 +2,7 @@
 #include <chrono>
 #include <unordered_map>
 #include <memory>
+#include <random>
 #include <SDL2/SDL.h>
 #include <GL/glew.h>
 #include <GL/gl.h>
@@ -205,8 +206,62 @@ void Engine::run()
 		transform->position = glm::vec3(float(10*i), 10.f, -10.f);
 		transform->scale = glm::vec3(0.2f);
 		dragon_object->add_transform(transform.get());
+		//debugger.add_cube(dragon_model.bounds(), transform.get());
 		transforms.push_back(std::move(transform));
 	}
+
+	geom::Bounding<glm::vec2> bounds = {
+		{ 0.f, 0.f}, { 64.f, 64.f }
+	};
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_real_distribution<float> dis_x(bounds.min.x, bounds.max.x);
+	std::uniform_real_distribution<float> dis_y(bounds.min.y, bounds.max.y);
+	
+	std::vector<glm::vec2> points;
+	for (int i = 0; i < 100; i++) {
+		glm::vec2 point = { dis_x(gen), dis_y(gen) };
+		points.push_back(point);
+	}
+
+	geom::VoronoiGraph voronoi;
+	voronoi.generate(points, bounds, 1);
+
+	std::vector<gfx::Vertex> vertices;
+	std::vector<uint32_t> indices;
+
+	std::uniform_real_distribution<float> dis_color(0.2f, 1.2f);
+	for (const auto &tile : voronoi.cells) {
+		glm::vec3 color = { dis_color(gen), dis_color(gen), dis_color(gen) };
+		for (const auto &edge : tile.edges) {
+			gfx::Vertex vertex_a = {
+				{ edge->left_vertex->position.x, 0.f, edge->left_vertex->position.y },
+				color
+			};
+			gfx::Vertex vertex_b = {
+				{ edge->right_vertex->position.x, 0.f, edge->right_vertex->position.y },
+				color
+			};
+			gfx::Vertex vertex_c = {
+				{ tile.center.x, 0.f, tile.center.y },
+				color
+			};
+			if (geom::clockwise(edge->left_vertex->position, edge->right_vertex->position, tile.center)) {
+				vertices.push_back(vertex_a);
+				vertices.push_back(vertex_b);
+				vertices.push_back(vertex_c);
+			} else {
+				vertices.push_back(vertex_b);
+				vertices.push_back(vertex_a);
+				vertices.push_back(vertex_c);
+			}
+		}
+	}
+	gfx::Model diagram_model;
+	diagram_model.add_mesh(vertices, indices);
+	auto diagram_transform = std::make_unique<geom::Transform>();
+	auto diagram_object = scene.find_object(&diagram_model);
+	diagram_object->add_transform(diagram_transform.get());
 
 	while (state == EngineState::TITLE) {
 		frame_timer.begin();
@@ -234,6 +289,9 @@ void Engine::run()
 
 		shader.use();
 		shader.uniform_mat4("MODEL", glm::mat4(1.f));
+		shader.uniform_bool("INDIRECT_DRAW", false);
+		shader.uniform_bool("WIRED_MODE", false);
+		//diagram_model.display();
 
 		scene.display();
 
