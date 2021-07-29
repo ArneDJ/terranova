@@ -13,13 +13,12 @@
 
 #include "world.h"
 
-void WorldModel::reload(const geom::VoronoiGraph &graph)
+void WorldModel::reload(const geom::VoronoiGraph &graph, int seed)
 {
 	m_vertices.clear();
 	m_indices.clear();
 
-	std::random_device rd;
-	std::mt19937 gen(rd());
+	std::mt19937 gen(seed);
 	std::uniform_real_distribution<float> dis_color(0.2f, 1.2f);
 	for (const auto &tile : graph.cells) {
 		glm::vec3 color = { dis_color(gen), dis_color(gen), dis_color(gen) };
@@ -58,19 +57,24 @@ void WorldModel::display() const
 	
 void WorldMap::generate(int seed)
 {
+	m_seed = seed;
+
 	std::mt19937 gen(seed);
 	std::uniform_real_distribution<float> dis_x(BOUNDS.min.x, BOUNDS.max.x);
 	std::uniform_real_distribution<float> dis_y(BOUNDS.min.y, BOUNDS.max.y);
 	
 	std::vector<glm::vec2> points;
-	for (int i = 0; i < 100; i++) {
+	for (int i = 0; i < 400; i++) {
 		glm::vec2 point = { dis_x(gen), dis_y(gen) };
 		points.push_back(point);
 	}
 
-	m_graph.generate(points, BOUNDS, 1);
-
-	m_model.reload(m_graph);
+	m_graph.generate(points, BOUNDS, 2);
+}
+	
+void WorldMap::prepare()
+{
+	m_model.reload(m_graph, m_seed);
 }
 	
 void WorldMap::display()

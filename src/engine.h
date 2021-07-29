@@ -1,4 +1,5 @@
 #pragma once
+#include "util/serialize.h"
 #include "util/config.h"
 #include "util/input.h"
 #include "util/camera.h"

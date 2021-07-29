@@ -1,3 +1,6 @@
+#pragma once
+#include <map>
+
 namespace geom {
 
 struct VoronoiCell;
@@ -27,6 +30,24 @@ struct VoronoiCell {
 	std::vector<const VoronoiEdge*> edges;
 };
 
+template <class Archive>
+void serialize(Archive &archive, VoronoiEdge &edge)
+{
+	archive(edge.index);
+}
+
+template <class Archive>
+void serialize(Archive &archive, VoronoiVertex &vertex)
+{
+	archive(vertex.index, vertex.position);
+}
+
+template <class Archive>
+void serialize(Archive &archive, VoronoiCell &cell)
+{
+	archive(cell.index, cell.center);
+}
+
 class VoronoiGraph {
 public:
 	std::vector<VoronoiCell> cells;
@@ -34,6 +55,45 @@ public:
 	std::vector<VoronoiEdge> edges;
 public:
 	void generate(const std::vector<glm::vec2> &locations, const Bounding<glm::vec2> &bounds, uint8_t relaxations = 0);
+	void clear();
+public:
+	template <class Archive>
+	void save(Archive &archive) const
+	{
+		archive(
+			cells, vertices, edges,
+			m_connected_cells,
+			m_connected_vertices,
+			m_cell_vertex_connections
+		);
+	}
+	template <class Archive>
+	void load(Archive &archive)
+	{
+		// clear data just to be sure
+		clear();
+
+		archive(
+			cells, vertices, edges,
+			m_connected_cells,
+			m_connected_vertices,
+			m_cell_vertex_connections
+		);
+
+		unserialize_nodes();
+	}
+private:
+	// left: edge index
+	// right: connected cells 
+	std::map<uint32_t, std::pair<uint32_t, uint32_t>> m_connected_cells;
+	// left: edge index
+	// right: connected vertices 
+	std::map<uint32_t, std::pair<uint32_t, uint32_t>> m_connected_vertices;
+	// left: cell index
+	// right: vertex index
+	std::vector<std::pair<uint32_t, uint32_t>> m_cell_vertex_connections;
+private:
+	void unserialize_nodes();
 };
 
 };

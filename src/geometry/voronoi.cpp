@@ -13,6 +13,8 @@
 #define JCV_PI 3.141592653589793115997963468544185161590576171875
 #include "../extern/jcvoronoi/jc_voronoi.h"
 
+#include "../util/serialize.h"
+
 #include "voronoi.h"
 
 namespace geom {
@@ -25,9 +27,7 @@ static void adapt_edges(const jcv_diagram *diagram, std::vector<VoronoiCell> &ce
 
 void VoronoiGraph::generate(const std::vector<glm::vec2> &locations, const Bounding<glm::vec2> &bounds, uint8_t relaxations)
 {
-	cells.clear();
-	edges.clear();
-	vertices.clear();
+	clear();
 
 	// import points
 	std::vector<jcv_point> points;
@@ -68,6 +68,66 @@ void VoronoiGraph::generate(const std::vector<glm::vec2> &locations, const Bound
 	jcv_diagram_free(&diagram);
 
 	// create data to serialize graph
+
+	for (const auto &edge : edges) {
+		auto cell_connection = std::make_pair(edge.left_cell->index, edge.right_cell->index);
+		auto vertex_connection = std::make_pair(edge.left_vertex->index, edge.right_vertex->index);
+		m_connected_cells[edge.index] = cell_connection;
+		m_connected_vertices[edge.index] = vertex_connection;
+	}
+	
+	for (const auto &cell : cells) {
+		for (const auto &vertex : cell.vertices) {
+			auto connection = std::make_pair(cell.index, vertex->index);
+			m_cell_vertex_connections.push_back(connection);
+		}
+	}
+}
+	
+void VoronoiGraph::clear()
+{
+	cells.clear();
+	vertices.clear();
+	edges.clear();
+
+	m_connected_cells.clear();
+	m_connected_vertices.clear();
+	m_cell_vertex_connections.clear();
+}
+	
+void VoronoiGraph::unserialize_nodes()
+{
+	// connect with pointers
+	for (const auto &connection : m_connected_cells) {
+		const auto &cell_pair = connection.second;
+		VoronoiEdge *edge = &edges[connection.first];
+		VoronoiCell *left_cell = &cells[cell_pair.first];
+		VoronoiCell *right_cell = &cells[cell_pair.second];
+		edge->left_cell = left_cell;
+		edge->right_cell = right_cell;
+		left_cell->edges.push_back(edge);
+		left_cell->neighbors.push_back(right_cell);
+		right_cell->edges.push_back(edge);
+		right_cell->neighbors.push_back(left_cell);
+	}
+	// vertex connections
+	for (const auto &connection : m_connected_vertices) {
+		const auto &vertex_pair = connection.second;
+		VoronoiEdge *edge = &edges[connection.first];
+		VoronoiVertex *left_vertex = &vertices[vertex_pair.first];
+		VoronoiVertex *right_vertex = &vertices[vertex_pair.second];
+		edge->left_vertex = left_vertex;
+		edge->right_vertex = right_vertex;
+		left_vertex->adjacent.push_back(right_vertex);
+		right_vertex->adjacent.push_back(left_vertex);
+	}
+	// vertex cell connections
+	for (const auto &connection : m_cell_vertex_connections) {
+		VoronoiCell *cell = &cells[connection.first];
+		VoronoiVertex *vertex = &vertices[connection.second];
+		cell->vertices.push_back(vertex);
+		vertex->cells.push_back(cell);
+	}
 }
 
 static void relax_points(const jcv_diagram *diagram, std::vector<jcv_point> &points)
@@ -88,8 +148,8 @@ static void relax_points(const jcv_diagram *diagram, std::vector<jcv_point> &poi
 		}
 
 		jcv_point point;
-		point.x = sum.x / count;
-		point.y = sum.y / count;
+		point.x = sum.x / float(count);
+		point.y = sum.y / float(count);
 		points.push_back(point);
 	}
 }
@@ -157,11 +217,9 @@ static void pair_duality(const jcv_diagram *diagram, std::vector<VoronoiCell> &c
 		while (edge) {
 			const jcv_altered_edge *altered = get_altered_edge(edge);
 			jcv_vertex *a = altered->vertices[0];
-			//cells[site->index].vertices.push_back(&vertices[a->index]);
 			indices.insert(a->index);
 			jcv_vertex *b = altered->vertices[1];
 			indices.insert(b->index);
-			//cells[site->index].vertices.push_back(&vertices[b->index]);
 
 			edge = edge->next;
 		}
@@ -185,9 +243,17 @@ static void adapt_edges(const jcv_diagram *diagram, std::vector<VoronoiCell> &ce
 		VoronoiEdge e;
 		if (jcedge->sites[0] != nullptr) {
 			e.left_cell = &cells[jcedge->sites[0]->index];
+			// literally an edge case
+			if (jcedge->sites[1] == nullptr) {
+				e.right_cell = e.left_cell;
+			}
 		}
 		if (jcedge->sites[1] != nullptr) {
 			e.right_cell = &cells[jcedge->sites[1]->index];
+			// literally an edge case
+			if (jcedge->sites[0] == nullptr) {
+				e.left_cell = e.right_cell;
+			}
 		}
 
     		const jcv_altered_edge *alter = (jcv_altered_edge*)jcedge;

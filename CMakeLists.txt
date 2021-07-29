@@ -13,6 +13,7 @@ find_package(OpenGL REQUIRED COMPONENTS OpenGL)
 find_package(GLEW REQUIRED)
 include_directories(GLEW::GLEW)
 
+include_directories("src/extern")
 include_directories("src/extern/bullet")
 
 file(GLOB all_SRCS

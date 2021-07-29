@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <memory>
 #include <random>
+#include <fstream>
 #include <SDL2/SDL.h>
 #include <GL/glew.h>
 #include <GL/gl.h>
@@ -15,6 +16,8 @@
 #include "extern/imgui/imgui.h"
 #include "extern/imgui/imgui_impl_sdl.h"
 #include "extern/imgui/imgui_impl_opengl3.h"
+
+#include "extern/cereal/archives/binary.hpp"
 
 #include "engine.h"
 
@@ -218,7 +221,15 @@ void Engine::run()
 	std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
 	std::uniform_int_distribution<int> distrib;
 	WorldMap world;
-	world.generate(distrib(gen));
+	//world.generate(distrib(gen));
+	// TODO prevent crash if file not found
+	{
+		std::ifstream stream("graph.bin", std::ios::binary);
+		cereal::BinaryInputArchive archive(stream);
+		world.load(archive);
+	}
+
+	world.prepare();
 
 	while (state == EngineState::TITLE) {
 		frame_timer.begin();
@@ -227,6 +238,7 @@ void Engine::run()
 	
 		if (g_generate) {
 			world.generate(distrib(gen));
+			world.prepare();
 		}
 
 		physics.update(frame_timer.delta_seconds());
@@ -269,6 +281,12 @@ void Engine::run()
 		if (util::InputManager::exit_request()) {
 			state = EngineState::EXIT;
 		}
+	}
+
+	{
+		std::ofstream os("graph.bin", std::ios::binary);
+		cereal::BinaryOutputArchive archive(os);
+		world.save(archive);
 	}
 	
 	physics.clear_objects();

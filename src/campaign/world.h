@@ -1,7 +1,7 @@
 
 class WorldModel {
 public:
-	void reload(const geom::VoronoiGraph &graph);
+	void reload(const geom::VoronoiGraph &graph, int seed);
 public:
 	void display() const;
 private:
@@ -12,14 +12,26 @@ private:
 
 class WorldMap {
 public:
-	const geom::Rectangle BOUNDS = { { 0.F, 0.F }, { 64.F, 64.F } };
+	const geom::Rectangle BOUNDS = { { 0.F, 0.F }, { 128.F, 128.F } };
 public:
 	void generate(int seed);
-	//void save();
-	//void load();
+	void prepare();
+public:
+	template <class Archive>
+	void save(Archive &archive) const 
+	{
+		archive(m_seed, m_graph);
+	}
+public:
+	template <class Archive>
+	void load(Archive &archive)
+	{
+		archive(m_seed, m_graph);
+	}
 public:
 	void display();
 private:
+	int m_seed;
 	geom::VoronoiGraph m_graph;
 	WorldModel m_model;
 };
