@@ -48,5 +48,27 @@ void PhysicalSystem::clear_objects()
 		m_world->removeCollisionObject(obj);
 	}
 }
+	
+RayResult PhysicalSystem::cast_ray(const glm::vec3 &origin, const glm::vec3 &end) const
+{
+	RayResult result = { false, glm::vec3(0.f) };
+
+	const btVector3 from = vec3_to_bt(origin);
+	const btVector3 to = vec3_to_bt(end);
+
+	btCollisionWorld::ClosestRayResultCallback callback(from, to);
+	//callback.m_collisionFilterGroup = masks;
+	//callback.m_collisionFilterGroup |= COLLISION_GROUP_RAY;
+	//callback.m_collisionFilterMask = masks;
+
+	m_world->rayTest(from, to, callback);
+
+	if (callback.hasHit()) {
+		result.hit = true;
+		result.point = bt_to_vec3(callback.m_hitPointWorld);
+	}
+
+	return result;
+}
 
 };

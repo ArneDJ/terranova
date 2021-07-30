@@ -17,6 +17,8 @@ public:
 	void generate(int seed);
 	void prepare();
 public:
+	fysx::HeightField& height_field();
+public:
 	template <class Archive>
 	void save(Archive &archive) const 
 	{
@@ -34,4 +36,5 @@ private:
 	int m_seed;
 	geom::VoronoiGraph m_graph;
 	WorldModel m_model;
+	fysx::HeightField m_height_field;
 };

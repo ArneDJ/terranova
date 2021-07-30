@@ -13,6 +13,7 @@ public:
 public:
 	static bool exit_request();
 	static bool key_down(uint32_t key); // is key held down
+	static bool key_pressed(uint32_t key); // is key pressed once
 	static glm::vec2 abs_mouse_coords();
 	static glm::vec2 rel_mouse_coords();
 private:
@@ -27,6 +28,7 @@ private:
 	static void sample_relative_mouse();	
 	static void press_key(uint32_t key);
 	static void release_key(uint32_t key);
+	static bool was_key_down(uint32_t key);
 };
 
 };

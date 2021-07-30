@@ -12,8 +12,10 @@
 #include "graphics/model.h"
 #include "graphics/scene.h"
 #include "physics/physical.h"
+#include "physics/heightfield.h"
 
 #include "campaign/world.h"
+#include "campaign/campaign.h"
 
 #include "debugger.h"
 
@@ -54,8 +56,7 @@ private:
 	UserDirectory user_dir;
 	util::Config config;
 	VideoSettings video_settings;
-	util::Camera camera;
-	fysx::PhysicalSystem physics;
+	Campaign campaign;
 private:
 	void init_opengl();
 	void init_imgui();

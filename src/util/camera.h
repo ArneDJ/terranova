@@ -12,10 +12,11 @@ public:
 	float pitch = 0.f; // in radians
 	float yaw = 0.f; // in radians
 	geom::Frustum frustum;
+	glm::vec2 resolution;
 public:
 	void update_viewing();
 	// create perspective projection matrix
-	void set_projection(float FOV, float ratio, float near, float far);
+	void set_projection(float FOV, float width, float height, float near, float far);
 	// change the camera direction vector
 	void direct(const glm::vec3 &dir);
 	void target(const glm::vec3 &location);
@@ -28,6 +29,8 @@ public:
 	void move_right(float modifier);
 	void translate(const glm::vec3 &translation);
 	void teleport(const glm::vec3 &location);
+public:
+	glm::vec3 ndc_to_ray(const glm::vec2 &ndc) const;
 private:
 	void angles_to_direction();
 };

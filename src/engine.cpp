@@ -148,7 +148,7 @@ void Engine::update_state()
 	ImGui::NewFrame();
 	ImGui::Begin("Debug Mode");
 	ImGui::SetWindowSize(ImVec2(400, 300));
-	ImGui::Text("cam position: %f, %f, %f", camera.position.x, camera.position.y, camera.position.z);
+	ImGui::Text("cam position: %f, %f, %f", campaign.camera.position.x, campaign.camera.position.y, campaign.camera.position.z);
 	ImGui::Text("%.2f ms/frame (%.1d fps)", (frame_timer.FPS_UPDATE_TIME / frame_timer.frames_per_second()), frame_timer.frames_per_second());
 	ImGui::Text("%.4f frame delta", frame_timer.delta_seconds());
 	ImGui::Text("%f elapsed cull time", g_elapsed);
@@ -157,28 +157,16 @@ void Engine::update_state()
 	if (ImGui::Button("Exit")) { state = EngineState::EXIT; }
 	ImGui::End();
 
-	// update camera
-	float modifier = 10.f * frame_timer.delta_seconds();
-	if (util::InputManager::key_down(SDL_BUTTON_RIGHT)) {
-		glm::vec2 offset = modifier * 0.05f * util::InputManager::rel_mouse_coords();
-		camera.add_offset(offset);
-	}
-	if (util::InputManager::key_down(SDLK_w)) { camera.move_forward(modifier); }
-	if (util::InputManager::key_down(SDLK_s)) { camera.move_backward(modifier); }
-	if (util::InputManager::key_down(SDLK_d)) { camera.move_right(modifier); }
-	if (util::InputManager::key_down(SDLK_a)) { camera.move_left(modifier); }
-
-	camera.update_viewing();
+	campaign.update(frame_timer.delta_seconds());
 }
 
 void Engine::run()
 {
 	state = EngineState::TITLE;
 
-	float ratio = float(video_settings.canvas.x) / float(video_settings.canvas.y);
-	camera.set_projection(video_settings.fov, ratio, 0.1f, 900.f);
-	camera.teleport(glm::vec3(10.f));
-	camera.target(glm::vec3(0.f));
+	campaign.camera.set_projection(video_settings.fov, video_settings.canvas.x, video_settings.canvas.y, 0.1f, 900.f);
+	campaign.camera.teleport(glm::vec3(10.f));
+	campaign.camera.target(glm::vec3(0.f));
 
 	gfx::Shader shader;
 	shader.compile("shaders/triangle.vert", GL_VERTEX_SHADER);
@@ -195,8 +183,10 @@ void Engine::run()
 	gfx::Model teapot_model = gfx::Model("media/models/teapot.glb");
 	gfx::Model dragon_model = gfx::Model("media/models/dragon.glb");
 
+	campaign.init(&shader, &culler);
+
 	gfx::SceneGroup scene = gfx::SceneGroup(&shader, &culler);
-	scene.set_scene_type(gfx::SceneType::FIXED);
+	scene.set_scene_type(gfx::SceneType::DYNAMIC);
 
 	Debugger debugger = Debugger(&shader, &culler);
 
@@ -220,16 +210,11 @@ void Engine::run()
 	std::random_device rd;  //Will be used to obtain a seed for the random number engine
 	std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
 	std::uniform_int_distribution<int> distrib;
-	WorldMap world;
-	//world.generate(distrib(gen));
-	// TODO prevent crash if file not found
-	{
-		std::ifstream stream("graph.bin", std::ios::binary);
-		cereal::BinaryInputArchive archive(stream);
-		world.load(archive);
-	}
 
-	world.prepare();
+	campaign.load();
+	campaign.world->prepare();
+
+	teapot_object->add_transform(campaign.marker.get());
 
 	while (state == EngineState::TITLE) {
 		frame_timer.begin();
@@ -237,15 +222,13 @@ void Engine::run()
 		update_state();
 	
 		if (g_generate) {
-			world.generate(distrib(gen));
-			world.prepare();
+			campaign.world->generate(distrib(gen));
+			campaign.world->prepare();
 		}
 
-		physics.update(frame_timer.delta_seconds());
+		debugger.update(campaign.camera);
 
-		debugger.update(camera);
-
-		scene.update(camera);
+		scene.update(campaign.camera);
 
 		auto start = std::chrono::steady_clock::now();
 
@@ -264,7 +247,7 @@ void Engine::run()
 		shader.uniform_mat4("MODEL", glm::mat4(1.f));
 		shader.uniform_bool("INDIRECT_DRAW", false);
 		shader.uniform_bool("WIRED_MODE", false);
-		world.display();
+		campaign.display();
 
 		scene.display();
 
@@ -283,11 +266,5 @@ void Engine::run()
 		}
 	}
 
-	{
-		std::ofstream os("graph.bin", std::ios::binary);
-		cereal::BinaryOutputArchive archive(os);
-		world.save(archive);
-	}
-	
-	physics.clear_objects();
+	campaign.save();
 }

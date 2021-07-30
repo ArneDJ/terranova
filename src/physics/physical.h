@@ -5,6 +5,11 @@
 
 namespace fysx {
 
+struct RayResult {
+	bool hit = false;
+	glm::vec3 point = {};
+};
+
 class PhysicalSystem {
 public:
 	PhysicalSystem();
@@ -13,6 +18,8 @@ public:
 	void add_body(btRigidBody *body);
 	void remove_body(btRigidBody *body);
 	void clear_objects();
+public:
+	RayResult cast_ray(const glm::vec3 &origin, const glm::vec3 &end) const; 
 private:
 	std::unique_ptr<btCollisionConfiguration> m_config;
 	std::unique_ptr<btCollisionDispatcher> m_dispatcher;

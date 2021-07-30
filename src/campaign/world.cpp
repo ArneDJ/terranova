@@ -1,5 +1,6 @@
 #include <vector>
 #include <random>
+#include <memory>
 #include <GL/glew.h>
 #include <GL/gl.h>
 #include <glm/vec3.hpp>
@@ -9,7 +10,10 @@
 
 #include "../geometry/geometry.h"
 #include "../geometry/voronoi.h"
+#include "../geometry/transform.h"
 #include "../graphics/mesh.h"
+#include "../physics/physical.h"
+#include "../physics/heightfield.h"
 
 #include "world.h"
 
@@ -80,4 +84,9 @@ void WorldMap::prepare()
 void WorldMap::display()
 {
 	m_model.display();
+}
+	
+fysx::HeightField& WorldMap::height_field()
+{
+	return m_height_field;
 }

@@ -44,6 +44,21 @@ bool InputManager::key_down(uint32_t key)
 
 	return false;
 }
+	
+bool InputManager::key_pressed(uint32_t key)
+{
+	return (key_down(key) && !was_key_down(key));
+}
+
+bool InputManager::was_key_down(uint32_t key)
+{
+	auto result = m_previous.find(key);
+	if (result != m_previous.end()) {
+		return result->second;
+	}
+
+	return false;
+}
 
 glm::vec2 InputManager::abs_mouse_coords()
 {
