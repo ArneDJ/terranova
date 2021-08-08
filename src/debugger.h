@@ -27,7 +27,7 @@ private:
 	gfx::SceneGroup m_scene;
 	std::vector<std::unique_ptr<DebugEntity>> m_entities;
 private:
-	std::unique_ptr<gfx::Model> m_sphere;
-	std::unique_ptr<gfx::Model> m_cube;
-	std::unique_ptr<gfx::Model> m_cylinder;
+	const gfx::Model *m_sphere;
+	const gfx::Model *m_cube;
+	const gfx::Model *m_cylinder;
 };

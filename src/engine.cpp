@@ -179,8 +179,8 @@ void Engine::run()
 
 	shaders = std::make_unique<ShaderGroup>();
 
-	gfx::Model teapot_model = gfx::Model("media/models/teapot.glb");
-	gfx::Model dragon_model = gfx::Model("media/models/dragon.glb");
+	auto teapot_model = MediaManager::load_model("media/models/teapot.glb");
+	auto dragon_model = MediaManager::load_model("media/models/dragon.glb");
 
 	campaign.init(&shaders->debug, &shaders->culling);
 	campaign.camera.set_projection(video_settings.fov, video_settings.canvas.x, video_settings.canvas.y, 0.1f, 900.f);
@@ -190,8 +190,8 @@ void Engine::run()
 
 	Debugger debugger = Debugger(&shaders->debug, &shaders->culling);
 
-	auto teapot_object = scene.find_object(&teapot_model);
-	auto dragon_object = scene.find_object(&dragon_model);
+	auto teapot_object = scene.find_object(teapot_model);
+	auto dragon_object = scene.find_object(dragon_model);
 
 	std::vector<std::unique_ptr<geom::Transform>> transforms;
 
@@ -200,12 +200,12 @@ void Engine::run()
 		transform->position = glm::vec3(float(10*i), 10.f, -10.f);
 		transform->scale = glm::vec3(0.2f);
 		dragon_object->add_transform(transform.get());
-		//debugger.add_cube(dragon_model.bounds(), transform.get());
+		//debugger.add_cube(dragon_model->bounds(), transform.get());
 		transforms.push_back(std::move(transform));
 	}
 
-	std::random_device rd;  //Will be used to obtain a seed for the random number engine
-	std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
+	std::random_device rd;
+	std::mt19937 gen(rd());
 	std::uniform_int_distribution<int> distrib;
 
 	campaign.load(user_dir.saves + "test.save");

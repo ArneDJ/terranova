@@ -16,6 +16,7 @@
 #include "graphics/model.h"
 #include "graphics/scene.h"
 
+#include "media.h"
 #include "debugger.h"
 
 DebugEntity::DebugEntity(const geom::Transform &shape, const geom::Transform *base)
@@ -44,9 +45,9 @@ const geom::Transform* DebugEntity::transform() const
 Debugger::Debugger(const gfx::Shader *visual_shader, const gfx::Shader *culling_shader)
 	: m_scene(visual_shader, culling_shader)
 {
-	m_sphere = std::make_unique<gfx::Model>("media/models/primitives/sphere.glb");
-	m_cube = std::make_unique<gfx::Model>("media/models/primitives/cube.glb");
-	m_cylinder = std::make_unique<gfx::Model>("media/models/primitives/cylinder.glb");
+	m_sphere = MediaManager::load_model("media/models/primitives/sphere.glb");
+	m_cube = MediaManager::load_model("media/models/primitives/cube.glb");
+	m_cylinder = MediaManager::load_model("media/models/primitives/cylinder.glb");
 
 	m_scene.set_scene_type(gfx::SceneType::DYNAMIC);
 }
@@ -58,7 +59,7 @@ void Debugger::add_cube(const geom::AABB &bounds, const geom::Transform *transfo
 	auto entity = std::make_unique<DebugEntity>(shape, transform);
 	entity->update();
 
-	auto scene_object = m_scene.find_object(m_cube.get());
+	auto scene_object = m_scene.find_object(m_cube);
 	scene_object->add_transform(entity->transform());
 
 	m_entities.push_back(std::move(entity));
@@ -73,7 +74,7 @@ void Debugger::add_sphere(const geom::Sphere &sphere, const geom::Transform *tra
 	auto entity = std::make_unique<DebugEntity>(shape, transform);
 	entity->update();
 
-	auto scene_object = m_scene.find_object(m_sphere.get());
+	auto scene_object = m_scene.find_object(m_sphere);
 	scene_object->add_transform(entity->transform());
 
 	m_entities.push_back(std::move(entity));
@@ -87,7 +88,7 @@ void Debugger::add_cylinder(const glm::vec3 &extents, const geom::Transform *tra
 	auto entity = std::make_unique<DebugEntity>(shape, transform);
 	entity->update();
 
-	auto scene_object = m_scene.find_object(m_cylinder.get());
+	auto scene_object = m_scene.find_object(m_cylinder);
 	scene_object->add_transform(entity->transform());
 
 	m_entities.push_back(std::move(entity));

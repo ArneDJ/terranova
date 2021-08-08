@@ -17,6 +17,7 @@
 #include "campaign/world.h"
 #include "campaign/campaign.h"
 
+#include "media.h"
 #include "debugger.h"
 
 struct VideoSettings {
