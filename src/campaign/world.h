@@ -15,7 +15,7 @@ public:
 	const geom::Rectangle BOUNDS = { { 0.F, 0.F }, { 128.F, 128.F } };
 public:
 	void generate(int seed);
-	void prepare();
+	void reload();
 public:
 	fysx::HeightField& height_field();
 public:

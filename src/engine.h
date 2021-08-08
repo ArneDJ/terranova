@@ -35,6 +35,14 @@ private:
 	bool locate_dir(const char *base, const char *target, std::string &output);
 };
 
+class ShaderGroup {
+public:
+	gfx::Shader debug;
+	gfx::Shader culling;
+public:
+	ShaderGroup();
+};
+
 enum class EngineState {
 	TITLE,
 	CAMPAIGN,
@@ -57,6 +65,7 @@ private:
 	util::Config config;
 	VideoSettings video_settings;
 	Campaign campaign;
+	std::unique_ptr<ShaderGroup> shaders;
 private:
 	void init_opengl();
 	void init_imgui();

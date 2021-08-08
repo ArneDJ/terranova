@@ -24,7 +24,6 @@
 static double g_elapsed = 0.0;
 static bool g_freeze_frustum = false;
 static bool g_generate = false;
-
 static const char *GAME_NAME = "terranova";
 
 bool UserDirectory::locate(const char *base)
@@ -44,6 +43,16 @@ bool UserDirectory::locate_dir(const char *base, const char *target, std::string
 	}
 
 	return false;
+}
+
+ShaderGroup::ShaderGroup()
+{
+	debug.compile("shaders/triangle.vert", GL_VERTEX_SHADER);
+	debug.compile("shaders/triangle.frag", GL_FRAGMENT_SHADER);
+	debug.link();
+
+	culling.compile("shaders/culling.comp", GL_COMPUTE_SHADER);
+	culling.link();
 }
 
 Engine::Engine()
@@ -153,7 +162,11 @@ void Engine::update_state()
 	ImGui::Text("%.4f frame delta", frame_timer.delta_seconds());
 	ImGui::Text("%f elapsed cull time", g_elapsed);
 	if (ImGui::Button("Freeze Frustum")) { g_freeze_frustum = !g_freeze_frustum; }
+	ImGui::Separator();
 	if (ImGui::Button("Generate World")) { g_generate = true; }
+	if (ImGui::Button("Save World")) { 
+		campaign.save(user_dir.saves + "test.save");
+	}
 	if (ImGui::Button("Exit")) { state = EngineState::EXIT; }
 	ImGui::End();
 
@@ -164,35 +177,19 @@ void Engine::run()
 {
 	state = EngineState::TITLE;
 
-	campaign.camera.set_projection(video_settings.fov, video_settings.canvas.x, video_settings.canvas.y, 0.1f, 900.f);
-	campaign.camera.teleport(glm::vec3(10.f));
-	campaign.camera.target(glm::vec3(0.f));
+	shaders = std::make_unique<ShaderGroup>();
 
-	gfx::Shader shader;
-	shader.compile("shaders/triangle.vert", GL_VERTEX_SHADER);
-	shader.compile("shaders/triangle.frag", GL_FRAGMENT_SHADER);
-	shader.link();
-
-	gfx::Shader culler;
-	culler.compile("shaders/culling.comp", GL_COMPUTE_SHADER);
-	culler.link();
-
-	gfx::Model plane_model = gfx::Model("media/models/primitives/plane.glb");
-	gfx::Model sphere_model = gfx::Model("media/models/primitives/icosphere.glb");
-	gfx::Model cube_model = gfx::Model("media/models/primitives/cube.glb");
 	gfx::Model teapot_model = gfx::Model("media/models/teapot.glb");
 	gfx::Model dragon_model = gfx::Model("media/models/dragon.glb");
 
-	campaign.init(&shader, &culler);
+	campaign.init(&shaders->debug, &shaders->culling);
+	campaign.camera.set_projection(video_settings.fov, video_settings.canvas.x, video_settings.canvas.y, 0.1f, 900.f);
 
-	gfx::SceneGroup scene = gfx::SceneGroup(&shader, &culler);
+	gfx::SceneGroup scene = gfx::SceneGroup(&shaders->debug, &shaders->culling);
 	scene.set_scene_type(gfx::SceneType::DYNAMIC);
 
-	Debugger debugger = Debugger(&shader, &culler);
+	Debugger debugger = Debugger(&shaders->debug, &shaders->culling);
 
-	auto plane_object = scene.find_object(&plane_model);
-	auto sphere_object = scene.find_object(&sphere_model);
-	auto cube_object = scene.find_object(&cube_model);
 	auto teapot_object = scene.find_object(&teapot_model);
 	auto dragon_object = scene.find_object(&dragon_model);
 
@@ -211,8 +208,8 @@ void Engine::run()
 	std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
 	std::uniform_int_distribution<int> distrib;
 
-	campaign.load();
-	campaign.world->prepare();
+	campaign.load(user_dir.saves + "test.save");
+	campaign.world->reload();
 
 	teapot_object->add_transform(campaign.marker.get());
 
@@ -223,7 +220,7 @@ void Engine::run()
 	
 		if (g_generate) {
 			campaign.world->generate(distrib(gen));
-			campaign.world->prepare();
+			campaign.world->reload();
 		}
 
 		debugger.update(campaign.camera);
@@ -243,10 +240,10 @@ void Engine::run()
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glViewport(0, 0, video_settings.canvas.x, video_settings.canvas.y);
 
-		shader.use();
-		shader.uniform_mat4("MODEL", glm::mat4(1.f));
-		shader.uniform_bool("INDIRECT_DRAW", false);
-		shader.uniform_bool("WIRED_MODE", false);
+		shaders->debug.use();
+		shaders->debug.uniform_mat4("MODEL", glm::mat4(1.f));
+		shaders->debug.uniform_bool("INDIRECT_DRAW", false);
+		shaders->debug.uniform_bool("WIRED_MODE", false);
 		campaign.display();
 
 		scene.display();
@@ -265,6 +262,4 @@ void Engine::run()
 			state = EngineState::EXIT;
 		}
 	}
-
-	campaign.save();
 }

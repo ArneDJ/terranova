@@ -1,5 +1,6 @@
 #pragma once
 #include "../geometry/frustum.h"
+#include "../util/serialize.h"
 
 namespace util {
 
@@ -34,5 +35,21 @@ public:
 private:
 	void angles_to_direction();
 };
+
+// camera saving
+template <class Archive>
+void save(Archive &archive, const Camera &camera)
+{
+	archive(camera.position, camera.direction);
+}
+
+// camera loading
+template <class Archive>
+void load(Archive &archive, Camera &camera)
+{
+	archive(camera.position, camera.direction);
+
+	camera.direct(camera.direction);
+}
 
 };

@@ -52,18 +52,32 @@ void Campaign::init(const gfx::Shader *visual, const gfx::Shader *culling)
 	marker = std::make_unique<geom::Transform>();
 }
 	
-void Campaign::load()
+void Campaign::load(const std::string &filepath)
 {
-	std::ifstream stream("graph.bin", std::ios::binary);
-	cereal::BinaryInputArchive archive(stream);
-	world->load(archive);
+	std::ifstream stream(filepath, std::ios::binary);
+
+	if (stream.is_open()) {
+		cereal::BinaryInputArchive archive(stream);
+		archive(name);
+		world->load(archive);
+		archive(camera);
+	} else {
+		LOG_F(ERROR, "Game loading error: could not open save file %s", filepath.c_str());
+	}
 }
 
-void Campaign::save()
+void Campaign::save(const std::string &filepath)
 {
-	std::ofstream os("graph.bin", std::ios::binary);
-	cereal::BinaryOutputArchive archive(os);
-	world->save(archive);
+	std::ofstream stream(filepath, std::ios::binary);
+
+	if (stream.is_open()) {
+		cereal::BinaryOutputArchive archive(stream);
+		archive(name);
+		world->save(archive);
+		archive(camera);
+	} else {
+		LOG_F(ERROR, "Game saving error: could not open save file %s", filepath.c_str());
+	}
 }
 
 void Campaign::update(float delta)

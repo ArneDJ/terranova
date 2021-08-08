@@ -76,7 +76,7 @@ void WorldMap::generate(int seed)
 	m_graph.generate(points, BOUNDS, 2);
 }
 	
-void WorldMap::prepare()
+void WorldMap::reload()
 {
 	m_model.reload(m_graph, m_seed);
 }
