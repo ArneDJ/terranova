@@ -23,7 +23,6 @@ std::map<uint64_t, std::unique_ptr<gfx::Model>> MediaManager::m_models;
 
 const gfx::Model* MediaManager::load_model(const std::string &filepath)
 {
-	//std::string filepath = m_directory + "models/" + path;
 	uint64_t key = std::hash<std::string>()(filepath);
 
 	auto search = m_models.find(key);

@@ -32,6 +32,7 @@ void serialize(Archive &archive, Tile &tile)
 	archive(tile.index, tile.height);
 }
 
+// generates a tile map with geography data (relief, temperatures, ...)
 class Atlas {
 public:
 	void generate(int seed, const geom::Rectangle &bounds);

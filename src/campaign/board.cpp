@@ -18,7 +18,7 @@
 #include "../physics/heightfield.h"
 
 #include "atlas.h"
-#include "world.h"
+#include "board.h"
 
 WorldModel::WorldModel(const gfx::Shader *shader)
 {
@@ -82,29 +82,29 @@ void WorldModel::display(const util::Camera &camera) const
 	m_mesh.draw();
 }
 	
-WorldMap::WorldMap(const gfx::Shader *tilemap)
+Board::Board(const gfx::Shader *tilemap)
 	: m_model(tilemap)
 {
 }
 	
-void WorldMap::generate(int seed)
+void Board::generate(int seed)
 {
 	m_seed = seed;
 
 	m_atlas.generate(seed, BOUNDS);
 }
 	
-void WorldMap::reload()
+void Board::reload()
 {
 	m_model.reload(m_atlas, m_seed);
 }
 	
-void WorldMap::display(const util::Camera &camera)
+void Board::display(const util::Camera &camera)
 {
 	m_model.display(camera);
 }
 	
-fysx::HeightField& WorldMap::height_field()
+fysx::HeightField& Board::height_field()
 {
 	return m_height_field;
 }

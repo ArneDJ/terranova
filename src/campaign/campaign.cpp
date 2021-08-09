@@ -14,8 +14,6 @@
 #include "../extern/loguru/loguru.hpp"
 
 #include "../extern/imgui/imgui.h"
-#include "../extern/imgui/imgui_impl_sdl.h"
-#include "../extern/imgui/imgui_impl_opengl3.h"
 
 #include "../extern/cereal/archives/binary.hpp"
 
@@ -36,9 +34,6 @@
 
 #include "../debugger.h"
 
-#include "atlas.h"
-#include "world.h"
-
 #include "campaign.h"
 	
 void Campaign::init(const gfx::Shader *visual, const gfx::Shader *culling, const gfx::Shader *tilemap)
@@ -46,11 +41,9 @@ void Campaign::init(const gfx::Shader *visual, const gfx::Shader *culling, const
 	scene = std::make_unique<gfx::SceneGroup>(visual, culling);
 	scene->set_scene_type(gfx::SceneType::FIXED);
 	
-	world = std::make_unique<WorldMap>(tilemap);
+	world = std::make_unique<Board>(tilemap);
 
 	physics.add_body(world->height_field().body());
-	
-	marker = std::make_unique<geom::Transform>();
 }
 	
 void Campaign::load(const std::string &filepath)
@@ -100,7 +93,8 @@ void Campaign::update(float delta)
 		glm::vec3 ray = camera.ndc_to_ray(util::InputManager::abs_mouse_coords());
 		auto result = physics.cast_ray(camera.position, camera.position + (1000.f * ray));
 		if (result.hit) {
-			marker->position = result.point;
+			//marker->position = result.point;
+			marker.teleport(result.point);
 		}
 	}
 }

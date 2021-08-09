@@ -1,12 +1,16 @@
+#pragma once
+#include "atlas.h"
+#include "board.h"
+#include "marker.h"
 
 class Campaign {
 public:
 	std::string name = {};
 	util::Camera camera;
 	fysx::PhysicalSystem physics;
-	std::unique_ptr<WorldMap> world;
+	std::unique_ptr<Board> world;
 	std::unique_ptr<gfx::SceneGroup> scene;
-	std::unique_ptr<geom::Transform> marker;
+	Marker marker;
 public:
 	void load(const std::string &filepath);
 	void save(const std::string &filepath);

@@ -14,8 +14,6 @@
 #include "physics/physical.h"
 #include "physics/heightfield.h"
 
-#include "campaign/atlas.h"
-#include "campaign/world.h"
 #include "campaign/campaign.h"
 
 #include "media.h"
@@ -73,5 +71,5 @@ private:
 	void init_opengl();
 	void init_imgui();
 private:
-	void update_state();
+	void update_debug_menu();
 };

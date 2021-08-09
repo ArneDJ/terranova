@@ -150,11 +150,9 @@ void Engine::init_imgui()
 	ImGui_ImplOpenGL3_Init("#version 460");
 }
 	
-void Engine::update_state()
+void Engine::update_debug_menu()
 {
 	g_generate = false;
-
-	util::InputManager::update();
 
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplSDL2_NewFrame(window);
@@ -173,8 +171,6 @@ void Engine::update_state()
 	}
 	if (ImGui::Button("Exit")) { state = EngineState::EXIT; }
 	ImGui::End();
-
-	campaign.update(frame_timer.delta_seconds());
 }
 
 void Engine::run()
@@ -188,7 +184,7 @@ void Engine::run()
 	campaign.init(&shaders->debug, &shaders->culling, &shaders->tilemap);
 	campaign.camera.set_projection(video_settings.fov, video_settings.canvas.x, video_settings.canvas.y, 0.1f, 900.f);
 
-	auto teapot_model = MediaManager::load_model("media/models/teapot.glb");
+	auto teapot_model = MediaManager::load_model("media/models/primitives/cone.glb");
 
 	gfx::SceneGroup scene = gfx::SceneGroup(&shaders->debug, &shaders->culling);
 	scene.set_scene_type(gfx::SceneType::DYNAMIC);
@@ -202,12 +198,16 @@ void Engine::run()
 	campaign.load(user_dir.saves + "test.save");
 	campaign.world->reload();
 
-	teapot_object->add_transform(campaign.marker.get());
+	teapot_object->add_transform(campaign.marker.transform());
 
 	while (state == EngineState::TITLE) {
 		frame_timer.begin();
 	
-		update_state();
+		util::InputManager::update();
+
+		update_debug_menu();
+
+		campaign.update(frame_timer.delta_seconds());
 	
 		if (g_generate) {
 			campaign.world->generate(distrib(gen));

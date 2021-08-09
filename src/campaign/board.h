@@ -13,9 +13,9 @@ private:
 	std::vector<uint32_t> m_indices;
 };
 
-class WorldMap {
+class Board {
 public:
-	WorldMap(const gfx::Shader *tilemap);
+	Board(const gfx::Shader *tilemap);
 public:
 	const geom::Rectangle BOUNDS = { { 0.F, 0.F }, { 1024.F, 1024.F } };
 public:
