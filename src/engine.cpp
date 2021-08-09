@@ -1,6 +1,7 @@
 #include <iostream>
 #include <chrono>
 #include <unordered_map>
+#include <list>
 #include <memory>
 #include <random>
 #include <fstream>
@@ -21,8 +22,6 @@
 
 #include "engine.h"
 
-static double g_elapsed = 0.0;
-static bool g_freeze_frustum = false;
 static bool g_generate = false;
 static const char *GAME_NAME = "terranova";
 
@@ -162,8 +161,6 @@ void Engine::update_debug_menu()
 	ImGui::Text("cam position: %f, %f, %f", campaign.camera.position.x, campaign.camera.position.y, campaign.camera.position.z);
 	ImGui::Text("%.2f ms/frame (%.1d fps)", (frame_timer.FPS_UPDATE_TIME / frame_timer.frames_per_second()), frame_timer.frames_per_second());
 	ImGui::Text("%.4f frame delta", frame_timer.delta_seconds());
-	ImGui::Text("%f elapsed cull time", g_elapsed);
-	if (ImGui::Button("Freeze Frustum")) { g_freeze_frustum = !g_freeze_frustum; }
 	ImGui::Separator();
 	if (ImGui::Button("Generate World")) { g_generate = true; }
 	if (ImGui::Button("Save World")) { 
@@ -184,21 +181,12 @@ void Engine::run()
 	campaign.init(&shaders->debug, &shaders->culling, &shaders->tilemap);
 	campaign.camera.set_projection(video_settings.fov, video_settings.canvas.x, video_settings.canvas.y, 0.1f, 900.f);
 
-	auto teapot_model = MediaManager::load_model("media/models/primitives/cone.glb");
-
-	gfx::SceneGroup scene = gfx::SceneGroup(&shaders->debug, &shaders->culling);
-	scene.set_scene_type(gfx::SceneType::DYNAMIC);
-
-	auto teapot_object = scene.find_object(teapot_model);
-
 	std::random_device rd;
 	std::mt19937 gen(rd());
 	std::uniform_int_distribution<int> distrib;
 
 	campaign.load(user_dir.saves + "test.save");
 	campaign.world->reload();
-
-	teapot_object->add_transform(campaign.marker.transform());
 
 	while (state == EngineState::TITLE) {
 		frame_timer.begin();
@@ -216,24 +204,10 @@ void Engine::run()
 
 		debugger.update(campaign.camera);
 
-		scene.update(campaign.camera);
-
-		auto start = std::chrono::steady_clock::now();
-
-		if (!g_freeze_frustum) {
-			scene.cull_frustum();
-		}
-
-		auto end = std::chrono::steady_clock::now();
-		std::chrono::duration<double> elapsed_seconds = end-start;
-		g_elapsed = elapsed_seconds.count();
-
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glViewport(0, 0, video_settings.canvas.x, video_settings.canvas.y);
 
 		campaign.display();
-
-		scene.display();
 
 		debugger.display();
 		debugger.display_wireframe();

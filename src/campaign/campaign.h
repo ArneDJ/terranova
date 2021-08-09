@@ -1,6 +1,7 @@
 #pragma once
 #include "atlas.h"
 #include "board.h"
+#include "meeple.h"
 #include "marker.h"
 
 class Campaign {
@@ -11,6 +12,7 @@ public:
 	std::unique_ptr<Board> world;
 	std::unique_ptr<gfx::SceneGroup> scene;
 	Marker marker;
+	Meeple player;
 public:
 	void load(const std::string &filepath);
 	void save(const std::string &filepath);

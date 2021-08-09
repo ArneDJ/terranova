@@ -1,6 +1,7 @@
 #include <iostream>
 #include <chrono>
 #include <unordered_map>
+#include <list>
 #include <memory>
 #include <random>
 #include <fstream>
@@ -33,17 +34,28 @@
 #include "../physics/heightfield.h"
 
 #include "../debugger.h"
+#include "../media.h"
 
 #include "campaign.h"
 	
 void Campaign::init(const gfx::Shader *visual, const gfx::Shader *culling, const gfx::Shader *tilemap)
 {
 	scene = std::make_unique<gfx::SceneGroup>(visual, culling);
-	scene->set_scene_type(gfx::SceneType::FIXED);
+	scene->set_scene_type(gfx::SceneType::DYNAMIC);
 	
 	world = std::make_unique<Board>(tilemap);
 
 	physics.add_body(world->height_field().body());
+
+	auto cone_model = MediaManager::load_model("media/models/primitives/cone.glb");
+	auto cone_object = scene->find_object(cone_model);
+	cone_object->add_transform(marker.transform());
+
+	player.teleport(glm::vec2(0.f));
+	player.set_speed(10.f);
+	auto duck_model = MediaManager::load_model("media/models/duck.glb");
+	auto duck_object = scene->find_object(duck_model);
+	duck_object->add_transform(player.transform());
 }
 	
 void Campaign::load(const std::string &filepath)
@@ -78,14 +90,15 @@ void Campaign::update(float delta)
 {
 	// update camera
 	float modifier = 10.f * delta;
+	float speed = 10.f * modifier;
 	if (util::InputManager::key_down(SDL_BUTTON_LEFT)) {
 		glm::vec2 offset = modifier * 0.05f * util::InputManager::rel_mouse_coords();
 		camera.add_offset(offset);
 	}
-	if (util::InputManager::key_down(SDLK_w)) { camera.move_forward(10.f*modifier); }
-	if (util::InputManager::key_down(SDLK_s)) { camera.move_backward(10.f*modifier); }
-	if (util::InputManager::key_down(SDLK_d)) { camera.move_right(10.f*modifier); }
-	if (util::InputManager::key_down(SDLK_a)) { camera.move_left(10.f*modifier); }
+	if (util::InputManager::key_down(SDLK_w)) { camera.move_forward(speed); }
+	if (util::InputManager::key_down(SDLK_s)) { camera.move_backward(speed); }
+	if (util::InputManager::key_down(SDLK_d)) { camera.move_right(speed); }
+	if (util::InputManager::key_down(SDLK_a)) { camera.move_left(speed); }
 
 	camera.update_viewing();
 
@@ -93,13 +106,22 @@ void Campaign::update(float delta)
 		glm::vec3 ray = camera.ndc_to_ray(util::InputManager::abs_mouse_coords());
 		auto result = physics.cast_ray(camera.position, camera.position + (1000.f * ray));
 		if (result.hit) {
-			//marker->position = result.point;
 			marker.teleport(result.point);
+			std::list<glm::vec2> nodes;
+			nodes.push_back(glm::vec2(player.transform()->position.x + 0.01f, player.transform()->position.z));
+			nodes.push_back(glm::vec2(result.point.x, result.point.z));
+			player.set_path(nodes);
 		}
 	}
+
+	player.update(delta);
 }
 	
 void Campaign::display()
 {
+	scene->update(camera);
+	scene->cull_frustum();
+	scene->display();
+
 	world->display(camera);
 }

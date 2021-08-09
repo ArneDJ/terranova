@@ -81,4 +81,9 @@ inline bool clockwise(const glm::vec2 &a, const glm::vec2 &b, const glm::vec2 &c
 	return (wise < 0.f);
 }
 
+inline bool point_in_circle(const glm::vec2 &point, const glm::vec2 &origin, float radius)
+{
+	return ((point.x - origin.x) * (point.x - origin.x)) + ((point.y - origin.y) * (point.y - origin.y)) <= (radius * radius);
+}
+
 };
