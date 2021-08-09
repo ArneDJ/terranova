@@ -33,6 +33,7 @@ file(GLOB all_SRCS
         "${PROJECT_SOURCE_DIR}/src/extern/loguru/*.h"
 	"${PROJECT_SOURCE_DIR}/src/extern/imgui/*.cpp"
 	"${PROJECT_SOURCE_DIR}/src/extern/imgui/*.h"
+	"${PROJECT_SOURCE_DIR}/src/extern/fastnoise/*.cpp"
 )
 
 add_executable(${PROJECT_NAME} ${all_SRCS})

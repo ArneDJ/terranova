@@ -36,16 +36,17 @@
 
 #include "../debugger.h"
 
+#include "atlas.h"
 #include "world.h"
 
 #include "campaign.h"
 	
-void Campaign::init(const gfx::Shader *visual, const gfx::Shader *culling)
+void Campaign::init(const gfx::Shader *visual, const gfx::Shader *culling, const gfx::Shader *tilemap)
 {
 	scene = std::make_unique<gfx::SceneGroup>(visual, culling);
 	scene->set_scene_type(gfx::SceneType::FIXED);
 	
-	world = std::make_unique<WorldMap>();
+	world = std::make_unique<WorldMap>(tilemap);
 
 	physics.add_body(world->height_field().body());
 	
@@ -88,16 +89,16 @@ void Campaign::update(float delta)
 		glm::vec2 offset = modifier * 0.05f * util::InputManager::rel_mouse_coords();
 		camera.add_offset(offset);
 	}
-	if (util::InputManager::key_down(SDLK_w)) { camera.move_forward(modifier); }
-	if (util::InputManager::key_down(SDLK_s)) { camera.move_backward(modifier); }
-	if (util::InputManager::key_down(SDLK_d)) { camera.move_right(modifier); }
-	if (util::InputManager::key_down(SDLK_a)) { camera.move_left(modifier); }
+	if (util::InputManager::key_down(SDLK_w)) { camera.move_forward(10.f*modifier); }
+	if (util::InputManager::key_down(SDLK_s)) { camera.move_backward(10.f*modifier); }
+	if (util::InputManager::key_down(SDLK_d)) { camera.move_right(10.f*modifier); }
+	if (util::InputManager::key_down(SDLK_a)) { camera.move_left(10.f*modifier); }
 
 	camera.update_viewing();
 
 	if (util::InputManager::key_pressed(SDL_BUTTON_RIGHT)) {
 		glm::vec3 ray = camera.ndc_to_ray(util::InputManager::abs_mouse_coords());
-		auto result = physics.cast_ray(camera.position, camera.position + (100.f * ray));
+		auto result = physics.cast_ray(camera.position, camera.position + (1000.f * ray));
 		if (result.hit) {
 			marker->position = result.point;
 		}
@@ -106,5 +107,5 @@ void Campaign::update(float delta)
 	
 void Campaign::display()
 {
-	world->display();
+	world->display(camera);
 }

@@ -11,7 +11,7 @@ public:
 	void load(const std::string &filepath);
 	void save(const std::string &filepath);
 public:
-	void init(const gfx::Shader *visual, const gfx::Shader *culling);
+	void init(const gfx::Shader *visual, const gfx::Shader *culling, const gfx::Shader *tilemap);
 	void update(float delta);
 	void display();
 };

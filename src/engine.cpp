@@ -47,9 +47,13 @@ bool UserDirectory::locate_dir(const char *base, const char *target, std::string
 
 ShaderGroup::ShaderGroup()
 {
-	debug.compile("shaders/triangle.vert", GL_VERTEX_SHADER);
-	debug.compile("shaders/triangle.frag", GL_FRAGMENT_SHADER);
+	debug.compile("shaders/debug.vert", GL_VERTEX_SHADER);
+	debug.compile("shaders/debug.frag", GL_FRAGMENT_SHADER);
 	debug.link();
+
+	tilemap.compile("shaders/tilemap.vert", GL_VERTEX_SHADER);
+	tilemap.compile("shaders/tilemap.frag", GL_FRAGMENT_SHADER);
+	tilemap.link();
 
 	culling.compile("shaders/culling.comp", GL_COMPUTE_SHADER);
 	culling.link();
@@ -179,30 +183,17 @@ void Engine::run()
 
 	shaders = std::make_unique<ShaderGroup>();
 
-	auto teapot_model = MediaManager::load_model("media/models/teapot.glb");
-	auto dragon_model = MediaManager::load_model("media/models/dragon.glb");
+	Debugger debugger = Debugger(&shaders->debug, &shaders->culling);
 
-	campaign.init(&shaders->debug, &shaders->culling);
+	campaign.init(&shaders->debug, &shaders->culling, &shaders->tilemap);
 	campaign.camera.set_projection(video_settings.fov, video_settings.canvas.x, video_settings.canvas.y, 0.1f, 900.f);
+
+	auto teapot_model = MediaManager::load_model("media/models/teapot.glb");
 
 	gfx::SceneGroup scene = gfx::SceneGroup(&shaders->debug, &shaders->culling);
 	scene.set_scene_type(gfx::SceneType::DYNAMIC);
 
-	Debugger debugger = Debugger(&shaders->debug, &shaders->culling);
-
 	auto teapot_object = scene.find_object(teapot_model);
-	auto dragon_object = scene.find_object(dragon_model);
-
-	std::vector<std::unique_ptr<geom::Transform>> transforms;
-
-	for (int i = 0; i < 10; i++) {
-		auto transform = std::make_unique<geom::Transform>();
-		transform->position = glm::vec3(float(10*i), 10.f, -10.f);
-		transform->scale = glm::vec3(0.2f);
-		dragon_object->add_transform(transform.get());
-		//debugger.add_cube(dragon_model->bounds(), transform.get());
-		transforms.push_back(std::move(transform));
-	}
 
 	std::random_device rd;
 	std::mt19937 gen(rd());
@@ -240,10 +231,6 @@ void Engine::run()
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glViewport(0, 0, video_settings.canvas.x, video_settings.canvas.y);
 
-		shaders->debug.use();
-		shaders->debug.uniform_mat4("MODEL", glm::mat4(1.f));
-		shaders->debug.uniform_bool("INDIRECT_DRAW", false);
-		shaders->debug.uniform_bool("WIRED_MODE", false);
 		campaign.display();
 
 		scene.display();

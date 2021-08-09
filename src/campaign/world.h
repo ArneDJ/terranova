@@ -1,10 +1,13 @@
 
 class WorldModel {
 public:
-	void reload(const geom::VoronoiGraph &graph, int seed);
+	WorldModel(const gfx::Shader *shader);
 public:
-	void display() const;
+	void reload(const Atlas &atlas, int seed);
+public:
+	void display(const util::Camera &camera) const;
 private:
+	const gfx::Shader *m_shader = nullptr;
 	gfx::Mesh m_mesh;
 	std::vector<gfx::Vertex> m_vertices;
 	std::vector<uint32_t> m_indices;
@@ -12,7 +15,9 @@ private:
 
 class WorldMap {
 public:
-	const geom::Rectangle BOUNDS = { { 0.F, 0.F }, { 128.F, 128.F } };
+	WorldMap(const gfx::Shader *tilemap);
+public:
+	const geom::Rectangle BOUNDS = { { 0.F, 0.F }, { 1024.F, 1024.F } };
 public:
 	void generate(int seed);
 	void reload();
@@ -22,19 +27,19 @@ public:
 	template <class Archive>
 	void save(Archive &archive) const 
 	{
-		archive(m_seed, m_graph);
+		archive(m_seed, m_atlas);
 	}
 public:
 	template <class Archive>
 	void load(Archive &archive)
 	{
-		archive(m_seed, m_graph);
+		archive(m_seed, m_atlas);
 	}
 public:
-	void display();
+	void display(const util::Camera &camera);
 private:
 	int m_seed;
-	geom::VoronoiGraph m_graph;
+	Atlas m_atlas;
 	WorldModel m_model;
 	fysx::HeightField m_height_field;
 };

@@ -14,6 +14,7 @@
 #include "physics/physical.h"
 #include "physics/heightfield.h"
 
+#include "campaign/atlas.h"
 #include "campaign/world.h"
 #include "campaign/campaign.h"
 
@@ -39,6 +40,7 @@ private:
 class ShaderGroup {
 public:
 	gfx::Shader debug;
+	gfx::Shader tilemap;
 	gfx::Shader culling;
 public:
 	ShaderGroup();

@@ -32,7 +32,7 @@ void main()
 		translation = MODEL;
 	}
 		
-	gl_Position = camera.view_projection * translation * MODEL * vec4(vposition, 1.0);
+	gl_Position = camera.view_projection * translation * vec4(vposition, 1.0);
 
 	color = WIRED_MODE == true ? vec3(0.0) : vnormal;
 }
