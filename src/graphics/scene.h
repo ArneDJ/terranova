@@ -20,6 +20,7 @@ public:
 public:
 	void add(const Primitive &primimtive);
 	void add_instance();
+	void remove_instance();
 	void update();
 	void dispatch();
 public:
@@ -36,6 +37,7 @@ public:
 	SceneObject(const Model *model);
 public:
 	void add_transform(const geom::Transform *transform);
+	void remove_transform(const geom::Transform *transform);
 	void update_transforms();
 	void update_buffers();
 	void dispatch_frustum_cull();

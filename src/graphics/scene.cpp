@@ -68,6 +68,18 @@ void IndirectMesh::add_instance()
 	m_group_count++;
 }
 	
+void IndirectMesh::remove_instance()
+{
+	for (auto &drawer : m_drawers) {
+		drawer->pop_command();
+	}
+	for (auto &drawer : m_elements_drawers) {
+		drawer->pop_command();
+	}
+
+	m_group_count--;
+}
+	
 void IndirectMesh::update()
 {
 	for (auto &drawer : m_drawers) {
@@ -137,6 +149,26 @@ void SceneObject::add_transform(const geom::Transform *transform)
 	m_model_matrices.data.push_back(transform->to_matrix());
 
 	m_instance_count++;
+}
+	
+// FIXME check for correct removal
+void SceneObject::remove_transform(const geom::Transform *transform)
+{
+	for (int i = 0; i < m_transforms.size(); i++) {
+		if (m_transforms[i] == transform) {
+			m_transforms.erase(m_transforms.begin() + i);
+			m_padded_transforms.data.erase(m_padded_transforms.data.begin() + i);
+			m_model_matrices.data.erase(m_model_matrices.data.begin() + i);
+
+			for (auto &indirect_mesh : m_indirect_meshes) {
+				indirect_mesh->remove_instance();
+			}
+
+			m_instance_count--;
+
+			break;
+		}
+	}
 }
 	
 void SceneObject::update_transforms()

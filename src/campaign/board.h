@@ -15,12 +15,16 @@ private:
 
 class Board {
 public:
+	std::vector<glm::vec2> path; // TODO remove
+	std::vector<nav::MapSearchNode> nodes; // TODO remove
+public:
 	Board(const gfx::Shader *tilemap);
 public:
 	const geom::Rectangle BOUNDS = { { 0.F, 0.F }, { 1024.F, 1024.F } };
 public:
 	void generate(int seed);
 	void reload();
+	void find_path(uint32_t start, uint32_t end, std::list<glm::vec2> &pathways);
 public:
 	fysx::HeightField& height_field();
 public:

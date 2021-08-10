@@ -1,6 +1,7 @@
 #include <vector>
 #include <random>
 #include <memory>
+#include <list>
 #include <GL/glew.h>
 #include <GL/gl.h>
 #include <glm/vec3.hpp>
@@ -16,6 +17,7 @@
 #include "../graphics/shader.h"
 #include "../physics/physical.h"
 #include "../physics/heightfield.h"
+#include "../navigation/astar.h"
 
 #include "atlas.h"
 #include "board.h"
@@ -92,6 +94,112 @@ void Board::generate(int seed)
 	m_seed = seed;
 
 	m_atlas.generate(seed, BOUNDS);
+
+	// FIXME 
+	path.clear();
+	nodes.clear();
+	nodes.resize(m_atlas.graph().cells.size());
+	for (const auto &cell : m_atlas.graph().cells) {
+		nav::MapSearchNode node;
+		node.position = cell.center;
+		node.index = cell.index;
+		nodes[cell.index] = node;
+		for (const auto &neighbor : cell.neighbors) {
+			nodes[cell.index].neighbors.push_back(&nodes[neighbor->index]);
+		}
+	}
+	AStarSearch<nav::MapSearchNode> astarsearch;
+	astarsearch.SetStartAndGoalStates(&nodes[0], &nodes[100]);
+
+	/*
+	unsigned int SearchState;
+	unsigned int SearchSteps = 0;
+	do {
+		SearchState = astarsearch.SearchStep();
+		SearchSteps++;
+	} while (SearchState == AStarSearch<nav::MapSearchNode>::SEARCH_STATE_SEARCHING);
+
+	std::cout << "Search steps " << SearchSteps << endl;
+	std::cout << "Search state " << SearchState << endl;
+
+	if (SearchState == AStarSearch<nav::MapSearchNode>::SEARCH_STATE_SUCCEEDED ) {
+		std::cout << "Search found goal state\n";
+
+		nav::MapSearchNode *node = astarsearch.GetSolutionStart();
+
+		std::cout << "Displaying solution\n";
+		int steps = 0;
+
+		node->PrintNodeInfo();
+
+		path.push_back(node->position);
+
+		for (;;) {
+			node = astarsearch.GetSolutionNext();
+		
+			if(!node) { break; }
+			
+			path.push_back(node->position);
+
+			node->PrintNodeInfo();
+			steps ++;
+		};
+
+		std::cout << "Solution steps " << steps << endl;
+
+		// Once you're done with the solution you can free the nodes up
+		astarsearch.FreeSolutionNodes();
+	} else if (SearchState == AStarSearch<nav::MapSearchNode>::SEARCH_STATE_FAILED) {
+		std::cout << "Search terminated. Did not find goal state\n";
+	}
+	*/
+}
+	
+void Board::find_path(uint32_t start, uint32_t end, std::list<glm::vec2> &pathways)
+{
+	AStarSearch<nav::MapSearchNode> astarsearch;
+	astarsearch.SetStartAndGoalStates(&nodes[start], &nodes[end]);
+
+	unsigned int SearchState;
+	unsigned int SearchSteps = 0;
+	do {
+		SearchState = astarsearch.SearchStep();
+		SearchSteps++;
+	} while (SearchState == AStarSearch<nav::MapSearchNode>::SEARCH_STATE_SEARCHING);
+
+	std::cout << "Search steps " << SearchSteps << endl;
+	std::cout << "Search state " << SearchState << endl;
+
+	if (SearchState == AStarSearch<nav::MapSearchNode>::SEARCH_STATE_SUCCEEDED ) {
+		std::cout << "Search found goal state\n";
+
+		nav::MapSearchNode *node = astarsearch.GetSolutionStart();
+
+		std::cout << "Displaying solution\n";
+		int steps = 0;
+
+		node->PrintNodeInfo();
+
+		pathways.push_back(node->position);
+
+		for (;;) {
+			node = astarsearch.GetSolutionNext();
+		
+			if(!node) { break; }
+			
+			pathways.push_back(node->position);
+
+			node->PrintNodeInfo();
+			steps ++;
+		};
+
+		std::cout << "Solution steps " << steps << endl;
+
+		// Once you're done with the solution you can free the nodes up
+		astarsearch.FreeSolutionNodes();
+	} else if (SearchState == AStarSearch<nav::MapSearchNode>::SEARCH_STATE_FAILED) {
+		std::cout << "Search terminated. Did not find goal state\n";
+	}
 }
 	
 void Board::reload()

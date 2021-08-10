@@ -27,6 +27,8 @@ file(GLOB all_SRCS
         "${PROJECT_SOURCE_DIR}/src/graphics/*.h"
         "${PROJECT_SOURCE_DIR}/src/physics/*.cpp"
         "${PROJECT_SOURCE_DIR}/src/physics/*.h"
+        "${PROJECT_SOURCE_DIR}/src/navigation/*.cpp"
+        "${PROJECT_SOURCE_DIR}/src/navigation/*.h"
         "${PROJECT_SOURCE_DIR}/src/campaign/*.cpp"
         "${PROJECT_SOURCE_DIR}/src/campaign/*.h"
         "${PROJECT_SOURCE_DIR}/src/extern/loguru/*.cpp"

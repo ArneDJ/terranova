@@ -13,6 +13,7 @@
 #include "graphics/scene.h"
 #include "physics/physical.h"
 #include "physics/heightfield.h"
+#include "navigation/astar.h"
 
 #include "campaign/campaign.h"
 

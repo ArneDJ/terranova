@@ -198,7 +198,8 @@ void Engine::run()
 		campaign.update(frame_timer.delta_seconds());
 	
 		if (g_generate) {
-			campaign.world->generate(distrib(gen));
+			campaign.generate(distrib(gen));
+			//campaign.world->generate(distrib(gen));
 			campaign.world->reload();
 		}
 
