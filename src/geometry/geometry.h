@@ -17,6 +17,11 @@ struct Sphere {
 	float radius = 1.f;
 };
 
+struct Segment {
+	glm::vec2 A = {};
+	glm::vec2 B = {};
+};
+
 template<typename T>
 inline T max(const T &a, const T &b, const T &c)
 {
@@ -84,6 +89,56 @@ inline bool clockwise(const glm::vec2 &a, const glm::vec2 &b, const glm::vec2 &c
 inline bool point_in_circle(const glm::vec2 &point, const glm::vec2 &origin, float radius)
 {
 	return ((point.x - origin.x) * (point.x - origin.x)) + ((point.y - origin.y) * (point.y - origin.y)) <= (radius * radius);
+}
+
+inline bool point_in_rectangle(const glm::vec2 &p, const Rectangle &r)
+{
+	return (p.x >= r.min.x && p.x < r.max.x && p.y >= r.min.y && p.y < r.max.y);
+}
+
+// http://fgiesen.wordpress.com/2013/02/08/triangle-rasterization-in-practice/
+inline int orient(float x0, float y0, float x1, float y1, float x2, float y2)
+{
+	return (int(x1) - int(x0))*(int(y2) - int(y0)) - (int(y1) - int(y0))*(int(x2) - int(x0));
+}
+
+// TODO check triangle winding
+inline bool triangle_overlaps_point(const glm::vec2 &a, const glm::vec2 &b, const glm::vec2 &c, const glm::vec2 &pt)
+{
+	// barycentric coordinates
+	int w0 = orient(b.x, b.y, c.x, c.y, pt.x, pt.y);
+	int w1 = orient(c.x, c.y, a.x, a.y, pt.x, pt.y);
+	int w2 = orient(a.x, a.y, b.x, b.y, pt.x, pt.y);
+
+	return (w0 >= 0 && w1 >= 0 && w2 >= 0);
+}
+
+// Returns 2 times the signed triangle area. The result is positive if
+// abc is ccw, negative if abc is cw, zero if abc is degenerate.
+inline float sign(const glm::vec2 &a, const glm::vec2 &b, const glm::vec2 &c)
+{
+	return (a.x - c.x) * (b.y - c.y) - (a.y - c.y) * (b.x - c.x);
+}
+
+inline bool segment_intersects_segment(const glm::vec2 &a, const glm::vec2 &b, const glm::vec2 &c, const glm::vec2 &d)
+{
+	// Sign of areas correspond to which side of ab points c and d are
+	float a1 = sign(a, b, d); // Compute winding of abd (+ or -)
+	float a2 = sign(a, b, c); // To intersect, must have sign opposite of a1
+
+	// If c and d are on different sides of ab, areas have different signs
+	if ((a1 * a2) < 0.f) {
+		// Compute signs for a and b with respect to segment cd
+		float a3 = sign(c, d, a);
+		// Compute winding of cda (+ or -)
+		// Since area is constant a1 - a2 = a3 - a4, or a4 = a3 + a2 - a1
+		float a4 = a3 + a2 - a1;
+		// Points a and b on different sides of cd if areas have different signs
+		if (a3 * a4 < 0.0f) { return true; }
+	}
+
+	// Segments not intersecting (or collinear)
+	return false;
 }
 
 };

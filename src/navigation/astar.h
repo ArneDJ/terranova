@@ -14,7 +14,7 @@ public:
 	bool GetSuccessors(AStarSearch<MapSearchNode> *astarsearch, MapSearchNode *parent_node);
 	float GetCost(MapSearchNode *successor);
 	bool IsSameState(MapSearchNode *rhs);
-	void PrintNodeInfo();
+	//void PrintNodeInfo();
 };
 
 };

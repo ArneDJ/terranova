@@ -186,7 +186,7 @@ void Engine::run()
 	std::uniform_int_distribution<int> distrib;
 
 	campaign.load(user_dir.saves + "test.save");
-	campaign.world->reload();
+	campaign.board->reload();
 
 	while (state == EngineState::TITLE) {
 		frame_timer.begin();
@@ -199,8 +199,7 @@ void Engine::run()
 	
 		if (g_generate) {
 			campaign.generate(distrib(gen));
-			//campaign.world->generate(distrib(gen));
-			campaign.world->reload();
+			campaign.board->reload();
 		}
 
 		debugger.update(campaign.camera);

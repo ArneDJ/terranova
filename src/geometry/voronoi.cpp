@@ -24,9 +24,14 @@ static void adapt_cells(const jcv_diagram *diagram, std::vector<VoronoiCell> &ce
 static void adapt_vertices(const jcv_diagram *diagram, std::vector<VoronoiVertex> &vertices);
 static void pair_duality(const jcv_diagram *diagram, std::vector<VoronoiCell> &cells, std::vector<VoronoiVertex> &vertices);
 static void adapt_edges(const jcv_diagram *diagram, std::vector<VoronoiCell> &cells, std::vector<VoronoiVertex> &vertices, std::vector<VoronoiEdge> &edges);
+bool triangle_overlaps_rectangle(const glm::vec2 &a, const glm::vec2 &b, const glm::vec2 &c, const Rectangle &area);
+
+static const size_t CELL_REGION_RES = 128;
 
 void VoronoiGraph::generate(const std::vector<glm::vec2> &locations, const Bounding<glm::vec2> &bounds, uint8_t relaxations)
 {
+	m_bounds = bounds;
+
 	clear();
 
 	// import points
@@ -68,7 +73,6 @@ void VoronoiGraph::generate(const std::vector<glm::vec2> &locations, const Bound
 	jcv_diagram_free(&diagram);
 
 	// create data to serialize graph
-
 	for (const auto &edge : edges) {
 		auto cell_connection = std::make_pair(edge.left_cell->index, edge.right_cell->index);
 		auto vertex_connection = std::make_pair(edge.left_vertex->index, edge.right_vertex->index);
@@ -82,6 +86,9 @@ void VoronoiGraph::generate(const std::vector<glm::vec2> &locations, const Bound
 			m_cell_vertex_connections.push_back(connection);
 		}
 	}
+
+	// spatial hash cells
+	create_spatial_map();
 }
 	
 void VoronoiGraph::clear()
@@ -93,6 +100,46 @@ void VoronoiGraph::clear()
 	m_connected_cells.clear();
 	m_connected_vertices.clear();
 	m_cell_vertex_connections.clear();
+
+	m_spatial_map.clear();
+}
+	
+VoronoiSearchResult VoronoiGraph::cell_at(const glm::vec2 &position) const
+{
+	VoronoiSearchResult result = { false, nullptr };
+
+	int x = floor(position.x / m_region_scale.x);
+	int y = floor(position.y / m_region_scale.y);
+
+	int index = x + y * CELL_REGION_RES;
+	if (index < 0 || index >= m_spatial_map.size()) {
+		return result;
+	}
+
+	const auto &region = m_spatial_map[index];
+	printf("total cells in region %d: %d\n", index, region.cells.size());
+
+	// find closest cell to point within region
+	float min_distance = std::numeric_limits<float>::max();
+	for (const auto &cell : region.cells) {
+		//min_distance = (std::min)(glm::distance(cell->center, position), min_distance);
+		float distance = glm::distance(cell->center, position);
+		if (distance < min_distance) {
+			min_distance = distance;
+			result.cell = cell;
+			result.found = true;
+		}
+		/*
+		const mosaictriangle *tri = &triangles[index];
+		if (geom::triangle_overlaps_point(vertices[tri->a], vertices[tri->b], vertices[tri->c], position)) {
+			result.found = true;
+			result.index = tri->index;
+			return result;
+		}
+		*/
+	}
+
+	return result;
 }
 	
 void VoronoiGraph::unserialize_nodes()
@@ -128,6 +175,137 @@ void VoronoiGraph::unserialize_nodes()
 		cell->vertices.push_back(vertex);
 		vertex->cells.push_back(cell);
 	}
+}
+	
+void VoronoiGraph::create_spatial_map()
+{
+	m_spatial_map.resize(CELL_REGION_RES * CELL_REGION_RES);
+	m_region_scale = {
+		glm::distance(m_bounds.min.x, m_bounds.max.x) / float(CELL_REGION_RES),
+		glm::distance(m_bounds.min.y, m_bounds.max.y) / float(CELL_REGION_RES)
+	};
+
+	glm::vec2 offset = m_bounds.min;
+	for (int i = 0; i < CELL_REGION_RES; i++) {
+		for (int j = 0; j < CELL_REGION_RES; j++) {
+			Rectangle area = { offset, offset + m_region_scale };
+			m_spatial_map[i + j * CELL_REGION_RES].bounds = area;
+			offset.y += m_region_scale.y;
+		}
+		offset.x += m_region_scale.x;
+		offset.y = 0.f;
+	}
+
+	// insert cell references in spatial map
+	for (const auto &cell : cells) {
+		add_cell_to_regions(&cell);
+	}
+
+	std::cout << "of " << cells.size() << "cells:\n";
+	std::cout << "outside diagram (should be 0): " << n_outside << std::endl;
+	std::cout << "bounds inside grid: " << n_bounds_inside << std::endl;
+	std::cout << "overlap diagram cell: " << n_overlap << std::endl;
+	std::cout << "with overlap\n";
+	std::cout << "total cases: " << n_total << std::endl;
+	std::cout << "total valid cases: " << n_total_cases << std::endl;
+	std::cout << "have center inside: " << n_center_inside << std::endl;
+	std::cout << "have vertex inside: " << n_vertex_inside << std::endl;
+	std::cout << "have triangle inside: " << n_triangle_inside << std::endl;
+}
+	
+void VoronoiGraph::add_cell_to_regions(const VoronoiCell *cell)
+{
+	// compute polygon bounding
+	Rectangle poly_bounds = {
+		glm::vec2((std::numeric_limits<float>::max)()),
+		glm::vec2((std::numeric_limits<float>::min)())
+	};
+	for (const auto &vertex : cell->vertices) {
+		poly_bounds.min = (glm::min)(vertex->position, poly_bounds.min);
+		poly_bounds.max = (glm::max)(vertex->position, poly_bounds.max);
+	}
+
+	// bounds in grid
+	int min_x = floor(poly_bounds.min.x / m_region_scale.x);
+	int min_y = floor(poly_bounds.min.y / m_region_scale.y);
+	int max_x = floor(poly_bounds.max.x / m_region_scale.x);
+	int max_y = floor(poly_bounds.max.y / m_region_scale.y);
+
+	// clamp bounds
+	// FIXME 
+	if (max_x >= CELL_REGION_RES) {
+		max_x = CELL_REGION_RES - 1;
+	}
+	if (max_y >= CELL_REGION_RES) {
+		max_y = CELL_REGION_RES - 1;
+	}
+
+	int index_min = min_x + min_y * CELL_REGION_RES;
+	int index_max = max_x + max_y * CELL_REGION_RES;
+	if (index_min < 0 || index_min >= m_spatial_map.size() || index_max < 0 || index_max >= m_spatial_map.size()) {
+		n_outside++;
+		// not in grid early exit
+		return;
+	}
+
+	// polygon bounds are in a single grid region
+	if (index_min == index_max) {
+		n_bounds_inside++;
+		m_spatial_map[index_min].cells.push_back(cell);
+		return;
+	}
+
+	n_overlap++;
+
+	// lastly check if cell partially overlaps grid regions
+	for (int py = min_y; py <= max_y; py++) {
+		for (int px = min_x; px <= max_x; px++) {
+			n_total++;
+			int index = px + py * CELL_REGION_RES;
+			if (index >= 0 && index < m_spatial_map.size()) {
+				// TODO check if this step is necessary
+				if (cell_overlaps_rectangle(cell, m_spatial_map[index].bounds)) {
+					n_total_cases++;
+					m_spatial_map[index].cells.push_back(cell);
+				}
+			}
+		}
+	}
+}
+	
+bool VoronoiGraph::cell_overlaps_rectangle(const VoronoiCell *cell, const Rectangle &rectangle)
+{
+	// cell center is in rectangle
+	// early exit
+	if (point_in_rectangle(cell->center, rectangle)) {
+		n_center_inside++;
+		return true;
+	}
+
+	// check if any of the vertices are inside
+	for (const auto &vertex : cell->vertices) {
+		if (point_in_rectangle(vertex->position, rectangle)) {
+			n_vertex_inside++;
+			return true;
+		}
+	}
+
+	// final case
+	// split polygon into triangles and check for overlap
+	glm::vec2 a = cell->center;
+	for (const auto &edge : cell->edges) {
+		glm::vec2 b = edge->left_vertex->position;
+		glm::vec2 c = edge->right_vertex->position;
+		if (clockwise(a, b, c)) {
+			std::swap(b, c);
+		}
+		if (triangle_overlaps_rectangle(a, b, c, rectangle)) {
+			n_triangle_inside++;
+			return true;
+		}
+	}
+
+	return false;
 }
 
 static void relax_points(const jcv_diagram *diagram, std::vector<jcv_point> &points)
@@ -274,6 +452,42 @@ static void adapt_edges(const jcv_diagram *diagram, std::vector<VoronoiCell> &ce
 			cells[e->right_cell->index].edges.push_back(&edges[i]);
 		}
 	}
+}
+
+bool triangle_overlaps_rectangle(const glm::vec2 &a, const glm::vec2 &b, const glm::vec2 &c, const Rectangle &area)
+{
+	// check if grid points overlap with triangle
+	std::array<glm::vec2, 4> points = {
+		area.min,
+		{ area.max.x, area.min.y },
+		{ area.min.x, area.max.y },
+		area.max
+	};
+	for (const auto &point : points) {
+		if (triangle_overlaps_point(a, b, c, point)) {
+			return true;
+		}
+	}
+	// check if grid line segments overlap with triangle
+	std::array<Segment, 4> segments = { {
+		{ points[0], points[1] },
+		{ points[1], points[3] },
+		{ points[3], points[2] },
+		{ points[2], points[0] }
+	} };
+	for (const auto &segment : segments) {
+		if (segment_intersects_segment(a, b, segment.A, segment.B)) {
+			return true;
+		}
+		if (segment_intersects_segment(b, c, segment.A, segment.B)) {
+			return true;
+		}
+		if (segment_intersects_segment(c, a, segment.A, segment.B)) {
+			return true;
+		}
+	}
+
+	return false;
 }
 
 };

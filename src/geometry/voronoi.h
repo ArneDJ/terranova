@@ -48,6 +48,19 @@ void serialize(Archive &archive, VoronoiCell &cell)
 	archive(cell.index, cell.center);
 }
 
+// contains voronoi cells overlapping an area defined by bounds
+// for spatial searching
+struct VoronoiCellsRegion {
+	Rectangle bounds = {};
+	std::vector<const VoronoiCell*> cells;
+};
+
+// search result of spatial searching
+struct VoronoiSearchResult {
+	bool found = false;
+	const VoronoiCell *cell;
+};
+
 class VoronoiGraph {
 public:
 	std::vector<VoronoiCell> cells;
@@ -57,10 +70,13 @@ public:
 	void generate(const std::vector<glm::vec2> &locations, const Bounding<glm::vec2> &bounds, uint8_t relaxations = 0);
 	void clear();
 public:
+	VoronoiSearchResult cell_at(const glm::vec2 &position) const;
+public:
 	template <class Archive>
 	void save(Archive &archive) const
 	{
 		archive(
+			m_bounds.min, m_bounds.max,
 			cells, vertices, edges,
 			m_connected_cells,
 			m_connected_vertices,
@@ -74,6 +90,7 @@ public:
 		clear();
 
 		archive(
+			m_bounds.min, m_bounds.max,
 			cells, vertices, edges,
 			m_connected_cells,
 			m_connected_vertices,
@@ -81,7 +98,22 @@ public:
 		);
 
 		unserialize_nodes();
+
+		create_spatial_map();
 	}
+private:
+	Bounding<glm::vec2> m_bounds = {};
+	glm::vec2 m_region_scale = {};
+	std::vector<VoronoiCellsRegion> m_spatial_map;
+	// FIXME remove
+	int n_outside = 0;
+	int n_bounds_inside = 0;
+	int n_overlap = 0;
+	int n_center_inside = 0;
+	int n_vertex_inside = 0;
+	int n_triangle_inside = 0;
+	int n_total_cases = 0;
+	int n_total = 0;
 private:
 	// left: edge index
 	// right: connected cells 
@@ -94,6 +126,9 @@ private:
 	std::vector<std::pair<uint32_t, uint32_t>> m_cell_vertex_connections;
 private:
 	void unserialize_nodes();
+	void create_spatial_map();
+	void add_cell_to_regions(const VoronoiCell *cell);
+	bool cell_overlaps_rectangle(const VoronoiCell *cell, const Rectangle &rectangle);
 };
 
 };

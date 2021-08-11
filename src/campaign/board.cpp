@@ -94,67 +94,25 @@ void Board::generate(int seed)
 	m_seed = seed;
 
 	m_atlas.generate(seed, BOUNDS);
-
-	// FIXME 
-	path.clear();
-	nodes.clear();
-	nodes.resize(m_atlas.graph().cells.size());
-	for (const auto &cell : m_atlas.graph().cells) {
-		nav::MapSearchNode node;
-		node.position = cell.center;
-		node.index = cell.index;
-		nodes[cell.index] = node;
-		for (const auto &neighbor : cell.neighbors) {
-			nodes[cell.index].neighbors.push_back(&nodes[neighbor->index]);
-		}
-	}
-	AStarSearch<nav::MapSearchNode> astarsearch;
-	astarsearch.SetStartAndGoalStates(&nodes[0], &nodes[100]);
-
-	/*
-	unsigned int SearchState;
-	unsigned int SearchSteps = 0;
-	do {
-		SearchState = astarsearch.SearchStep();
-		SearchSteps++;
-	} while (SearchState == AStarSearch<nav::MapSearchNode>::SEARCH_STATE_SEARCHING);
-
-	std::cout << "Search steps " << SearchSteps << endl;
-	std::cout << "Search state " << SearchState << endl;
-
-	if (SearchState == AStarSearch<nav::MapSearchNode>::SEARCH_STATE_SUCCEEDED ) {
-		std::cout << "Search found goal state\n";
-
-		nav::MapSearchNode *node = astarsearch.GetSolutionStart();
-
-		std::cout << "Displaying solution\n";
-		int steps = 0;
-
-		node->PrintNodeInfo();
-
-		path.push_back(node->position);
-
-		for (;;) {
-			node = astarsearch.GetSolutionNext();
-		
-			if(!node) { break; }
-			
-			path.push_back(node->position);
-
-			node->PrintNodeInfo();
-			steps ++;
-		};
-
-		std::cout << "Solution steps " << steps << endl;
-
-		// Once you're done with the solution you can free the nodes up
-		astarsearch.FreeSolutionNodes();
-	} else if (SearchState == AStarSearch<nav::MapSearchNode>::SEARCH_STATE_FAILED) {
-		std::cout << "Search terminated. Did not find goal state\n";
-	}
-	*/
 }
 	
+void Board::find_path(const glm::vec2 &start, const glm::vec2 &end, std::list<glm::vec2> &pathways)
+{
+	auto origin = m_atlas.tile_at(start);
+	auto target = m_atlas.tile_at(end);
+
+	if (origin && target) {
+		pathways.push_front(start);
+		// same tile
+		// early exit
+		if (origin->index != target->index) {
+			find_path(origin->index, target->index, pathways);
+		}
+
+		pathways.push_back(end);
+	}
+}
+
 void Board::find_path(uint32_t start, uint32_t end, std::list<glm::vec2> &pathways)
 {
 	AStarSearch<nav::MapSearchNode> astarsearch;
@@ -171,14 +129,12 @@ void Board::find_path(uint32_t start, uint32_t end, std::list<glm::vec2> &pathwa
 	std::cout << "Search state " << SearchState << endl;
 
 	if (SearchState == AStarSearch<nav::MapSearchNode>::SEARCH_STATE_SUCCEEDED ) {
-		std::cout << "Search found goal state\n";
 
 		nav::MapSearchNode *node = astarsearch.GetSolutionStart();
 
-		std::cout << "Displaying solution\n";
 		int steps = 0;
 
-		node->PrintNodeInfo();
+		//node->PrintNodeInfo();
 
 		pathways.push_back(node->position);
 
@@ -189,11 +145,11 @@ void Board::find_path(uint32_t start, uint32_t end, std::list<glm::vec2> &pathwa
 			
 			pathways.push_back(node->position);
 
-			node->PrintNodeInfo();
+			//node->PrintNodeInfo();
 			steps ++;
 		};
 
-		std::cout << "Solution steps " << steps << endl;
+		//std::cout << "Solution steps " << steps << endl;
 
 		// Once you're done with the solution you can free the nodes up
 		astarsearch.FreeSolutionNodes();
@@ -205,6 +161,19 @@ void Board::find_path(uint32_t start, uint32_t end, std::list<glm::vec2> &pathwa
 void Board::reload()
 {
 	m_model.reload(m_atlas, m_seed);
+
+	// FIXME 
+	nodes.clear();
+	nodes.resize(m_atlas.graph().cells.size());
+	for (const auto &cell : m_atlas.graph().cells) {
+		nav::MapSearchNode node;
+		node.position = cell.center;
+		node.index = cell.index;
+		nodes[cell.index] = node;
+		for (const auto &neighbor : cell.neighbors) {
+			nodes[cell.index].neighbors.push_back(&nodes[neighbor->index]);
+		}
+	}
 }
 	
 void Board::display(const util::Camera &camera)
@@ -215,4 +184,9 @@ void Board::display(const util::Camera &camera)
 fysx::HeightField& Board::height_field()
 {
 	return m_height_field;
+}
+
+const Tile* Board::tile_at(const glm::vec2 &position) const
+{
+	return m_atlas.tile_at(position);
 }

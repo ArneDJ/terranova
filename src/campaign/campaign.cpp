@@ -44,9 +44,9 @@ void Campaign::init(const gfx::Shader *visual, const gfx::Shader *culling, const
 	scene = std::make_unique<gfx::SceneGroup>(visual, culling);
 	scene->set_scene_type(gfx::SceneType::DYNAMIC);
 	
-	world = std::make_unique<Board>(tilemap);
+	board = std::make_unique<Board>(tilemap);
 
-	physics.add_body(world->height_field().body());
+	physics.add_body(board->height_field().body());
 
 	auto cone_model = MediaManager::load_model("media/models/primitives/cone.glb");
 	auto cone_object = scene->find_object(cone_model);
@@ -66,7 +66,7 @@ void Campaign::load(const std::string &filepath)
 	if (stream.is_open()) {
 		cereal::BinaryInputArchive archive(stream);
 		archive(name);
-		world->load(archive);
+		board->load(archive);
 		archive(camera);
 	} else {
 		LOG_F(ERROR, "Game loading error: could not open save file %s", filepath.c_str());
@@ -80,7 +80,7 @@ void Campaign::save(const std::string &filepath)
 	if (stream.is_open()) {
 		cereal::BinaryOutputArchive archive(stream);
 		archive(name);
-		world->save(archive);
+		board->save(archive);
 		archive(camera);
 	} else {
 		LOG_F(ERROR, "Game saving error: could not open save file %s", filepath.c_str());
@@ -90,7 +90,7 @@ void Campaign::save(const std::string &filepath)
 void Campaign::generate(int seed)
 {
 	remove_teapots();
-	world->generate(seed);
+	board->generate(seed);
 }
 
 // FIXME 
@@ -148,8 +148,7 @@ void Campaign::update(float delta)
 			marker.teleport(result.point);
 			std::list<glm::vec2> nodes;
 			
-			world->find_path(0, 5505, nodes);
-			nodes.push_front(glm::vec2(player.transform()->position.x + 0.01f, player.transform()->position.z));
+			board->find_path(glm::vec2(player.transform()->position.x, player.transform()->position.z), glm::vec2(result.point.x, result.point.z), nodes);
 			add_teapots(nodes);
 			player.set_path(nodes);
 		}
@@ -164,5 +163,5 @@ void Campaign::display()
 	scene->cull_frustum();
 	scene->display();
 
-	world->display(camera);
+	board->display(camera);
 }

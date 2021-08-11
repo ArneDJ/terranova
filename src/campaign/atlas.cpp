@@ -102,3 +102,14 @@ const std::vector<Border>& Atlas::borders() const
 {
 	return m_borders;
 }
+	
+const Tile* Atlas::tile_at(const glm::vec2 &position) const
+{
+	auto search = m_graph.cell_at(position);
+
+	if (search.found) {
+		return &m_tiles[search.cell->index];
+	} 
+
+	return nullptr;
+}

@@ -9,7 +9,7 @@ public:
 	std::string name = {};
 	util::Camera camera;
 	fysx::PhysicalSystem physics;
-	std::unique_ptr<Board> world;
+	std::unique_ptr<Board> board;
 	std::unique_ptr<gfx::SceneGroup> scene;
 	Marker marker;
 	Meeple player;

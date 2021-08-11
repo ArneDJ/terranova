@@ -41,6 +41,7 @@ public:
 	const std::vector<Tile>& tiles() const;
 	const std::vector<Corner>& corners() const;
 	const std::vector<Border>& borders() const;
+	const Tile* tile_at(const glm::vec2 &position) const;
 public:
 	template <class Archive>
 	void serialize(Archive &archive)

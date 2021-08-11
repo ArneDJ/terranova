@@ -27,9 +27,9 @@ bool MapSearchNode::IsGoal(MapSearchNode *nodeGoal)
 
 bool MapSearchNode::GetSuccessors(AStarSearch<MapSearchNode> *astarsearch, MapSearchNode *parent_node)
 {
-	printf("this node\n");
-	PrintNodeInfo();
-	printf("neighbor nodes %d\n", neighbors.size());
+	//printf("this node\n");
+	//PrintNodeInfo();
+	//printf("neighbor nodes %d\n", neighbors.size());
 	for (const auto &neighbor : neighbors) {
 		//MapSearchNode node;
 		//node.index = neighbor->index;
@@ -37,7 +37,7 @@ bool MapSearchNode::GetSuccessors(AStarSearch<MapSearchNode> *astarsearch, MapSe
 		//node.PrintNodeInfo();
 		astarsearch->AddSuccessor(neighbor);
 	}
-	printf("----------\n");
+	//printf("----------\n");
 
 	return true;
 }
@@ -50,10 +50,12 @@ float MapSearchNode::GetCost(MapSearchNode *successor)
 	return 1.f;
 }
 
+/*
 void MapSearchNode::PrintNodeInfo()
 {
 	printf("node index, %d\n", index);
 	printf("node position, %f, %f\n", position.x, position.y);
 }
+*/
 
 };

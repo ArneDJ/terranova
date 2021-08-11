@@ -15,8 +15,7 @@ private:
 
 class Board {
 public:
-	std::vector<glm::vec2> path; // TODO remove
-	std::vector<nav::MapSearchNode> nodes; // TODO remove
+	std::vector<nav::MapSearchNode> nodes; // TODO replace in voronoi cell
 public:
 	Board(const gfx::Shader *tilemap);
 public:
@@ -25,8 +24,10 @@ public:
 	void generate(int seed);
 	void reload();
 	void find_path(uint32_t start, uint32_t end, std::list<glm::vec2> &pathways);
+	void find_path(const glm::vec2 &start, const glm::vec2 &end, std::list<glm::vec2> &pathways);
 public:
 	fysx::HeightField& height_field();
+	const Tile* tile_at(const glm::vec2 &position) const;
 public:
 	template <class Archive>
 	void save(Archive &archive) const 
