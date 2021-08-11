@@ -16,7 +16,6 @@ bool MapSearchNode::IsSameState(MapSearchNode *rhs)
 // to the Goal.
 float MapSearchNode::GoalDistanceEstimate(MapSearchNode *nodeGoal)
 {
-	//return abs(x - nodeGoal.x) + abs(y - nodeGoal.y);
 	return glm::distance(position, nodeGoal->position);
 }
 

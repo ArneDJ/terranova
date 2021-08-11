@@ -151,14 +151,13 @@ void SceneObject::add_transform(const geom::Transform *transform)
 	m_instance_count++;
 }
 	
-// FIXME check for correct removal
 void SceneObject::remove_transform(const geom::Transform *transform)
 {
 	for (int i = 0; i < m_transforms.size(); i++) {
 		if (m_transforms[i] == transform) {
 			m_transforms.erase(m_transforms.begin() + i);
-			m_padded_transforms.data.erase(m_padded_transforms.data.begin() + i);
-			m_model_matrices.data.erase(m_model_matrices.data.begin() + i);
+			m_padded_transforms.erase(i);
+			m_model_matrices.erase(i);
 
 			for (auto &indirect_mesh : m_indirect_meshes) {
 				indirect_mesh->remove_instance();
@@ -175,7 +174,6 @@ void SceneObject::update_transforms()
 {
 	if (m_padded_transforms.data.size() == m_transforms.size()) {
 		for (int i = 0; i < m_transforms.size(); i++) {
-			// FIXME better assigment
 			m_padded_transforms.data[i].position.x = m_transforms[i]->position.x;
 			m_padded_transforms.data[i].position.y = m_transforms[i]->position.y;
 			m_padded_transforms.data[i].position.z = m_transforms[i]->position.z;

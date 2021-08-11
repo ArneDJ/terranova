@@ -105,7 +105,7 @@ void Campaign::add_teapots(const std::list<glm::vec2> &nodes)
 	for (const auto &point : nodes) {
 		auto transform = std::make_unique<geom::Transform>();
 		transform->position.x = point.x;
-		transform->position.y = 1.f;
+		transform->position.y = 10.f;
 		transform->position.z = point.y;
 		object->add_transform(transform.get());
 

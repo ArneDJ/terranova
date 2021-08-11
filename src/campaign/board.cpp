@@ -102,19 +102,23 @@ void Board::find_path(const glm::vec2 &start, const glm::vec2 &end, std::list<gl
 	auto target = m_atlas.tile_at(end);
 
 	if (origin && target) {
-		pathways.push_front(start);
-		// same tile
-		// early exit
+		// if not same tile find path
 		if (origin->index != target->index) {
 			find_path(origin->index, target->index, pathways);
 		}
 
+		if (pathways.size() > 2) {
+			pathways.pop_front();
+			pathways.pop_back();
+		}
+		pathways.push_front(start);
 		pathways.push_back(end);
 	}
 }
 
 void Board::find_path(uint32_t start, uint32_t end, std::list<glm::vec2> &pathways)
 {
+	std::cout << "Starting Search\n";
 	AStarSearch<nav::MapSearchNode> astarsearch;
 	astarsearch.SetStartAndGoalStates(&nodes[start], &nodes[end]);
 
@@ -156,6 +160,8 @@ void Board::find_path(uint32_t start, uint32_t end, std::list<glm::vec2> &pathwa
 	} else if (SearchState == AStarSearch<nav::MapSearchNode>::SEARCH_STATE_FAILED) {
 		std::cout << "Search terminated. Did not find goal state\n";
 	}
+	
+	std::cout << "Search finished\n";
 }
 	
 void Board::reload()

@@ -62,8 +62,8 @@ void Atlas::generate(int seed, const geom::Rectangle &bounds)
 	fastnoise.SetFrequency(2.f * 0.001f);
 	fastnoise.SetFractalOctaves(6);
 	fastnoise.SetFractalLacunarity(2.5f);
-	fastnoise.SetPerturbFrequency(0.001f);
-	fastnoise.SetGradientPerturbAmp(400.f);
+	fastnoise.SetPerturbFrequency(2.f*0.001f);
+	fastnoise.SetGradientPerturbAmp(300.f);
 
 	for (auto &tile : m_tiles) {
 		glm::vec2 center = m_graph.cells[tile.index].center;

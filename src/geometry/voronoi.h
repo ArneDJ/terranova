@@ -105,15 +105,6 @@ private:
 	Bounding<glm::vec2> m_bounds = {};
 	glm::vec2 m_region_scale = {};
 	std::vector<VoronoiCellsRegion> m_spatial_map;
-	// FIXME remove
-	int n_outside = 0;
-	int n_bounds_inside = 0;
-	int n_overlap = 0;
-	int n_center_inside = 0;
-	int n_vertex_inside = 0;
-	int n_triangle_inside = 0;
-	int n_total_cases = 0;
-	int n_total = 0;
 private:
 	// left: edge index
 	// right: connected cells 

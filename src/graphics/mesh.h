@@ -108,6 +108,10 @@ public:
 			buffer.store_mutable_part(0, data_size, data.data());
 		}
 	} 
+	void erase(size_t index)
+	{
+		data.erase(data.begin() + index);
+	}
 };
 
 // manages indirect draw commands of glDrawArrays

@@ -26,7 +26,7 @@ static void pair_duality(const jcv_diagram *diagram, std::vector<VoronoiCell> &c
 static void adapt_edges(const jcv_diagram *diagram, std::vector<VoronoiCell> &cells, std::vector<VoronoiVertex> &vertices, std::vector<VoronoiEdge> &edges);
 bool triangle_overlaps_rectangle(const glm::vec2 &a, const glm::vec2 &b, const glm::vec2 &c, const Rectangle &area);
 
-static const size_t CELL_REGION_RES = 128;
+static const size_t CELL_REGION_RES = 256;
 
 void VoronoiGraph::generate(const std::vector<glm::vec2> &locations, const Bounding<glm::vec2> &bounds, uint8_t relaxations)
 {
@@ -117,26 +117,16 @@ VoronoiSearchResult VoronoiGraph::cell_at(const glm::vec2 &position) const
 	}
 
 	const auto &region = m_spatial_map[index];
-	printf("total cells in region %d: %d\n", index, region.cells.size());
 
 	// find closest cell to point within region
 	float min_distance = std::numeric_limits<float>::max();
 	for (const auto &cell : region.cells) {
-		//min_distance = (std::min)(glm::distance(cell->center, position), min_distance);
 		float distance = glm::distance(cell->center, position);
 		if (distance < min_distance) {
 			min_distance = distance;
 			result.cell = cell;
 			result.found = true;
 		}
-		/*
-		const mosaictriangle *tri = &triangles[index];
-		if (geom::triangle_overlaps_point(vertices[tri->a], vertices[tri->b], vertices[tri->c], position)) {
-			result.found = true;
-			result.index = tri->index;
-			return result;
-		}
-		*/
 	}
 
 	return result;
@@ -200,17 +190,6 @@ void VoronoiGraph::create_spatial_map()
 	for (const auto &cell : cells) {
 		add_cell_to_regions(&cell);
 	}
-
-	std::cout << "of " << cells.size() << "cells:\n";
-	std::cout << "outside diagram (should be 0): " << n_outside << std::endl;
-	std::cout << "bounds inside grid: " << n_bounds_inside << std::endl;
-	std::cout << "overlap diagram cell: " << n_overlap << std::endl;
-	std::cout << "with overlap\n";
-	std::cout << "total cases: " << n_total << std::endl;
-	std::cout << "total valid cases: " << n_total_cases << std::endl;
-	std::cout << "have center inside: " << n_center_inside << std::endl;
-	std::cout << "have vertex inside: " << n_vertex_inside << std::endl;
-	std::cout << "have triangle inside: " << n_triangle_inside << std::endl;
 }
 	
 void VoronoiGraph::add_cell_to_regions(const VoronoiCell *cell)
@@ -231,41 +210,22 @@ void VoronoiGraph::add_cell_to_regions(const VoronoiCell *cell)
 	int max_x = floor(poly_bounds.max.x / m_region_scale.x);
 	int max_y = floor(poly_bounds.max.y / m_region_scale.y);
 
-	// clamp bounds
-	// FIXME 
-	if (max_x >= CELL_REGION_RES) {
-		max_x = CELL_REGION_RES - 1;
-	}
-	if (max_y >= CELL_REGION_RES) {
-		max_y = CELL_REGION_RES - 1;
-	}
-
-	int index_min = min_x + min_y * CELL_REGION_RES;
-	int index_max = max_x + max_y * CELL_REGION_RES;
-	if (index_min < 0 || index_min >= m_spatial_map.size() || index_max < 0 || index_max >= m_spatial_map.size()) {
-		n_outside++;
-		// not in grid early exit
-		return;
-	}
-
 	// polygon bounds are in a single grid region
-	if (index_min == index_max) {
-		n_bounds_inside++;
-		m_spatial_map[index_min].cells.push_back(cell);
-		return;
+	if (min_x == max_x && min_y == max_y) {
+		int index = max_x + max_y * CELL_REGION_RES;
+		if (index > 0 && index < m_spatial_map.size()) {
+			m_spatial_map[index].cells.push_back(cell);
+			return;
+		}
 	}
-
-	n_overlap++;
 
 	// lastly check if cell partially overlaps grid regions
 	for (int py = min_y; py <= max_y; py++) {
 		for (int px = min_x; px <= max_x; px++) {
-			n_total++;
 			int index = px + py * CELL_REGION_RES;
 			if (index >= 0 && index < m_spatial_map.size()) {
 				// TODO check if this step is necessary
 				if (cell_overlaps_rectangle(cell, m_spatial_map[index].bounds)) {
-					n_total_cases++;
 					m_spatial_map[index].cells.push_back(cell);
 				}
 			}
@@ -278,14 +238,12 @@ bool VoronoiGraph::cell_overlaps_rectangle(const VoronoiCell *cell, const Rectan
 	// cell center is in rectangle
 	// early exit
 	if (point_in_rectangle(cell->center, rectangle)) {
-		n_center_inside++;
 		return true;
 	}
 
 	// check if any of the vertices are inside
 	for (const auto &vertex : cell->vertices) {
 		if (point_in_rectangle(vertex->position, rectangle)) {
-			n_vertex_inside++;
 			return true;
 		}
 	}
@@ -300,7 +258,6 @@ bool VoronoiGraph::cell_overlaps_rectangle(const VoronoiCell *cell, const Rectan
 			std::swap(b, c);
 		}
 		if (triangle_overlaps_rectangle(a, b, c, rectangle)) {
-			n_triangle_inside++;
 			return true;
 		}
 	}
