@@ -15,19 +15,17 @@ private:
 
 class Board {
 public:
-	std::vector<nav::MapSearchNode> nodes; // TODO replace in voronoi cell
-public:
 	Board(const gfx::Shader *tilemap);
 public:
 	const geom::Rectangle BOUNDS = { { 0.F, 0.F }, { 1024.F, 1024.F } };
 public:
 	void generate(int seed);
 	void reload();
-	void find_path(uint32_t start, uint32_t end, std::list<glm::vec2> &pathways);
-	void find_path(const glm::vec2 &start, const glm::vec2 &end, std::list<glm::vec2> &pathways);
 public:
 	fysx::HeightField& height_field();
+	const util::Navigation& navigation() const;
 	const Tile* tile_at(const glm::vec2 &position) const;
+	void find_path(const glm::vec2 &start, const glm::vec2 &end, std::list<glm::vec2> &path) const;
 public:
 	template <class Archive>
 	void save(Archive &archive) const 
@@ -47,4 +45,5 @@ private:
 	Atlas m_atlas;
 	WorldModel m_model;
 	fysx::HeightField m_height_field;
+	util::Navigation m_navigation;
 };

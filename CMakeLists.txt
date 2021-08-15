@@ -27,8 +27,6 @@ file(GLOB all_SRCS
         "${PROJECT_SOURCE_DIR}/src/graphics/*.h"
         "${PROJECT_SOURCE_DIR}/src/physics/*.cpp"
         "${PROJECT_SOURCE_DIR}/src/physics/*.h"
-        "${PROJECT_SOURCE_DIR}/src/navigation/*.cpp"
-        "${PROJECT_SOURCE_DIR}/src/navigation/*.h"
         "${PROJECT_SOURCE_DIR}/src/campaign/*.cpp"
         "${PROJECT_SOURCE_DIR}/src/campaign/*.h"
         "${PROJECT_SOURCE_DIR}/src/extern/loguru/*.cpp"
@@ -36,6 +34,7 @@ file(GLOB all_SRCS
 	"${PROJECT_SOURCE_DIR}/src/extern/imgui/*.cpp"
 	"${PROJECT_SOURCE_DIR}/src/extern/imgui/*.h"
 	"${PROJECT_SOURCE_DIR}/src/extern/fastnoise/*.cpp"
+	"${PROJECT_SOURCE_DIR}/src/extern/recast/ChunkyTriMesh.cpp"
 )
 
 add_executable(${PROJECT_NAME} ${all_SRCS})
@@ -48,3 +47,7 @@ target_link_libraries(${PROJECT_NAME} OpenGL::OpenGL)
 target_link_libraries(${PROJECT_NAME}  ${CMAKE_SOURCE_DIR}/lib/libBulletDynamics.a)
 target_link_libraries(${PROJECT_NAME}  ${CMAKE_SOURCE_DIR}/lib/libBulletCollision.a)
 target_link_libraries(${PROJECT_NAME}  ${CMAKE_SOURCE_DIR}/lib/libLinearMath.a)
+
+target_link_libraries(${PROJECT_NAME}  ${CMAKE_SOURCE_DIR}/lib/libRecast.a)
+target_link_libraries(${PROJECT_NAME}  ${CMAKE_SOURCE_DIR}/lib/libDetour.a)
+target_link_libraries(${PROJECT_NAME}  ${CMAKE_SOURCE_DIR}/lib/libDetourCrowd.a)

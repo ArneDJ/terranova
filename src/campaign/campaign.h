@@ -13,7 +13,6 @@ public:
 	std::unique_ptr<gfx::SceneGroup> scene;
 	Marker marker;
 	Meeple player;
-	std::vector<std::unique_ptr<geom::Transform>> teapots; // TODO remove
 public:
 	void load(const std::string &filepath);
 	void save(const std::string &filepath);
@@ -22,7 +21,4 @@ public:
 	void init(const gfx::Shader *visual, const gfx::Shader *culling, const gfx::Shader *tilemap);
 	void update(float delta);
 	void display();
-private:
-	void add_teapots(const std::list<glm::vec2> &nodes);
-	void remove_teapots();
 };

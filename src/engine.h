@@ -4,6 +4,7 @@
 #include "util/input.h"
 #include "util/camera.h"
 #include "util/timer.h"
+#include "util/navigation.h"
 #include "geometry/geometry.h"
 #include "geometry/transform.h"
 #include "geometry/voronoi.h"
@@ -13,7 +14,6 @@
 #include "graphics/scene.h"
 #include "physics/physical.h"
 #include "physics/heightfield.h"
-#include "navigation/astar.h"
 
 #include "campaign/campaign.h"
 

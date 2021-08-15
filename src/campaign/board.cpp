@@ -13,11 +13,11 @@
 #include "../geometry/voronoi.h"
 #include "../geometry/transform.h"
 #include "../util/camera.h"
+#include "../util/navigation.h"
 #include "../graphics/mesh.h"
 #include "../graphics/shader.h"
 #include "../physics/physical.h"
 #include "../physics/heightfield.h"
-#include "../navigation/astar.h"
 
 #include "atlas.h"
 #include "board.h"
@@ -94,92 +94,46 @@ void Board::generate(int seed)
 	m_seed = seed;
 
 	m_atlas.generate(seed, BOUNDS);
-}
 	
-void Board::find_path(const glm::vec2 &start, const glm::vec2 &end, std::list<glm::vec2> &pathways)
-{
-	auto origin = m_atlas.tile_at(start);
-	auto target = m_atlas.tile_at(end);
+	// build navigation mesh
+	std::vector<float> vertices;
+	std::vector<int> indices;
+	int index = 0;
 
-	if (origin && target) {
-		// if not same tile find path
-		if (origin->index != target->index) {
-			find_path(origin->index, target->index, pathways);
-		}
-
-		if (pathways.size() > 2) {
-			pathways.pop_front();
-			pathways.pop_back();
-		}
-		pathways.push_front(start);
-		pathways.push_back(end);
+	const auto &graph = m_atlas.graph();
+	for (const auto &vertex : graph.vertices) {
+		vertices.push_back(vertex.position.x);
+		vertices.push_back(0.f);
+		vertices.push_back(vertex.position.y);
+		index++;
 	}
-}
-
-void Board::find_path(uint32_t start, uint32_t end, std::list<glm::vec2> &pathways)
-{
-	std::cout << "Starting Search\n";
-	AStarSearch<nav::MapSearchNode> astarsearch;
-	astarsearch.SetStartAndGoalStates(&nodes[start], &nodes[end]);
-
-	unsigned int SearchState;
-	unsigned int SearchSteps = 0;
-	do {
-		SearchState = astarsearch.SearchStep();
-		SearchSteps++;
-	} while (SearchState == AStarSearch<nav::MapSearchNode>::SEARCH_STATE_SEARCHING);
-
-	std::cout << "Search steps " << SearchSteps << endl;
-	std::cout << "Search state " << SearchState << endl;
-
-	if (SearchState == AStarSearch<nav::MapSearchNode>::SEARCH_STATE_SUCCEEDED ) {
-
-		nav::MapSearchNode *node = astarsearch.GetSolutionStart();
-
-		int steps = 0;
-
-		//node->PrintNodeInfo();
-
-		pathways.push_back(node->position);
-
-		for (;;) {
-			node = astarsearch.GetSolutionNext();
-		
-			if(!node) { break; }
-			
-			pathways.push_back(node->position);
-
-			//node->PrintNodeInfo();
-			steps ++;
-		};
-
-		//std::cout << "Solution steps " << steps << endl;
-
-		// Once you're done with the solution you can free the nodes up
-		astarsearch.FreeSolutionNodes();
-	} else if (SearchState == AStarSearch<nav::MapSearchNode>::SEARCH_STATE_FAILED) {
-		std::cout << "Search terminated. Did not find goal state\n";
+	const auto &tiles = m_atlas.tiles();
+	for (const auto &cell : graph.cells) {
+		if (tiles[cell.index].height >= 114) {
+			for (const auto &edge : cell.edges) {
+				indices.push_back(index);
+				if (geom::clockwise(cell.center, edge->left_vertex->position, edge->right_vertex->position)) {
+					indices.push_back(edge->left_vertex->index);
+					indices.push_back(edge->right_vertex->index);
+				} else {
+					indices.push_back(edge->right_vertex->index);
+					indices.push_back(edge->left_vertex->index);
+				}
+			}
+			vertices.push_back(cell.center.x);
+			vertices.push_back(0.f);
+			vertices.push_back(cell.center.y);
+			index++;
+		}
 	}
-	
-	std::cout << "Search finished\n";
+
+	m_navigation.cleanup();
+	m_navigation.build(vertices, indices);
 }
 	
 void Board::reload()
 {
 	m_model.reload(m_atlas, m_seed);
-
-	// FIXME 
-	nodes.clear();
-	nodes.resize(m_atlas.graph().cells.size());
-	for (const auto &cell : m_atlas.graph().cells) {
-		nav::MapSearchNode node;
-		node.position = cell.center;
-		node.index = cell.index;
-		nodes[cell.index] = node;
-		for (const auto &neighbor : cell.neighbors) {
-			nodes[cell.index].neighbors.push_back(&nodes[neighbor->index]);
-		}
-	}
 }
 	
 void Board::display(const util::Camera &camera)
@@ -191,8 +145,18 @@ fysx::HeightField& Board::height_field()
 {
 	return m_height_field;
 }
+	
+const util::Navigation& Board::navigation() const
+{
+	return m_navigation;
+}
 
 const Tile* Board::tile_at(const glm::vec2 &position) const
 {
 	return m_atlas.tile_at(position);
+}
+	
+void Board::find_path(const glm::vec2 &start, const glm::vec2 &end, std::list<glm::vec2> &path) const
+{
+	m_navigation.find_2D_path(start, end, path);
 }

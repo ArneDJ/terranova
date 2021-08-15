@@ -176,7 +176,7 @@ void Engine::run()
 
 	shaders = std::make_unique<ShaderGroup>();
 
-	Debugger debugger = Debugger(&shaders->debug, &shaders->culling);
+	Debugger debugger = Debugger(&shaders->tilemap, &shaders->debug, &shaders->culling);
 
 	campaign.init(&shaders->debug, &shaders->culling, &shaders->tilemap);
 	campaign.camera.set_projection(video_settings.fov, video_settings.canvas.x, video_settings.canvas.y, 0.1f, 900.f);
@@ -200,6 +200,9 @@ void Engine::run()
 		if (g_generate) {
 			campaign.generate(distrib(gen));
 			campaign.board->reload();
+			const auto &navigation = campaign.board->navigation();
+			debugger.clear();
+			debugger.add_navmesh(navigation.get_navmesh());
 		}
 
 		debugger.update(campaign.camera);

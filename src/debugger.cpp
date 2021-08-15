@@ -1,5 +1,6 @@
 #include <iostream>
 #include <chrono>
+#include <list>
 #include <unordered_map>
 #include <memory>
 #include <vector>
@@ -10,6 +11,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include "util/camera.h"
+#include "util/navigation.h"
 #include "geometry/transform.h"
 #include "graphics/shader.h"
 #include "graphics/mesh.h"
@@ -42,9 +44,10 @@ const geom::Transform* DebugEntity::transform() const
 	return m_final_transform.get();
 }
 	
-Debugger::Debugger(const gfx::Shader *visual_shader, const gfx::Shader *culling_shader)
+Debugger::Debugger(const gfx::Shader *debug_shader, const gfx::Shader *visual_shader, const gfx::Shader *culling_shader)
 	: m_scene(visual_shader, culling_shader)
 {
+	m_shader = debug_shader;
 	m_sphere = MediaManager::load_model("media/models/primitives/sphere.glb");
 	m_cube = MediaManager::load_model("media/models/primitives/cube.glb");
 	m_cylinder = MediaManager::load_model("media/models/primitives/cylinder.glb");
@@ -114,6 +117,57 @@ void Debugger::add_capsule(float radius, float height, const geom::Transform *tr
 	add_cylinder(extents, transform);
 }
 	
+void Debugger::add_navmesh(const dtNavMesh *navmesh)
+{
+	std::vector<gfx::Vertex> vertices;
+	std::vector<uint32_t> indices;
+
+	glm::vec3 color = { 1.f, 0.f, 1.f };
+
+	for (int i = 0; i < navmesh->getMaxTiles(); i++) {
+		const dtMeshTile *tile = navmesh->getTile(i);
+		if (!tile) { continue; }
+		if (!tile->header) { continue; }
+		dtPolyRef base = navmesh->getPolyRefBase(tile);
+		for (int i = 0; i < tile->header->polyCount; i++) {
+			const dtPoly *poly = &tile->polys[i];
+			if (poly->getType() == DT_POLYTYPE_OFFMESH_CONNECTION) { // Skip off-mesh links.
+				continue;
+			}
+			const dtPolyDetail *detail = &tile->detailMeshes[i];
+			for (int j = 0; j < detail->triCount; j++) {
+				const uint8_t *triangle = &tile->detailTris[(detail->triBase+j)*4];
+				for (int k = 0; k < 3; k++) {
+					if (triangle[k] < poly->vertCount) {
+						float x = tile->verts[poly->verts[triangle[k]]*3];
+						float y = tile->verts[poly->verts[triangle[k]]*3 + 1] + 0.05f;
+						float z = tile->verts[poly->verts[triangle[k]]*3 + 2];
+						struct gfx::Vertex v = {
+							{ x, y, z},
+							color
+						};
+						vertices.push_back(v);
+					} else {
+						float x = tile->detailVerts[(detail->vertBase+triangle[k]-poly->vertCount)*3];
+						float y = tile->detailVerts[(detail->vertBase+triangle[k]-poly->vertCount)*3 + 1];
+						float z = tile->detailVerts[(detail->vertBase+triangle[k]-poly->vertCount)*3 + 2];
+						struct gfx::Vertex v = {
+							{ x, y, z},
+							color
+						};
+						vertices.push_back(v);
+					}
+				}
+			}
+		}
+	}
+
+	auto mesh = std::make_unique<gfx::Mesh>();
+	mesh->create(vertices, indices, GL_TRIANGLES);
+
+	m_navigation_meshes.push_back(std::move(mesh));
+}
+	
 void Debugger::update(const util::Camera &camera)
 {
 	for (auto &entity : m_entities) {
@@ -128,9 +182,19 @@ void Debugger::update(const util::Camera &camera)
 void Debugger::display() const
 {
 	m_scene.display();
+
+	m_shader->use();
+	for (const auto &mesh : m_navigation_meshes) {
+		mesh->draw();
+	}
 }
 
 void Debugger::display_wireframe() const
 {
 	m_scene.display_wireframe();
+}
+	
+void Debugger::clear()
+{
+	m_navigation_meshes.clear();
 }

@@ -23,6 +23,7 @@
 #include "../util/input.h"
 #include "../util/camera.h"
 #include "../util/timer.h"
+#include "../util/navigation.h"
 #include "../geometry/geometry.h"
 #include "../geometry/transform.h"
 #include "../geometry/voronoi.h"
@@ -32,7 +33,6 @@
 #include "../graphics/scene.h"
 #include "../physics/physical.h"
 #include "../physics/heightfield.h"
-#include "../navigation/astar.h"
 
 #include "../debugger.h"
 #include "../media.h"
@@ -52,7 +52,7 @@ void Campaign::init(const gfx::Shader *visual, const gfx::Shader *culling, const
 	auto cone_object = scene->find_object(cone_model);
 	cone_object->add_transform(marker.transform());
 
-	player.teleport(glm::vec2(0.f));
+	player.teleport(glm::vec2(512.f));
 	player.set_speed(10.f);
 	auto duck_model = MediaManager::load_model("media/models/duck.glb");
 	auto duck_object = scene->find_object(duck_model);
@@ -89,42 +89,9 @@ void Campaign::save(const std::string &filepath)
 	
 void Campaign::generate(int seed)
 {
-	remove_teapots();
 	board->generate(seed);
 }
 
-// FIXME 
-void Campaign::add_teapots(const std::list<glm::vec2> &nodes)
-{
-	auto model = MediaManager::load_model("media/models/teapot.glb");
-	auto object = scene->find_object(model);
-
-	// remove previous nodes
-	remove_teapots();
-
-	for (const auto &point : nodes) {
-		auto transform = std::make_unique<geom::Transform>();
-		transform->position.x = point.x;
-		transform->position.y = 10.f;
-		transform->position.z = point.y;
-		object->add_transform(transform.get());
-
-		teapots.push_back(std::move(transform));
-	}
-}
-
-// FIXME 
-void Campaign::remove_teapots()
-{
-	auto model = MediaManager::load_model("media/models/teapot.glb");
-	auto object = scene->find_object(model);
-
-	for (auto &transform : teapots) {
-		object->remove_transform(transform.get());
-	}
-	teapots.clear();
-}
-	
 void Campaign::update(float delta)
 {
 	// update camera
@@ -149,7 +116,8 @@ void Campaign::update(float delta)
 			std::list<glm::vec2> nodes;
 			
 			board->find_path(glm::vec2(player.transform()->position.x, player.transform()->position.z), glm::vec2(result.point.x, result.point.z), nodes);
-			add_teapots(nodes);
+			//nodes.push_front(glm::vec2(player.transform()->position.x, player.transform()->position.z));
+			//nodes.push_back(glm::vec2(result.point.x, result.point.z));
 			player.set_path(nodes);
 		}
 	}
