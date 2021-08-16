@@ -1,4 +1,5 @@
 #include <iostream>
+#include <random>
 #include <chrono>
 #include <list>
 #include <unordered_map>
@@ -122,6 +123,8 @@ void Debugger::add_navmesh(const dtNavMesh *navmesh)
 	std::vector<gfx::Vertex> vertices;
 	std::vector<uint32_t> indices;
 
+	std::mt19937 gen(1337);
+	std::uniform_real_distribution<float> dist(0.2f, 1.f);
 	glm::vec3 color = { 1.f, 0.f, 1.f };
 
 	for (int i = 0; i < navmesh->getMaxTiles(); i++) {
@@ -136,11 +139,12 @@ void Debugger::add_navmesh(const dtNavMesh *navmesh)
 			}
 			const dtPolyDetail *detail = &tile->detailMeshes[i];
 			for (int j = 0; j < detail->triCount; j++) {
+				color = glm::vec3(dist(gen), dist(gen), dist(gen));
 				const uint8_t *triangle = &tile->detailTris[(detail->triBase+j)*4];
 				for (int k = 0; k < 3; k++) {
 					if (triangle[k] < poly->vertCount) {
 						float x = tile->verts[poly->verts[triangle[k]]*3];
-						float y = tile->verts[poly->verts[triangle[k]]*3 + 1] + 0.05f;
+						float y = tile->verts[poly->verts[triangle[k]]*3 + 1] + 0.5f;
 						float z = tile->verts[poly->verts[triangle[k]]*3 + 2];
 						struct gfx::Vertex v = {
 							{ x, y, z},

@@ -15,6 +15,8 @@
 
 #include "../extern/loguru/loguru.hpp"
 
+#include "serialize.h"
+
 #include "navigation.h"
 
 #define MAX_PATHPOLY 256 // max number of polygons in a path
@@ -24,7 +26,8 @@ namespace util {
 
 class Navbuilder {
 public:
-	Navbuilder()
+	Navbuilder(bool ignore_agent_radius)
+		: m_ignore_agent_radius(ignore_agent_radius)
 	{
 		context = new rcContext { false };
 	}
@@ -38,7 +41,7 @@ public:
 		rcFreePolyMeshDetail(dmesh);
 		delete context;
 	}
-	uint8_t *alloc_navdata(const int tx, const int ty, float *bmin, float *bmax, int &data_size, const float *verts, const int nverts, const rcChunkyTriMesh *chunky_mesh, const rcConfig *cfg);
+	uint8_t *alloc_navdata(const int tx, const int ty, float *bmin, float *bmax, int &data_size, const float *verts, const int nverts, const rcChunkyTriMesh *chunky_mesh, const rcConfig *config);
 private:
 	uint8_t *triareas = 0;
 	rcContext *context = nullptr;
@@ -47,6 +50,7 @@ private:
 	rcContourSet *cset = 0;
 	rcPolyMesh *pmesh = 0;
 	rcPolyMeshDetail *dmesh = 0;
+	bool m_ignore_agent_radius = true;
 };
 
 static const float BOX_EXTENTS[3] = {512.0f, 512.0f, 512.0f}; // size of box around start/end points to look for nav polygons
@@ -68,8 +72,8 @@ static const int TILE_SIZE = 128;
 
 std::mutex global_mutex;
 
-static void add_tile_mesh_rows(const int y, const int tw, const float tcs, const float *bmin, const float *bmax, const float *verts, const int nverts, const rcChunkyTriMesh *chunky_mesh, const rcConfig *cfg, dtNavMesh *navmesh);
-static uint8_t* build_tile_mesh(const int tx, const int ty, float *bmin, float *bmax, int &data_size, const float *verts, const int nverts, const rcChunkyTriMesh *chunky_mesh, const rcConfig *cfg);
+static void add_tile_mesh_rows(const int y, const int tw, const float tcs, const float *bmin, const float *bmax, const float *verts, const int nverts, const rcChunkyTriMesh *chunky_mesh, const rcConfig *config, dtNavMesh *navmesh);
+static uint8_t* build_tile_mesh(const int tx, const int ty, float *bmin, float *bmax, int &data_size, const float *verts, const int nverts, const rcChunkyTriMesh *chunky_mesh, const rcConfig *config);
 
 static inline uint32_t nextpow2(uint32_t v)
 {
@@ -103,89 +107,49 @@ static inline uint32_t ilog2(uint32_t v)
 
 Navigation::Navigation()
 {
-	max_tiles = 0;
-	max_polys_per_tile = 0;
-	tile_tri_count = 0;
+	memset(&m_config, 0, sizeof(m_config));
+	m_config.cs = CELL_SIZE;
+	m_config.ch = CELL_HEIGHT;
+	m_config.walkableSlopeAngle = 60.f;
+	m_config.walkableHeight = int(ceilf(2.f / m_config.ch));
+	m_config.walkableClimb = int(floorf(0.9f / m_config.ch));
+	m_config.walkableRadius = int(ceilf(0.6f / m_config.cs));
+	m_config.maxEdgeLen = int(12.f / 0.35f);
+	m_config.maxSimplificationError = 1.3f;
+	m_config.minRegionArea = int(rcSqr(8));  // Note: area = size*size
+	m_config.mergeRegionArea = int(rcSqr(20)); // Note: area = size*size
+	m_config.maxVertsPerPoly = 6;
 
-	memset(&cfg, 0, sizeof(cfg));
-	cfg.cs = CELL_SIZE;
-	cfg.ch = CELL_HEIGHT;
-	cfg.walkableSlopeAngle = 60.f;
-	cfg.walkableHeight = int(ceilf(2.f / cfg.ch));
-	cfg.walkableClimb = int(floorf(0.9f / cfg.ch));
-	cfg.walkableRadius = int(ceilf(0.6f / cfg.cs));
-	cfg.maxEdgeLen = int(12.f / 0.35f);
-	cfg.maxSimplificationError = 1.3f;
-	cfg.minRegionArea = int(rcSqr(8));  // Note: area = size*size
-	cfg.mergeRegionArea = int(rcSqr(20)); // Note: area = size*size
-	cfg.maxVertsPerPoly = 6;
+	m_config.tileSize = TILE_SIZE;
+	m_config.borderSize = m_config.walkableRadius + 3; 
 
-	cfg.tileSize = TILE_SIZE;
-	cfg.borderSize = cfg.walkableRadius + 3; 
-
-	cfg.width = cfg.tileSize + cfg.borderSize*2;
-	cfg.height = cfg.tileSize + cfg.borderSize*2;
-	cfg.detailSampleDist = DETAIL_SAMPLE_DIST < 0.9f ? 0 : cfg.cs * DETAIL_SAMPLE_DIST;
-	cfg.detailSampleMaxError = CELL_HEIGHT * DETAIL_SAMPLE_MAX_ERROR;
-}
-
-void Navigation::cleanup()
-{
-	verts.clear();
-	tris.clear();
-}
-
-bool Navigation::alloc(const glm::vec3 &origin, float tilewidth, float tileheight, int maxtiles, int maxpolys)
-{
-	navquery = std::make_unique<dtNavMeshQuery>();
-	chunky_mesh = std::make_unique<rcChunkyTriMesh>();
-
-	navmesh = std::make_unique<dtNavMesh>();
-
-	dtNavMeshParams params;
-	rcVcopy(params.orig, glm::value_ptr(origin));
-	params.tileWidth = tilewidth;
-	params.tileHeight = tileheight;
-	params.maxTiles = maxtiles;
-	params.maxPolys = maxpolys;
+	m_config.width = m_config.tileSize + m_config.borderSize*2;
+	m_config.height = m_config.tileSize + m_config.borderSize*2;
+	m_config.detailSampleDist = DETAIL_SAMPLE_DIST < 0.9f ? 0 : m_config.cs * DETAIL_SAMPLE_DIST;
+	m_config.detailSampleMaxError = CELL_HEIGHT * DETAIL_SAMPLE_MAX_ERROR;
 	
-	dtStatus status = navmesh->init(&params);
-	if (dtStatusFailed(status)) {
-		LOG_F(ERROR, "Build tiled navigation: could not init navmesh");
-		return false;
-	}
-	
-	status = navquery->init(navmesh.get(), 2048);
-	if (dtStatusFailed(status)) {
-		LOG_F(ERROR, "Build tiled navigation: could not init Detour navmesh query");
-		return false;
-	}
-
-	return true;
+	m_navmesh = std::make_unique<dtNavMesh>();
+	m_query = std::make_unique<dtNavMeshQuery>();
 }
 
 bool Navigation::build(const std::vector<float> &vertices, const std::vector<int> &indices)
 {
-	navquery = std::make_unique<dtNavMeshQuery>();
-	chunky_mesh = std::make_unique<rcChunkyTriMesh>();
+	m_query = std::make_unique<dtNavMeshQuery>();
+	m_chunky_mesh = std::make_unique<rcChunkyTriMesh>();
 
-	// populate verts and tris:
-	verts.insert(verts.begin(), vertices.begin(), vertices.end());
-	tris.insert(tris.begin(), indices.begin(), indices.end());
-
-	rcCreateChunkyTriMesh(verts.data(), tris.data(), tris.size()/3, 256, chunky_mesh.get());
+	rcCreateChunkyTriMesh(vertices.data(), indices.data(), indices.size()/3, 256, m_chunky_mesh.get());
 
 	int gw = 0, gh = 0;
 	float bmin[3];
 	float bmax[3];
-	rcCalcBounds(verts.data(), vertices.size()/3, bmin, bmax);
-	rcCalcGridSize(bmin, bmax, cfg.cs, &gw, &gh);
-	BOUNDS_MIN[0] = bmin[0];
-	BOUNDS_MIN[1] = bmin[1];
-	BOUNDS_MIN[2] = bmin[2];
-	BOUNDS_MAX[0] = bmax[0];
-	BOUNDS_MAX[1] = bmax[1];
-	BOUNDS_MAX[2] = bmax[2];
+	rcCalcBounds(vertices.data(), vertices.size() / 3, bmin, bmax);
+	rcCalcGridSize(bmin, bmax, m_config.cs, &gw, &gh);
+	m_bounds_min.x = bmin[0];
+	m_bounds_min.y = bmin[1];
+	m_bounds_min.z = bmin[2];
+	m_bounds_max.x = bmax[0];
+	m_bounds_max.y = bmax[1];
+	m_bounds_max.z = bmax[2];
 	const int ts = TILE_SIZE;
 	const int tw = (gw + ts-1) / ts;
 	const int th = (gh + ts-1) / ts;
@@ -195,88 +159,57 @@ bool Navigation::build(const std::vector<float> &vertices, const std::vector<int
 	int tile_bits = rcMin((int)ilog2(nextpow2(tw*th)), 14);
 	if (tile_bits > 14) { tile_bits = 14; }
 	int poly_bits = 22 - tile_bits;
-	max_tiles = 1 << tile_bits;
-	max_polys_per_tile = 1 << poly_bits;
+	m_max_tiles = 1 << tile_bits;
+	m_max_polys = 1 << poly_bits;
 
-	navmesh = std::make_unique<dtNavMesh>();
+	m_navmesh = std::make_unique<dtNavMesh>();
 
 	dtNavMeshParams params;
 	rcVcopy(params.orig, bmin);
-	params.tileWidth = TILE_SIZE*cfg.cs;
-	params.tileHeight = TILE_SIZE*cfg.cs;
-	params.maxTiles = max_tiles;
-	params.maxPolys = max_polys_per_tile;
+	params.tileWidth = TILE_SIZE * m_config.cs;
+	params.tileHeight = TILE_SIZE * m_config.cs;
+	params.maxTiles = m_max_tiles;
+	params.maxPolys = m_max_polys;
 	
-	dtStatus status = navmesh->init(&params);
+	dtStatus status = m_navmesh->init(&params);
 	if (dtStatusFailed(status)) {
 		LOG_F(ERROR, "Build tiled navigation: could not init navmesh");
 		return false;
 	}
 	
-	status = navquery->init(navmesh.get(), 2048);
+	status = m_query->init(m_navmesh.get(), 2048);
 	if (dtStatusFailed(status)) {
 		LOG_F(ERROR, "Build tiled navigation: could not init Detour navmesh query");
 		return false;
 	}
 
-	build_all_tiles();
+	build_all_tiles(vertices, indices);
 
-	verts.clear();
-	tris.clear();
+	m_record.insert(m_navmesh.get());
 
 	return true;
 }
 
-void Navigation::load_tilemesh(int x, int y, const std::vector<uint8_t> &data)
+void Navigation::build_all_tiles(const std::vector<float> &vertices, const std::vector<int> &indices)
 {
-	// Remove any previous data (navmesh owns and deletes the data).
-	navmesh->removeTile(navmesh->getTileRefAt(x, y, 0), 0, 0);
-	// make a copy of the data so the tilemesh can owns it
-	uint8_t *cpy = new uint8_t[data.size()];
-	std::copy(data.begin(), data.end(), cpy);
-	// Let the navmesh own the data.
-	dtStatus status = navmesh->addTile(cpy, data.size(), DT_TILE_FREE_DATA, 0, 0);
-	if (dtStatusFailed(status)) { dtFree(cpy); }
-}
-	
-void Navigation::build_all_tiles()
-{
-	const float *bmin = BOUNDS_MIN;
-	const float *bmax = BOUNDS_MAX;
+	const float *bmin = glm::value_ptr(m_bounds_min);
+	const float *bmax = glm::value_ptr(m_bounds_max);
 	int gw = 0, gh = 0;
-	rcCalcGridSize(bmin, bmax, cfg.cs, &gw, &gh);
+	rcCalcGridSize(bmin, bmax, m_config.cs, &gw, &gh);
 	const int ts = TILE_SIZE;
 	const int tw = (gw + ts-1) / ts;
 	const int th = (gh + ts-1) / ts;
-	const float tcs = TILE_SIZE * cfg.cs;
+	const float tcs = TILE_SIZE * m_config.cs;
 	
 	std::vector<std::thread> threads;
 	
 	// Start the build process.
 	for (int y = 0; y < th; ++y) {
-		threads.push_back(std::thread(add_tile_mesh_rows, y, tw, tcs, bmin, bmax, verts.data(), verts.size(), chunky_mesh.get(), &cfg, navmesh.get()));
+		threads.push_back(std::thread(add_tile_mesh_rows, y, tw, tcs, bmin, bmax, vertices.data(), vertices.size(), m_chunky_mesh.get(), &m_config, m_navmesh.get()));
 	}
 
 	for (std::thread &th : threads) {
 		if (th.joinable()) { th.join(); }
-	}
-}
-
-void Navigation::remove_all_tiles()
-{
-	const float *bmin = BOUNDS_MIN;
-	const float *bmax = BOUNDS_MAX;
-	int gw = 0, gh = 0;
-	rcCalcGridSize(bmin, bmax, cfg.cs, &gw, &gh);
-	const int ts = TILE_SIZE;
-	const int tw = (gw + ts-1) / ts;
-	const int th = (gh + ts-1) / ts;
-
-	for (int y = 0; y < th; ++y) {
-		for (int x = 0; x < tw; ++x) {
-			dtTileRef ref = navmesh->getTileRefAt(x, y, 0);
-			if (ref) { navmesh->removeTile(ref, 0, 0); }
-		}
 	}
 }
 
@@ -293,7 +226,7 @@ void Navigation::find_2D_path(const glm::vec2 &startpos, const glm::vec2 &endpos
 	// find the start polygon
 	dtPolyRef start_poly;
 	float nearest_start[3];
-	dtStatus status = navquery->findNearestPoly(glm::value_ptr(start), BOX_EXTENTS, &filter, &start_poly, nearest_start);
+	dtStatus status = m_query->findNearestPoly(glm::value_ptr(start), BOX_EXTENTS, &filter, &start_poly, nearest_start);
 	if ((status & DT_FAILURE) || (status & DT_STATUS_DETAIL_MASK)) {
 		return; 
 	}
@@ -301,14 +234,14 @@ void Navigation::find_2D_path(const glm::vec2 &startpos, const glm::vec2 &endpos
 	// find the end polygon
 	dtPolyRef end_poly;
 	float nearest_end[3];
-	status = navquery->findNearestPoly(glm::value_ptr(end), BOX_EXTENTS, &filter, &end_poly, nearest_end);
+	status = m_query->findNearestPoly(glm::value_ptr(end), BOX_EXTENTS, &filter, &end_poly, nearest_end);
 	if ((status & DT_FAILURE) || (status & DT_STATUS_DETAIL_MASK)) { 
 		return; 
 	}
 
 	dtPolyRef poly_path[MAX_PATHPOLY];
 	int path_count = 0;
-	status = navquery->findPath(start_poly, end_poly, nearest_start, nearest_end, &filter, poly_path, &path_count, MAX_PATHPOLY);
+	status = m_query->findPath(start_poly, end_poly, nearest_start, nearest_end, &filter, poly_path, &path_count, MAX_PATHPOLY);
 	if ((status & DT_FAILURE) || (status & DT_STATUS_DETAIL_MASK)) { 
 		return; 
 	}
@@ -318,7 +251,7 @@ void Navigation::find_2D_path(const glm::vec2 &startpos, const glm::vec2 &endpos
 
 	int vert_count = 0;
 	float pathdata[MAX_PATHVERT*3];
-	status = navquery->findStraightPath(nearest_start, nearest_end, poly_path, path_count, pathdata, NULL, NULL, &vert_count, MAX_PATHVERT);
+	status = m_query->findStraightPath(nearest_start, nearest_end, poly_path, path_count, pathdata, NULL, NULL, &vert_count, MAX_PATHVERT);
 	if ((status & DT_FAILURE) || (status & DT_STATUS_DETAIL_MASK)) { 
 		return; 
 	}
@@ -342,7 +275,7 @@ void Navigation::find_3D_path(const glm::vec3 &startpos, const glm::vec3 &endpos
 	// find the start polygon
 	dtPolyRef start_poly;
 	float nearest_start[3];
-	dtStatus status = navquery->findNearestPoly(glm::value_ptr(startpos), BOX_EXTENTS, &filter, &start_poly, nearest_start);
+	dtStatus status = m_query->findNearestPoly(glm::value_ptr(startpos), BOX_EXTENTS, &filter, &start_poly, nearest_start);
 	if ((status & DT_FAILURE) || (status & DT_STATUS_DETAIL_MASK)) {
 		return; 
 	}
@@ -350,14 +283,14 @@ void Navigation::find_3D_path(const glm::vec3 &startpos, const glm::vec3 &endpos
 	// find the end polygon
 	dtPolyRef end_poly;
 	float nearest_end[3];
-	status = navquery->findNearestPoly(glm::value_ptr(endpos), BOX_EXTENTS, &filter, &end_poly, nearest_end);
+	status = m_query->findNearestPoly(glm::value_ptr(endpos), BOX_EXTENTS, &filter, &end_poly, nearest_end);
 	if ((status & DT_FAILURE) || (status & DT_STATUS_DETAIL_MASK)) { 
 		return; 
 	}
 
 	dtPolyRef poly_path[MAX_PATHPOLY];
 	int path_count = 0;
-	status = navquery->findPath(start_poly, end_poly, nearest_start, nearest_end, &filter, poly_path, &path_count, MAX_PATHPOLY);
+	status = m_query->findPath(start_poly, end_poly, nearest_start, nearest_end, &filter, poly_path, &path_count, MAX_PATHPOLY);
 	if ((status & DT_FAILURE) || (status & DT_STATUS_DETAIL_MASK)) { 
 		return; 
 	}
@@ -367,7 +300,7 @@ void Navigation::find_3D_path(const glm::vec3 &startpos, const glm::vec3 &endpos
 
 	int vert_count = 0;
 	float pathdata[MAX_PATHVERT*3];
-	status = navquery->findStraightPath(nearest_start, nearest_end, poly_path, path_count, pathdata, NULL, NULL, &vert_count, MAX_PATHVERT);
+	status = m_query->findStraightPath(nearest_start, nearest_end, poly_path, path_count, pathdata, NULL, NULL, &vert_count, MAX_PATHVERT);
 	if ((status & DT_FAILURE) || (status & DT_STATUS_DETAIL_MASK)) { 
 		return; 
 	}
@@ -385,9 +318,9 @@ void Navigation::find_3D_path(const glm::vec3 &startpos, const glm::vec3 &endpos
 	}
 }
 
-poly_result_t Navigation::point_on_navmesh(const glm::vec3 &point) const
+PolySearchResult Navigation::point_on_navmesh(const glm::vec3 &point) const
 {
-	poly_result_t result;
+	PolySearchResult result;
 	result.found = false;
 
 	dtQueryFilter filter;
@@ -398,7 +331,7 @@ poly_result_t Navigation::point_on_navmesh(const glm::vec3 &point) const
 	// find the start polygon
 	dtPolyRef poly;
 	float nearest[3];
-	dtStatus status = navquery->findNearestPoly(glm::value_ptr(point), BOX_EXTENTS, &filter, &poly, nearest);
+	dtStatus status = m_query->findNearestPoly(glm::value_ptr(point), BOX_EXTENTS, &filter, &poly, nearest);
 	if ((status & DT_FAILURE) || (status & DT_STATUS_DETAIL_MASK)) {
 		return result; 
 	}
@@ -410,7 +343,8 @@ poly_result_t Navigation::point_on_navmesh(const glm::vec3 &point) const
 	return result;
 }
 
-static void add_tile_mesh_rows(const int y, const int tw, const float tcs, const float *bmin, const float *bmax, const float *verts, const int nverts, const rcChunkyTriMesh *chunky_mesh, const rcConfig *cfg, dtNavMesh *navmesh)
+// TODO make member function of Navigation class
+static void add_tile_mesh_rows(const int y, const int tw, const float tcs, const float *bmin, const float *bmax, const float *verts, const int nverts, const rcChunkyTriMesh *chunky_mesh, const rcConfig *config, dtNavMesh *navmesh)
 {
 	for (int x = 0; x < tw; ++x) {
 		float tile_min[3];
@@ -424,8 +358,8 @@ static void add_tile_mesh_rows(const int y, const int tw, const float tcs, const
 		tile_max[2] = bmin[2] + (y+1)*tcs;
 		
 		int data_size = 0;
-		Navbuilder builder;
-		uint8_t *data = builder.alloc_navdata(x, y, tile_min, tile_max, data_size, verts, nverts, chunky_mesh, cfg);
+		Navbuilder builder = Navbuilder(true);
+		uint8_t *data = builder.alloc_navdata(x, y, tile_min, tile_max, data_size, verts, nverts, chunky_mesh, config);
 		std::lock_guard<std::mutex> guard(global_mutex);
 		if (data) {
 			// Remove any previous data (navmesh owns and deletes the data).
@@ -437,7 +371,7 @@ static void add_tile_mesh_rows(const int y, const int tw, const float tcs, const
 	}
 }
 
-uint8_t* Navbuilder::alloc_navdata(const int tx, const int ty, float *bmin, float *bmax, int &data_size, const float *verts, const int nverts, const rcChunkyTriMesh *chunky_mesh, const rcConfig *cfg)
+uint8_t* Navbuilder::alloc_navdata(const int tx, const int ty, float *bmin, float *bmax, int &data_size, const float *verts, const int nverts, const rcChunkyTriMesh *chunky_mesh, const rcConfig *config)
 {
 	// Expand the heighfield bounding box by border size to find the extents of geometry we need to build this tile.
 	//
@@ -460,10 +394,10 @@ uint8_t* Navbuilder::alloc_navdata(const int tx, const int ty, float *bmin, floa
 	// For example if you build a navmesh for terrain, and want the navmesh tiles to match the terrain tile size
 	// you will need to pass in data from neighbour terrain tiles too! In a simple case, just pass in all the 8 neighbours,
 	// or use the bounding box below to only pass in a sliver of each of the 8 neighbours.
-	bmin[0] -= cfg->borderSize*cfg->cs;
-	bmin[2] -= cfg->borderSize*cfg->cs;
-	bmax[0] += cfg->borderSize*cfg->cs;
-	bmax[2] += cfg->borderSize*cfg->cs;
+	bmin[0] -= config->borderSize*config->cs;
+	bmin[2] -= config->borderSize*config->cs;
+	bmax[0] += config->borderSize*config->cs;
+	bmax[2] += config->borderSize*config->cs;
 	
 	// Allocate voxel heightfield where we rasterize our input data to.
 	solid = rcAllocHeightfield();
@@ -471,7 +405,7 @@ uint8_t* Navbuilder::alloc_navdata(const int tx, const int ty, float *bmin, floa
 		LOG_F(ERROR, "buildNavigation: Out of memory 'solid'");
 		return 0;
 	}
-	if (!rcCreateHeightfield(context, *solid, cfg->width, cfg->height, bmin, bmax, cfg->cs, cfg->ch)) {
+	if (!rcCreateHeightfield(context, *solid, config->width, config->height, bmin, bmax, config->cs, config->ch)) {
 		LOG_F(ERROR, "buildNavigation: Could not create solid heightfield");
 		return 0;
 	}
@@ -504,9 +438,9 @@ uint8_t* Navbuilder::alloc_navdata(const int tx, const int ty, float *bmin, floa
 		
 		tile_tri_count += nctris;
 		
-		memset(triareas, 0, nctris*sizeof(uint8_t));
-		rcMarkWalkableTriangles(context, cfg->walkableSlopeAngle, verts, nverts, ctris, nctris, triareas);
-		if (!rcRasterizeTriangles(context, verts, nverts, ctris, triareas, nctris, *solid, cfg->walkableClimb)) { 
+		memset(triareas, 1, nctris*sizeof(uint8_t));
+		//rcMarkWalkableTriangles(context, config->walkableSlopeAngle, verts, nverts, ctris, nctris, triareas);
+		if (!rcRasterizeTriangles(context, verts, nverts, ctris, triareas, nctris, *solid, config->walkableClimb)) { 
 			LOG_F(ERROR, "could not rasterize tris");
 			return 0; 
 		}
@@ -516,11 +450,11 @@ uint8_t* Navbuilder::alloc_navdata(const int tx, const int ty, float *bmin, floa
 	// remove unwanted overhangs caused by the conservative rasterization
 	// as well as filter spans where the character cannot possibly stand.
 	//if (m_filterLowHangingObstacles)
-	rcFilterLowHangingWalkableObstacles(context, cfg->walkableClimb, *solid);
+	rcFilterLowHangingWalkableObstacles(context, config->walkableClimb, *solid);
 	//if (m_filterLedgeSpans)
-	rcFilterLedgeSpans(context, cfg->walkableHeight, cfg->walkableClimb, *solid);
+	rcFilterLedgeSpans(context, config->walkableHeight, config->walkableClimb, *solid);
 	//if (m_filterWalkableLowHeightSpans)
-	rcFilterWalkableLowHeightSpans(context, cfg->walkableHeight, *solid);
+	rcFilterWalkableLowHeightSpans(context, config->walkableHeight, *solid);
 	
 	// Compact the heightfield so that it is faster to handle from now on.
 	// This will result more cache coherent data as well as the neighbours
@@ -530,7 +464,7 @@ uint8_t* Navbuilder::alloc_navdata(const int tx, const int ty, float *bmin, floa
 		LOG_F(ERROR, "buildNavigation: Out of memory 'chf'");
 		return 0;
 	}
-	if (!rcBuildCompactHeightfield(context, cfg->walkableHeight, cfg->walkableClimb, *solid, *chf)) {
+	if (!rcBuildCompactHeightfield(context, config->walkableHeight, config->walkableClimb, *solid, *chf)) {
 		LOG_F(ERROR, "buildNavigation: Could not build compact data");
 		return 0;
 	}
@@ -539,9 +473,11 @@ uint8_t* Navbuilder::alloc_navdata(const int tx, const int ty, float *bmin, floa
 	solid = 0;
 
 	// Erode the walkable area by agent radius.
-	if (!rcErodeWalkableArea(context, cfg->walkableRadius, *chf)) {
-		LOG_F(ERROR, "buildNavigation: Could not erode");
-		return 0;
+	if (!m_ignore_agent_radius) {
+		if (!rcErodeWalkableArea(context, config->walkableRadius, *chf)) {
+			LOG_F(ERROR, "buildNavigation: Could not erode");
+			return 0;
+		}
 	}
 
 	// (Optional) Mark areas.
@@ -579,7 +515,7 @@ uint8_t* Navbuilder::alloc_navdata(const int tx, const int ty, float *bmin, floa
 	//   * good choice to use for tiled navmesh with medium and small sized tiles
 	
 	// Partition the walkable surface into simple regions without holes.
-	if (!rcBuildLayerRegions(context, *chf, cfg->borderSize, cfg->minRegionArea)) {
+	if (!rcBuildLayerRegions(context, *chf, config->borderSize, config->minRegionArea)) {
 		LOG_F(ERROR, "buildNavigation: Could not build layer regions");
 		return 0;
 	}
@@ -590,7 +526,7 @@ uint8_t* Navbuilder::alloc_navdata(const int tx, const int ty, float *bmin, floa
 		LOG_F(ERROR, "buildNavigation: Out of memory 'cset'");
 		return 0;
 	}
-	if (!rcBuildContours(context, *chf, cfg->maxSimplificationError, cfg->maxEdgeLen, *cset)) {
+	if (!rcBuildContours(context, *chf, config->maxSimplificationError, config->maxEdgeLen, *cset)) {
 		LOG_F(ERROR, "buildNavigation: Could not create contours");
 		return 0;
 	}
@@ -599,23 +535,16 @@ uint8_t* Navbuilder::alloc_navdata(const int tx, const int ty, float *bmin, floa
 	
 	// Build polygon navmesh from the contours.
 	pmesh = rcAllocPolyMesh();
-	if (!pmesh) {
-		LOG_F(ERROR, "buildNavigation: Out of memory 'pmesh'");
-		return 0;
-	}
-	if (!rcBuildPolyMesh(context, *cset, cfg->maxVertsPerPoly, *pmesh)) {
+
+	if (!rcBuildPolyMesh(context, *cset, config->maxVertsPerPoly, *pmesh)) {
 		LOG_F(ERROR, "buildNavigation: Could not triangulate contours");
 		return 0;
 	}
 	
 	// Build detail mesh.
 	dmesh = rcAllocPolyMeshDetail();
-	if (!dmesh) {
-		LOG_F(ERROR, "buildNavigation: Out of memory 'dmesh'");
-		return 0;
-	}
 	
-	if (!rcBuildPolyMeshDetail(context, *pmesh, *chf, cfg->detailSampleDist, cfg->detailSampleMaxError, *dmesh)) {
+	if (!rcBuildPolyMeshDetail(context, *pmesh, *chf, config->detailSampleDist, config->detailSampleMaxError, *dmesh)) {
 		LOG_F(ERROR, "buildNavigation: Could build polymesh detail");
 		return 0;
 	}
@@ -627,7 +556,7 @@ uint8_t* Navbuilder::alloc_navdata(const int tx, const int ty, float *bmin, floa
 	
 	uint8_t *navdata = 0;
 	int navdata_size = 0;
-	if (cfg->maxVertsPerPoly <= DT_VERTS_PER_POLYGON) {
+	if (config->maxVertsPerPoly <= DT_VERTS_PER_POLYGON) {
 		if (pmesh->nverts >= 0xffff) {
 			// The vertex indices are ushorts, and cannot point to more than 0xffff vertices.
 			LOG_F(ERROR, "Too many vertices per tile");
@@ -671,8 +600,8 @@ uint8_t* Navbuilder::alloc_navdata(const int tx, const int ty, float *bmin, floa
 		params.tileLayer = 0;
 		rcVcopy(params.bmin, pmesh->bmin);
 		rcVcopy(params.bmax, pmesh->bmax);
-		params.cs = cfg->cs;
-		params.ch = cfg->ch;
+		params.cs = config->cs;
+		params.ch = config->ch;
 		params.buildBvTree = true;
 		
 		if (!dtCreateNavMeshData(&params, &navdata, &navdata_size)) {

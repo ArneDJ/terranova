@@ -16,6 +16,7 @@
 // 3. This notice may not be removed or altered from any source distribution.
 //
 
+#include <cstdint>
 #include "ChunkyTriMesh.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -101,6 +102,7 @@ static void subdivide(BoundsItem* items, int nitems, int imin, int imax, int tri
 		{
 			const int* src = &inTris[items[i].i*3];
 			int* dst = &outTris[curTri*3];
+
 			curTri++;
 			dst[0] = src[0];
 			dst[1] = src[1];
@@ -151,7 +153,7 @@ bool rcCreateChunkyTriMesh(const float* verts, const int* tris, int ntris,
 	cm->tris = new int[ntris*3];
 	if (!cm->tris)
 		return false;
-		
+
 	cm->ntris = ntris;
 
 	// Build tree

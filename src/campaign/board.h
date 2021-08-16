@@ -28,15 +28,15 @@ public:
 	void find_path(const glm::vec2 &start, const glm::vec2 &end, std::list<glm::vec2> &path) const;
 public:
 	template <class Archive>
-	void save(Archive &archive) const 
+	void save(Archive &archive) const
 	{
-		archive(m_seed, m_atlas);
+		archive(m_seed, m_atlas, m_land_navigation);
 	}
 public:
 	template <class Archive>
 	void load(Archive &archive)
 	{
-		archive(m_seed, m_atlas);
+		archive(m_seed, m_atlas, m_land_navigation);
 	}
 public:
 	void display(const util::Camera &camera);
@@ -45,5 +45,5 @@ private:
 	Atlas m_atlas;
 	WorldModel m_model;
 	fysx::HeightField m_height_field;
-	util::Navigation m_navigation;
+	util::Navigation m_land_navigation;
 };

@@ -109,7 +109,7 @@ void Board::generate(int seed)
 	}
 	const auto &tiles = m_atlas.tiles();
 	for (const auto &cell : graph.cells) {
-		if (tiles[cell.index].height >= 114) {
+		if (tiles[cell.index].height >= 114 && tiles[cell.index].height <= 168) {
 			for (const auto &edge : cell.edges) {
 				indices.push_back(index);
 				if (geom::clockwise(cell.center, edge->left_vertex->position, edge->right_vertex->position)) {
@@ -127,8 +127,7 @@ void Board::generate(int seed)
 		}
 	}
 
-	m_navigation.cleanup();
-	m_navigation.build(vertices, indices);
+	m_land_navigation.build(vertices, indices);
 }
 	
 void Board::reload()
@@ -148,7 +147,7 @@ fysx::HeightField& Board::height_field()
 	
 const util::Navigation& Board::navigation() const
 {
-	return m_navigation;
+	return m_land_navigation;
 }
 
 const Tile* Board::tile_at(const glm::vec2 &position) const
@@ -158,5 +157,5 @@ const Tile* Board::tile_at(const glm::vec2 &position) const
 	
 void Board::find_path(const glm::vec2 &start, const glm::vec2 &end, std::list<glm::vec2> &path) const
 {
-	m_navigation.find_2D_path(start, end, path);
+	m_land_navigation.find_2D_path(start, end, path);
 }
