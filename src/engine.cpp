@@ -202,7 +202,7 @@ void Engine::run()
 			campaign.board->reload();
 			const auto &navigation = campaign.board->navigation();
 			debugger.clear();
-			//debugger.add_navmesh(navigation.navmesh());
+			debugger.add_navmesh(navigation.navmesh());
 		}
 
 		debugger.update(campaign.camera);
