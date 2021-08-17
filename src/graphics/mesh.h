@@ -112,6 +112,10 @@ public:
 	{
 		data.erase(data.begin() + index);
 	}
+	void clear()
+	{
+		data.clear();
+	}
 };
 
 // manages indirect draw commands of glDrawArrays
@@ -120,6 +124,7 @@ public:
 	IndirectDrawer(const Primitive &primitive);
 	void add_command();
 	void pop_command();
+	void clear_commands();
 	void update_buffer();
 	void bind_for_culling(GLuint commands_index, GLuint sphere_index) const;
 	void draw() const;
@@ -137,6 +142,7 @@ public:
 	IndirectElementsDrawer(const Primitive &primitive);
 	void add_command();
 	void pop_command();
+	void clear_commands();
 	void update_buffer();
 	void bind_for_culling(GLuint commands_index, GLuint sphere_index) const;
 	void draw() const;

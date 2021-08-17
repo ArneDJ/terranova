@@ -93,6 +93,10 @@ void Campaign::save(const std::string &filepath)
 void Campaign::generate(int seed)
 {
 	board->generate(seed);
+
+	auto model = MediaManager::load_model("media/models/primitives/cylinder.glb");
+	auto object = scene->find_object(model);
+	object->clear_transforms();
 }
 
 void Campaign::update(float delta)

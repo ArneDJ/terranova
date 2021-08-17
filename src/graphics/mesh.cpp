@@ -140,6 +140,13 @@ void IndirectDrawer::pop_command()
 
 	m_instance_count = m_commands.data.size();
 }
+	
+void IndirectDrawer::clear_commands()
+{
+	m_commands.clear();
+
+	m_instance_count = 0;
+}
 
 void IndirectDrawer::update_buffer()
 {
@@ -193,6 +200,13 @@ void IndirectElementsDrawer::pop_command()
 	m_commands.data.pop_back();
 
 	m_instance_count = m_commands.data.size();
+}
+
+void IndirectElementsDrawer::clear_commands()
+{
+	m_commands.clear();
+
+	m_instance_count = 0;
 }
 
 void IndirectElementsDrawer::update_buffer()

@@ -80,6 +80,18 @@ void IndirectMesh::remove_instance()
 	m_group_count--;
 }
 	
+void IndirectMesh::clear_instances()
+{
+	for (auto &drawer : m_drawers) {
+		drawer->clear_commands();
+	}
+	for (auto &drawer : m_elements_drawers) {
+		drawer->clear_commands();
+	}
+
+	m_group_count = 0;
+}
+	
 void IndirectMesh::update()
 {
 	for (auto &drawer : m_drawers) {
@@ -167,6 +179,17 @@ void SceneObject::remove_transform(const geom::Transform *transform)
 
 			break;
 		}
+	}
+}
+	
+void SceneObject::clear_transforms()
+{
+	m_transforms.clear();
+	m_padded_transforms.clear();
+	m_model_matrices.clear();
+
+	for (auto &indirect_mesh : m_indirect_meshes) {
+		indirect_mesh->clear_instances();
 	}
 }
 	
@@ -320,6 +343,13 @@ void SceneGroup::display_wireframe() const
 	}
 	
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+}
+	
+void SceneGroup::clear_instances()
+{
+	for (auto &object : m_objects) {
+		object.second->clear_transforms();
+	}
 }
 
 };

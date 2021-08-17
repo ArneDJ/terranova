@@ -21,6 +21,7 @@ public:
 	void add(const Primitive &primimtive);
 	void add_instance();
 	void remove_instance();
+	void clear_instances();
 	void update();
 	void dispatch();
 public:
@@ -38,6 +39,7 @@ public:
 public:
 	void add_transform(const geom::Transform *transform);
 	void remove_transform(const geom::Transform *transform);
+	void clear_transforms();
 	void update_transforms();
 	void update_buffers();
 	void dispatch_frustum_cull();
@@ -63,6 +65,7 @@ public:
 public:
 	void update(const util::Camera &camera);
 	void cull_frustum();
+	void clear_instances();
 	void display() const;
 	void display_wireframe() const;
 private:
