@@ -14,7 +14,7 @@
 
 #include "atlas.h"
 	
-void Atlas::generate(int seed, const geom::Rectangle &bounds)
+void Atlas::generate(int seed, const geom::Rectangle &bounds, const AtlasParameters &parameters)
 {
 	// clear all data
 	clear();
@@ -59,11 +59,11 @@ void Atlas::generate(int seed, const geom::Rectangle &bounds)
 	fastnoise.SetSeed(seed);
 	fastnoise.SetNoiseType(FastNoise::SimplexFractal);
 	fastnoise.SetFractalType(FastNoise::FBM);
-	fastnoise.SetFrequency(2.f * 0.001f);
-	fastnoise.SetFractalOctaves(6);
-	fastnoise.SetFractalLacunarity(2.5f);
-	fastnoise.SetPerturbFrequency(2.f*0.001f);
-	fastnoise.SetGradientPerturbAmp(300.f);
+	fastnoise.SetFrequency(parameters.noise_frequency);
+	fastnoise.SetFractalOctaves(parameters.noise_octaves);
+	fastnoise.SetFractalLacunarity(parameters.noise_lacunarity);
+	fastnoise.SetPerturbFrequency(parameters.perturb_frequency);
+	fastnoise.SetGradientPerturbAmp(parameters.perturb_amp);
 
 	for (auto &tile : m_tiles) {
 		glm::vec2 center = m_graph.cells[tile.index].center;
@@ -71,6 +71,15 @@ void Atlas::generate(int seed, const geom::Rectangle &bounds)
 		fastnoise.GradientPerturbFractal(x, y);
 		float height = 0.5f * (fastnoise.GetNoise(x, y) + 1.f);
 		tile.height = 255 * height;
+		if (tile.height > parameters.mountains) {
+			tile.relief = ReliefType::MOUNTAINS;
+		} else if (tile.height > parameters.hills) {
+			tile.relief = ReliefType::HILLS;
+		} else if (tile.height > parameters.lowland) {
+			tile.relief = ReliefType::LOWLAND;
+		} else {
+			tile.relief = ReliefType::SEABED;
+		}
 	}
 }
 	

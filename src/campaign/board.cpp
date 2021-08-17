@@ -41,12 +41,11 @@ void WorldModel::reload(const Atlas &atlas, int seed)
 		const auto &cell = graph.cells[tile.index];
 		uint8_t height = tile.height;
 		glm::vec3 color = { dis_color(gen), dis_color(gen), dis_color(gen) };
-		if (height < 114) {
-			color = glm::vec3(0.1f);
-		} else if (height > 168) {
-			color = glm::vec3(1.f);
-		} else {
-			color = glm::vec3(height / 255.f);
+		switch (tile.relief) {
+		case ReliefType::SEABED: color = glm::vec3(0.1f); break;
+		case ReliefType::LOWLAND: color = glm::vec3(0.5f); break;
+		case ReliefType::HILLS: color = glm::vec3(0.75f); break;
+		case ReliefType::MOUNTAINS: color = glm::vec3(1.f); break;
 		}
 		for (const auto &edge : cell.edges) {
 			gfx::Vertex vertex_a = {
@@ -93,7 +92,8 @@ void Board::generate(int seed)
 {
 	m_seed = seed;
 
-	m_atlas.generate(seed, BOUNDS);
+	AtlasParameters parameters = {};
+	m_atlas.generate(seed, BOUNDS, parameters);
 	
 	// build navigation mesh
 	std::vector<float> vertices;

@@ -221,7 +221,7 @@ void Navigation::find_2D_path(const glm::vec2 &startpos, const glm::vec2 &endpos
 	dtQueryFilter filter;
 	filter.setIncludeFlags(0xFFFF);
 	filter.setExcludeFlags(0);
-	filter.setAreaCost(SAMPLE_POLYAREA_GROUND, 1.f);
+	filter.setAreaCost(POLY_AREA_GROUND, 1.f);
 
 	// find the start polygon
 	dtPolyRef start_poly;
@@ -270,7 +270,7 @@ void Navigation::find_3D_path(const glm::vec3 &startpos, const glm::vec3 &endpos
 	dtQueryFilter filter;
 	filter.setIncludeFlags(0xFFFF);
 	filter.setExcludeFlags(0);
-	filter.setAreaCost(SAMPLE_POLYAREA_GROUND, 1.f);
+	filter.setAreaCost(POLY_AREA_GROUND, 1.f);
 
 	// find the start polygon
 	dtPolyRef start_poly;
@@ -326,7 +326,7 @@ PolySearchResult Navigation::point_on_navmesh(const glm::vec3 &point) const
 	dtQueryFilter filter;
 	filter.setIncludeFlags(0xFFFF);
 	filter.setExcludeFlags(0);
-	filter.setAreaCost(SAMPLE_POLYAREA_GROUND, 1.f);
+	filter.setAreaCost(POLY_AREA_GROUND, 1.f);
 
 	// find the start polygon
 	dtPolyRef poly;
@@ -343,7 +343,6 @@ PolySearchResult Navigation::point_on_navmesh(const glm::vec3 &point) const
 	return result;
 }
 
-// TODO make member function of Navigation class
 static void add_tile_mesh_rows(const int y, const int tw, const float tcs, const float *bmin, const float *bmax, const float *verts, const int nverts, const rcChunkyTriMesh *chunky_mesh, const rcConfig *config, dtNavMesh *navmesh)
 {
 	for (int x = 0; x < tw; ++x) {
@@ -566,15 +565,15 @@ uint8_t* Navbuilder::alloc_navdata(const int tx, const int ty, float *bmin, floa
 		// Update poly flags from areas.
 		for (int i = 0; i < pmesh->npolys; ++i) {
 			if (pmesh->areas[i] == RC_WALKABLE_AREA) {
-				pmesh->areas[i] = SAMPLE_POLYAREA_GROUND;
+				pmesh->areas[i] = POLY_AREA_GROUND;
 			}
 			
-			if (pmesh->areas[i] == SAMPLE_POLYAREA_GROUND || pmesh->areas[i] == SAMPLE_POLYAREA_GRASS || pmesh->areas[i] == SAMPLE_POLYAREA_ROAD) {
-				pmesh->flags[i] = SAMPLE_POLYFLAGS_WALK;
-			} else if (pmesh->areas[i] == SAMPLE_POLYAREA_WATER) {
-				pmesh->flags[i] = SAMPLE_POLYFLAGS_SWIM;
-			} else if (pmesh->areas[i] == SAMPLE_POLYAREA_DOOR) {
-				pmesh->flags[i] = SAMPLE_POLYFLAGS_WALK | SAMPLE_POLYFLAGS_DOOR;
+			if (pmesh->areas[i] == POLY_AREA_GROUND || pmesh->areas[i] == POLY_AREA_GRASS || pmesh->areas[i] == POLY_AREA_ROAD) {
+				pmesh->flags[i] = POLY_FLAGS_WALK;
+			} else if (pmesh->areas[i] == POLY_AREA_WATER) {
+				pmesh->flags[i] = POLY_FLAGS_SWIM;
+			} else if (pmesh->areas[i] == POLY_AREA_DOOR) {
+				pmesh->flags[i] = POLY_FLAGS_WALK | POLY_FLAGS_DOOR;
 			}
 		}
 		

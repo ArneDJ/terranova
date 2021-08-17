@@ -8,21 +8,21 @@
 namespace util {
 
 enum PolyAreaType {
-	SAMPLE_POLYAREA_GROUND = 1,
-	SAMPLE_POLYAREA_WATER,
-	SAMPLE_POLYAREA_ROAD,
-	SAMPLE_POLYAREA_DOOR,
-	SAMPLE_POLYAREA_GRASS,
-	SAMPLE_POLYAREA_JUMP,
+	POLY_AREA_GROUND = 1,
+	POLY_AREA_WATER,
+	POLY_AREA_ROAD,
+	POLY_AREA_DOOR,
+	POLY_AREA_GRASS,
+	POLY_AREA_JUMP,
 };
 
 enum PolyFlags {
-	SAMPLE_POLYFLAGS_WALK = 0x01,  // Ability to walk (ground, grass, road)
-	SAMPLE_POLYFLAGS_SWIM = 0x02,  // Ability to swim (water).
-	SAMPLE_POLYFLAGS_DOOR = 0x04,  // Ability to move through doors.
-	SAMPLE_POLYFLAGS_JUMP = 0x08,  // Ability to jump.
-	SAMPLE_POLYFLAGS_DISABLED = 0x10,  // Disabled polygon
-	SAMPLE_POLYFLAGS_ALL = 0xffff // All abilities.
+	POLY_FLAGS_WALK = 0x01,  // Ability to walk (ground, grass, road)
+	POLY_FLAGS_SWIM = 0x02,  // Ability to swim (water).
+	POLY_FLAGS_DOOR = 0x04,  // Ability to move through doors.
+	POLY_FLAGS_JUMP = 0x08,  // Ability to jump.
+	POLY_FLAGS_DISABLED = 0x10,  // Disabled polygon
+	POLY_FLAGS_ALL = 0xffff // All abilities.
 };
 
 struct PolySearchResult {
@@ -110,9 +110,9 @@ class Navigation {
 public:
 	Navigation();
 public:
-	const dtNavMesh* get_navmesh() const { return m_navmesh.get(); }	
-	dtNavMesh* get_navmesh() { return m_navmesh.get(); }	
- 	const dtNavMeshQuery* get_navquery() const { return m_query.get(); }
+	const dtNavMesh* navmesh() const { return m_navmesh.get(); }	
+	dtNavMesh* navmesh() { return m_navmesh.get(); }	
+ 	const dtNavMeshQuery* query() const { return m_query.get(); }
 public:
 	bool build(const std::vector<float> &vertices, const std::vector<int> &indices);
 public:	
