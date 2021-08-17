@@ -3,6 +3,7 @@
 #include "board.h"
 #include "meeple.h"
 #include "marker.h"
+#include "settlement.h"
 
 class Campaign {
 public:
@@ -13,6 +14,7 @@ public:
 	std::unique_ptr<gfx::SceneGroup> scene;
 	Marker marker;
 	Meeple player;
+	std::unordered_map<uint32_t, std::unique_ptr<Settlement>> settlements;
 public:
 	void load(const std::string &filepath);
 	void save(const std::string &filepath);

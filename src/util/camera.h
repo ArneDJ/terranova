@@ -7,7 +7,7 @@ namespace util {
 class Camera {
 public:
 	glm::vec3 position = {};
-	glm::vec3 direction = {};
+	glm::vec3 direction = { 0.f, 1.f, 0.f };
 	glm::mat4 projection, viewing;
 	glm::mat4 VP; // view * project
 	float pitch = 0.f; // in radians

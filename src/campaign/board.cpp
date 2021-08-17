@@ -31,12 +31,14 @@ void WorldModel::reload(const Atlas &atlas, int seed)
 {
 	m_vertices.clear();
 	m_indices.clear();
+	m_tile_vertices.clear();
 
 	const auto &graph = atlas.graph();
 	const auto &tiles = atlas.tiles();
 
 	std::mt19937 gen(seed);
 	std::uniform_real_distribution<float> dis_color(0.2f, 1.2f);
+	uint32_t index = 0;
 	for (const auto &tile : tiles) {
 		const auto &cell = graph.cells[tile.index];
 		uint8_t height = tile.height;
@@ -47,6 +49,7 @@ void WorldModel::reload(const Atlas &atlas, int seed)
 		case ReliefType::HILLS: color = glm::vec3(0.75f); break;
 		case ReliefType::MOUNTAINS: color = glm::vec3(1.f); break;
 		}
+		auto &tile_targets = m_tile_vertices[tile.index];
 		for (const auto &edge : cell.edges) {
 			gfx::Vertex vertex_a = {
 				{ edge->left_vertex->position.x, 0.f, edge->left_vertex->position.y },
@@ -69,9 +72,27 @@ void WorldModel::reload(const Atlas &atlas, int seed)
 				m_vertices.push_back(vertex_a);
 				m_vertices.push_back(vertex_c);
 			}
+			tile_targets.push_back(index++);
+			tile_targets.push_back(index++);
+			tile_targets.push_back(index++);
 		}
 	}
 
+	m_mesh.create(m_vertices, m_indices);
+}
+	
+void WorldModel::color_tile(uint32_t tile, const glm::vec3 &color)
+{
+	auto search = m_tile_vertices.find(tile);
+	if (search != m_tile_vertices.end()) {
+		for (const auto &index : search->second) {
+			m_vertices[index].normal *= color;
+		}
+	}
+}
+	
+void WorldModel::update_mesh()
+{
 	m_mesh.create(m_vertices, m_indices);
 }
 
@@ -149,13 +170,33 @@ const util::Navigation& Board::navigation() const
 {
 	return m_land_navigation;
 }
-
+	
 const Tile* Board::tile_at(const glm::vec2 &position) const
 {
 	return m_atlas.tile_at(position);
 }
 	
+glm::vec2 Board::tile_center(uint32_t index) const
+{
+	return m_atlas.tile_center(index);
+}
+	
 void Board::find_path(const glm::vec2 &start, const glm::vec2 &end, std::list<glm::vec2> &path) const
 {
 	m_land_navigation.find_2D_path(start, end, path);
+}
+	
+void Board::color_tile(uint32_t tile, const glm::vec3 &color)
+{
+	m_model.color_tile(tile, color);
+}
+	
+void Board::update_model()
+{
+	m_model.update_mesh();
+}
+	
+void Board::occupy_tiles(uint32_t start, uint32_t occupier, uint32_t radius, std::vector<uint32_t> &occupied_tiles)
+{
+	m_atlas.occupy_tiles(start, occupier, radius, occupied_tiles);
 }

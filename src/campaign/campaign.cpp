@@ -57,6 +57,9 @@ void Campaign::init(const gfx::Shader *visual, const gfx::Shader *culling, const
 	auto duck_model = MediaManager::load_model("media/models/duck.glb");
 	auto duck_object = scene->find_object(duck_model);
 	duck_object->add_transform(player.transform());
+
+	camera.position = glm::vec3(0.f, 0.f, 0.f);
+	camera.direction = glm::vec3(0.f, 1.f, 0.f);
 }
 	
 void Campaign::load(const std::string &filepath)
@@ -116,9 +119,41 @@ void Campaign::update(float delta)
 			std::list<glm::vec2> nodes;
 			
 			board->find_path(glm::vec2(player.transform()->position.x, player.transform()->position.z), glm::vec2(result.point.x, result.point.z), nodes);
-			//nodes.push_front(glm::vec2(player.transform()->position.x, player.transform()->position.z));
-			//nodes.push_back(glm::vec2(result.point.x, result.point.z));
 			player.set_path(nodes);
+		}
+	}
+
+	// add settlement
+	if (util::InputManager::key_pressed(SDL_BUTTON_LEFT)) {
+		// see what tile ray hits
+		glm::vec3 ray = camera.ndc_to_ray(util::InputManager::abs_mouse_coords());
+		auto result = physics.cast_ray(camera.position, camera.position + (1000.f * ray));
+		if (result.hit) {
+			//auto atlas = board->atlas();
+			const auto &tile = board->tile_at(glm::vec2(result.point.x, result.point.z));
+			if (tile) {
+				if (tile->relief == ReliefType::LOWLAND || tile->relief == ReliefType::HILLS) {
+				// if settlement not present add new one
+				if (tile->occupier == 0) {
+				auto search = settlements.find(tile->index);
+				if (search == settlements.end()) {
+					auto settlement = std::make_unique<Settlement>();
+					glm::vec2 center = board->tile_center(tile->index);
+					settlement->set_position(glm::vec3(center.x, 0.f, center.y));
+					auto teapot_model = MediaManager::load_model("media/models/primitives/cylinder.glb");
+					auto teapot_object = scene->find_object(teapot_model);
+					teapot_object->add_transform(settlement->transform());
+					settlements[tile->index] = std::move(settlement);
+					std::vector<uint32_t> visited_tiles;
+					board->occupy_tiles(tile->index, 1, 4, visited_tiles);
+					for (const auto &visited : visited_tiles) {
+						board->color_tile(visited, glm::vec3(1.f, 0.f, 1.f));
+					}
+					board->update_model();
+				}
+				}
+				}
+			}
 		}
 	}
 

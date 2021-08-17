@@ -1,6 +1,8 @@
 #include <vector>
 #include <random>
 #include <memory>
+#include <queue>
+#include <unordered_map>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 #include <glm/mat4x4.hpp>
@@ -121,4 +123,50 @@ const Tile* Atlas::tile_at(const glm::vec2 &position) const
 	} 
 
 	return nullptr;
+}
+	
+glm::vec2 Atlas::tile_center(uint32_t index) const
+{
+	return m_graph.cells[index].center;
+}
+	
+// FIXME review
+void Atlas::occupy_tiles(uint32_t start, uint32_t occupier, uint32_t radius, std::vector<uint32_t> &occupied_tiles)
+{
+	// breadth first search until radius
+	std::unordered_map<uint32_t, bool> visited;
+	std::unordered_map<uint32_t, uint32_t> depth;
+	std::queue<Tile*> nodes;
+	
+	visited[start] = true;
+	depth[start] = 0;
+
+	Tile *root = &m_tiles[start]; // TODO safe check
+	if (root->occupier == 0) {
+		nodes.push(root);
+	}
+
+	while (!nodes.empty()) {
+		Tile *node = nodes.front();
+		nodes.pop();
+		node->occupier = occupier;
+		occupied_tiles.push_back(node->index);
+		uint32_t layer = depth[node->index] + 1;
+		if (layer < radius) {
+			auto &cell = m_graph.cells[node->index];
+			for (const auto &neighbor : cell.neighbors) {
+				Tile *neighbor_tile = &m_tiles[neighbor->index];
+				auto search = visited.find(neighbor->index);
+				if (search == visited.end()) {
+					visited[neighbor->index] = true;
+					depth[neighbor->index] = layer;
+					bool valid_relief = neighbor_tile->relief == ReliefType::LOWLAND || neighbor_tile->relief == ReliefType::HILLS;
+					bool can_occupy = neighbor_tile->occupier == 0 || neighbor_tile->occupier == occupier;
+					if (can_occupy && valid_relief) {
+						nodes.push(neighbor_tile);
+					}
+				}
+			}
+		}
+	}
 }
