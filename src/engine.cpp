@@ -149,14 +149,14 @@ void Engine::init_imgui()
 	ImGui_ImplOpenGL3_Init("#version 460");
 }
 	
-void Engine::update_debug_menu()
+void Engine::update_campaign_menu()
 {
 	g_generate = false;
 
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplSDL2_NewFrame(window);
 	ImGui::NewFrame();
-	ImGui::Begin("Debug Mode");
+	ImGui::Begin("Campaign Debug");
 	ImGui::SetWindowSize(ImVec2(400, 300));
 	ImGui::Text("cam position: %f, %f, %f", campaign.camera.position.x, campaign.camera.position.y, campaign.camera.position.z);
 	ImGui::Text("%.2f ms/frame (%.1d fps)", (frame_timer.FPS_UPDATE_TIME / frame_timer.frames_per_second()), frame_timer.frames_per_second());
@@ -166,13 +166,15 @@ void Engine::update_debug_menu()
 	if (ImGui::Button("Save World")) { 
 		campaign.save(user_dir.saves + "test.save");
 	}
+	if (ImGui::Button("Visit Tile")) { state = EngineState::BATTLE; }
+	ImGui::Separator();
 	if (ImGui::Button("Exit")) { state = EngineState::EXIT; }
 	ImGui::End();
 }
 
 void Engine::run()
 {
-	state = EngineState::TITLE;
+	state = EngineState::CAMPAIGN;
 
 	shaders = std::make_unique<ShaderGroup>();
 
@@ -180,6 +182,9 @@ void Engine::run()
 
 	campaign.init(&shaders->debug, &shaders->culling, &shaders->tilemap);
 	campaign.camera.set_projection(video_settings.fov, video_settings.canvas.x, video_settings.canvas.y, 0.1f, 900.f);
+	
+	battle.init(&shaders->debug, &shaders->culling);
+	battle.camera.set_projection(video_settings.fov, video_settings.canvas.x, video_settings.canvas.y, 0.1f, 900.f);
 
 	std::random_device rd;
 	std::mt19937 gen(rd());
@@ -188,12 +193,12 @@ void Engine::run()
 	campaign.load(user_dir.saves + "test.save");
 	campaign.board->reload();
 
-	while (state == EngineState::TITLE) {
+	while (state == EngineState::CAMPAIGN) {
 		frame_timer.begin();
 	
 		util::InputManager::update();
 
-		update_debug_menu();
+		update_campaign_menu();
 
 		campaign.update(frame_timer.delta_seconds());
 	
@@ -214,6 +219,55 @@ void Engine::run()
 
 		debugger.display();
 		debugger.display_wireframe();
+
+		ImGui::Render();
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+		SDL_GL_SwapWindow(window);
+
+		frame_timer.finish();
+
+		if (state == EngineState::BATTLE) {
+			run_battle();
+		}
+		if (util::InputManager::exit_request()) {
+			state = EngineState::EXIT;
+		}
+	}
+}
+
+void Engine::update_battle_menu()
+{
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplSDL2_NewFrame(window);
+	ImGui::NewFrame();
+	ImGui::Begin("Battle Debug");
+	ImGui::SetWindowSize(ImVec2(400, 300));
+	ImGui::Text("cam position: %f, %f, %f", battle.camera.position.x, battle.camera.position.y, battle.camera.position.z);
+	ImGui::Text("%.2f ms/frame (%.1d fps)", (frame_timer.FPS_UPDATE_TIME / frame_timer.frames_per_second()), frame_timer.frames_per_second());
+	ImGui::Text("%.4f frame delta", frame_timer.delta_seconds());
+	ImGui::Separator();
+	if (ImGui::Button("Return to Campaign")) { state = EngineState::CAMPAIGN; }
+	ImGui::Separator();
+	if (ImGui::Button("Quit Game")) { state = EngineState::EXIT; }
+	ImGui::End();
+}
+	
+void Engine::run_battle()
+{
+	while (state == EngineState::BATTLE) {
+		frame_timer.begin();
+	
+		util::InputManager::update();
+		
+		update_battle_menu();
+		
+		battle.update(frame_timer.delta_seconds());
+
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glViewport(0, 0, video_settings.canvas.x, video_settings.canvas.y);
+		
+		battle.display();
 
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

@@ -17,6 +17,8 @@
 
 #include "campaign/campaign.h"
 
+#include "battle/battle.h"
+
 #include "media.h"
 #include "debugger.h"
 
@@ -67,10 +69,13 @@ private:
 	util::Config config;
 	VideoSettings video_settings;
 	Campaign campaign;
+	Battle battle;
 	std::unique_ptr<ShaderGroup> shaders;
 private:
 	void init_opengl();
 	void init_imgui();
 private:
-	void update_debug_menu();
+	void run_battle();
+	void update_campaign_menu();
+	void update_battle_menu();
 };
