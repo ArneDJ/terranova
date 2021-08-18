@@ -33,20 +33,23 @@ void BoardMesh::add_cell(const geom::VoronoiCell &cell, const glm::vec3 &color)
 	auto &targets = m_tile_vertices[cell.index];
 
 	for (const auto &edge : cell.edges) {
-		gfx::Vertex vertex_a = {
-			{ edge->left_vertex->position.x, 0.f, edge->left_vertex->position.y },
-			color
+		BoardMeshVertex vertex_a = {
+			edge->left_vertex->position,
+			color,
+			glm::vec3(1.f, 0.f, 0.f)
 		};
-		gfx::Vertex vertex_b = {
-			{ edge->right_vertex->position.x, 0.f, edge->right_vertex->position.y },
-			color
+		BoardMeshVertex vertex_b = {
+			edge->right_vertex->position,
+			color,
+			glm::vec3(0.f, 1.f, 0.f)
 		};
-		gfx::Vertex vertex_c = {
-			{ cell.center.x, 0.f, cell.center.y },
-			color
+		BoardMeshVertex vertex_c = {
+			cell.center,
+			color,
+			glm::vec3(0.f, 0.f, 1.f)
 		};
 		if (!geom::clockwise(edge->left_vertex->position, edge->right_vertex->position, cell.center)) {
-			std::swap(vertex_a, vertex_b);
+			std::swap(vertex_a.position, vertex_b.position);
 		}
 		targets.push_back(m_vertices.size());
 		m_vertices.push_back(vertex_a);
@@ -59,7 +62,7 @@ void BoardMesh::add_cell(const geom::VoronoiCell &cell, const glm::vec3 &color)
 
 void BoardMesh::create()
 {
-	const size_t size = sizeof(gfx::Vertex) * m_vertices.size();
+	const size_t size = sizeof(BoardMeshVertex) * m_vertices.size();
 
 	m_primitive.first_index = 0;
 	m_primitive.index_count = 0;
@@ -74,13 +77,14 @@ void BoardMesh::create()
 	m_vbo.set_target(GL_ARRAY_BUFFER);
 	m_vbo.store_mutable(size, m_vertices.data(), GL_STATIC_DRAW);
 
-	m_vao.set_attribute(0, 3, GL_FLOAT, GL_FALSE, sizeof(gfx::Vertex), (char*)(offsetof(gfx::Vertex, position)));
-	m_vao.set_attribute(1, 3, GL_FLOAT, GL_FALSE, sizeof(gfx::Vertex), (char*)(offsetof(gfx::Vertex, normal)));
+	m_vao.set_attribute(0, 2, GL_FLOAT, GL_FALSE, sizeof(BoardMeshVertex), (char*)(offsetof(BoardMeshVertex, position)));
+	m_vao.set_attribute(1, 3, GL_FLOAT, GL_FALSE, sizeof(BoardMeshVertex), (char*)(offsetof(BoardMeshVertex, color)));
+	m_vao.set_attribute(2, 3, GL_FLOAT, GL_FALSE, sizeof(BoardMeshVertex), (char*)(offsetof(BoardMeshVertex, barycentric)));
 }
 	
 void BoardMesh::refresh()
 {
-	const size_t data_size = sizeof(gfx::Vertex) * m_vertices.size();
+	const size_t data_size = sizeof(BoardMeshVertex) * m_vertices.size();
 	m_vbo.store_mutable_part(0, data_size, m_vertices.data());
 }
 
@@ -96,7 +100,7 @@ void BoardMesh::color_tile(uint32_t tile, const glm::vec3 &color)
 	auto search = m_tile_vertices.find(tile);
 	if (search != m_tile_vertices.end()) {
 		for (const auto &index : search->second) {
-			m_vertices[index].normal *= color;
+			m_vertices[index].color *= color;
 		}
 	}
 }

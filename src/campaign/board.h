@@ -1,4 +1,10 @@
 
+struct BoardMeshVertex {
+	glm::vec2 position = {};
+	glm::vec3 color = {};
+	glm::vec3 barycentric = {}; // barycentric coordinates
+};
+
 class BoardMesh {
 public:
 	void add_cell(const geom::VoronoiCell &cell, const glm::vec3 &color);
@@ -13,7 +19,7 @@ private:
 	gfx::BufferObject m_ebo;
 	gfx::VertexArrayObject m_vao;
 private:
-	std::vector<gfx::Vertex> m_vertices;
+	std::vector<BoardMeshVertex> m_vertices;
 	std::unordered_map<uint32_t, std::vector<uint32_t>> m_tile_vertices;
 };
 
@@ -29,8 +35,6 @@ public:
 private:
 	const gfx::Shader *m_shader = nullptr;
 	BoardMesh m_mesh;
-	//std::vector<gfx::Vertex> m_vertices;
-	//std::unordered_map<uint32_t, std::vector<uint32_t>> m_tile_vertices;
 };
 
 class Board {
