@@ -1,19 +1,36 @@
 
-class WorldModel {
+class BoardMesh {
 public:
-	WorldModel(const gfx::Shader *shader);
+	void add_cell(const geom::VoronoiCell &cell, const glm::vec3 &color);
+	void create();
+	void refresh();
+	void draw() const;
+	void clear();
+	void color_tile(uint32_t tile, const glm::vec3 &color);
+private:
+	gfx::Primitive m_primitive;
+	gfx::BufferObject m_vbo;
+	gfx::BufferObject m_ebo;
+	gfx::VertexArrayObject m_vao;
+private:
+	std::vector<gfx::Vertex> m_vertices;
+	std::unordered_map<uint32_t, std::vector<uint32_t>> m_tile_vertices;
+};
+
+class BoardModel {
 public:
-	void reload(const Atlas &atlas, int seed);
+	BoardModel(const gfx::Shader *shader);
+public:
+	void reload(const Atlas &atlas);
 	void color_tile(uint32_t tile, const glm::vec3 &color);
 	void update_mesh();
 public:
 	void display(const util::Camera &camera) const;
 private:
 	const gfx::Shader *m_shader = nullptr;
-	gfx::Mesh m_mesh; // TODO use a special mesh for this
-	std::vector<gfx::Vertex> m_vertices;
-	std::vector<uint32_t> m_indices;
-	std::unordered_map<uint32_t, std::vector<uint32_t>> m_tile_vertices;
+	BoardMesh m_mesh;
+	//std::vector<gfx::Vertex> m_vertices;
+	//std::unordered_map<uint32_t, std::vector<uint32_t>> m_tile_vertices;
 };
 
 class Board {
@@ -51,7 +68,9 @@ public:
 private:
 	int m_seed;
 	Atlas m_atlas;
-	WorldModel m_model;
+	BoardModel m_model;
 	fysx::HeightField m_height_field;
 	util::Navigation m_land_navigation;
+private:
+	void build_navigation();
 };

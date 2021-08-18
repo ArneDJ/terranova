@@ -162,13 +162,12 @@ public:
 	void bind_vao() const;
 	const std::vector<Primitive>& primitives() const;
 	const geom::AABB& bounds() const;
-protected:
+private:
 	geom::AABB m_bounding_box;
 	BufferObject m_vbo;
 	BufferObject m_ebo;
 	VertexArrayObject m_vao;
 	std::vector<Primitive> m_primitives;
-	GLenum m_index_type = GL_UNSIGNED_INT;
 };
 
 GLenum index_type(size_t size);

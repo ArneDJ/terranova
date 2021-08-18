@@ -249,7 +249,6 @@ void Mesh::create(const std::vector<Vertex> &vertices, const std::vector<uint32_
 	if (indices.size() > 0) {
 		m_ebo.set_target(GL_ELEMENT_ARRAY_BUFFER);
 		m_ebo.store_mutable(indices_size, indices.data(), GL_STATIC_DRAW);
-		m_index_type = GL_UNSIGNED_INT;
 	}
 
 	// add position buffer

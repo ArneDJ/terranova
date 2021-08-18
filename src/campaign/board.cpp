@@ -22,66 +22,76 @@
 #include "atlas.h"
 #include "board.h"
 
-WorldModel::WorldModel(const gfx::Shader *shader)
-{
-	m_shader = shader;
-}
-
-void WorldModel::reload(const Atlas &atlas, int seed)
+void BoardMesh::clear()
 {
 	m_vertices.clear();
-	m_indices.clear();
 	m_tile_vertices.clear();
+}
 
-	const auto &graph = atlas.graph();
-	const auto &tiles = atlas.tiles();
+void BoardMesh::add_cell(const geom::VoronoiCell &cell, const glm::vec3 &color)
+{
+	auto &targets = m_tile_vertices[cell.index];
 
-	std::mt19937 gen(seed);
-	std::uniform_real_distribution<float> dis_color(0.2f, 1.2f);
-	uint32_t index = 0;
-	for (const auto &tile : tiles) {
-		const auto &cell = graph.cells[tile.index];
-		uint8_t height = tile.height;
-		glm::vec3 color = { dis_color(gen), dis_color(gen), dis_color(gen) };
-		switch (tile.relief) {
-		case ReliefType::SEABED: color = glm::vec3(0.1f); break;
-		case ReliefType::LOWLAND: color = glm::vec3(0.5f); break;
-		case ReliefType::HILLS: color = glm::vec3(0.75f); break;
-		case ReliefType::MOUNTAINS: color = glm::vec3(1.f); break;
+	for (const auto &edge : cell.edges) {
+		gfx::Vertex vertex_a = {
+			{ edge->left_vertex->position.x, 0.f, edge->left_vertex->position.y },
+			color
+		};
+		gfx::Vertex vertex_b = {
+			{ edge->right_vertex->position.x, 0.f, edge->right_vertex->position.y },
+			color
+		};
+		gfx::Vertex vertex_c = {
+			{ cell.center.x, 0.f, cell.center.y },
+			color
+		};
+		if (!geom::clockwise(edge->left_vertex->position, edge->right_vertex->position, cell.center)) {
+			std::swap(vertex_a, vertex_b);
 		}
-		auto &tile_targets = m_tile_vertices[tile.index];
-		for (const auto &edge : cell.edges) {
-			gfx::Vertex vertex_a = {
-				{ edge->left_vertex->position.x, 0.f, edge->left_vertex->position.y },
-				color
-			};
-			gfx::Vertex vertex_b = {
-				{ edge->right_vertex->position.x, 0.f, edge->right_vertex->position.y },
-				color
-			};
-			gfx::Vertex vertex_c = {
-				{ cell.center.x, 0.f, cell.center.y },
-				color
-			};
-			if (geom::clockwise(edge->left_vertex->position, edge->right_vertex->position, cell.center)) {
-				m_vertices.push_back(vertex_a);
-				m_vertices.push_back(vertex_b);
-				m_vertices.push_back(vertex_c);
-			} else {
-				m_vertices.push_back(vertex_b);
-				m_vertices.push_back(vertex_a);
-				m_vertices.push_back(vertex_c);
-			}
-			tile_targets.push_back(index++);
-			tile_targets.push_back(index++);
-			tile_targets.push_back(index++);
-		}
+		targets.push_back(m_vertices.size());
+		m_vertices.push_back(vertex_a);
+		targets.push_back(m_vertices.size());
+		m_vertices.push_back(vertex_b);
+		targets.push_back(m_vertices.size());
+		m_vertices.push_back(vertex_c);
 	}
+}
 
-	m_mesh.create(m_vertices, m_indices);
+void BoardMesh::create()
+{
+	const size_t size = sizeof(gfx::Vertex) * m_vertices.size();
+
+	m_primitive.first_index = 0;
+	m_primitive.index_count = 0;
+	m_primitive.first_vertex = 0;
+	m_primitive.vertex_count = GLsizei(m_vertices.size());
+	m_primitive.mode = GL_TRIANGLES;
+	m_primitive.index_type = GL_UNSIGNED_INT;
+
+	m_vao.bind();
+
+	// add position buffer
+	m_vbo.set_target(GL_ARRAY_BUFFER);
+	m_vbo.store_mutable(size, m_vertices.data(), GL_STATIC_DRAW);
+
+	m_vao.set_attribute(0, 3, GL_FLOAT, GL_FALSE, sizeof(gfx::Vertex), (char*)(offsetof(gfx::Vertex, position)));
+	m_vao.set_attribute(1, 3, GL_FLOAT, GL_FALSE, sizeof(gfx::Vertex), (char*)(offsetof(gfx::Vertex, normal)));
 }
 	
-void WorldModel::color_tile(uint32_t tile, const glm::vec3 &color)
+void BoardMesh::refresh()
+{
+	const size_t data_size = sizeof(gfx::Vertex) * m_vertices.size();
+	m_vbo.store_mutable_part(0, data_size, m_vertices.data());
+}
+
+void BoardMesh::draw() const
+{
+	m_vao.bind();
+
+	glDrawArrays(GL_TRIANGLES, 0, m_vertices.size());
+}
+
+void BoardMesh::color_tile(uint32_t tile, const glm::vec3 &color)
 {
 	auto search = m_tile_vertices.find(tile);
 	if (search != m_tile_vertices.end()) {
@@ -90,13 +100,48 @@ void WorldModel::color_tile(uint32_t tile, const glm::vec3 &color)
 		}
 	}
 }
-	
-void WorldModel::update_mesh()
+
+BoardModel::BoardModel(const gfx::Shader *shader)
 {
-	m_mesh.create(m_vertices, m_indices);
+	m_shader = shader;
 }
 
-void WorldModel::display(const util::Camera &camera) const
+void BoardModel::reload(const Atlas &atlas)
+{
+	m_mesh.clear();
+
+	const auto &graph = atlas.graph();
+	const auto &tiles = atlas.tiles();
+
+	uint32_t index = 0;
+	for (const auto &tile : tiles) {
+		const auto &cell = graph.cells[tile.index];
+		uint8_t height = tile.height;
+		glm::vec3 color = { 0.f, 0.f, 0.f };
+		switch (tile.relief) {
+		case ReliefType::SEABED: color = glm::vec3(0.1f); break;
+		case ReliefType::LOWLAND: color = glm::vec3(0.5f); break;
+		case ReliefType::HILLS: color = glm::vec3(0.75f); break;
+		case ReliefType::MOUNTAINS: color = glm::vec3(1.f); break;
+		}
+
+		m_mesh.add_cell(cell, color);
+	}
+
+	m_mesh.create();
+}
+	
+void BoardModel::color_tile(uint32_t tile, const glm::vec3 &color)
+{
+	m_mesh.color_tile(tile, color);
+}
+	
+void BoardModel::update_mesh()
+{
+	m_mesh.refresh();
+}
+
+void BoardModel::display(const util::Camera &camera) const
 {
 	m_shader->use();
 	m_shader->uniform_mat4("CAMERA_VP", camera.VP);
@@ -116,44 +161,12 @@ void Board::generate(int seed)
 	AtlasParameters parameters = {};
 	m_atlas.generate(seed, BOUNDS, parameters);
 	
-	// build navigation mesh
-	std::vector<float> vertices;
-	std::vector<int> indices;
-	int index = 0;
-
-	const auto &graph = m_atlas.graph();
-	for (const auto &vertex : graph.vertices) {
-		vertices.push_back(vertex.position.x);
-		vertices.push_back(0.f);
-		vertices.push_back(vertex.position.y);
-		index++;
-	}
-	const auto &tiles = m_atlas.tiles();
-	for (const auto &cell : graph.cells) {
-		if (tiles[cell.index].height >= 114 && tiles[cell.index].height <= 168) {
-			for (const auto &edge : cell.edges) {
-				indices.push_back(index);
-				if (geom::clockwise(cell.center, edge->left_vertex->position, edge->right_vertex->position)) {
-					indices.push_back(edge->left_vertex->index);
-					indices.push_back(edge->right_vertex->index);
-				} else {
-					indices.push_back(edge->right_vertex->index);
-					indices.push_back(edge->left_vertex->index);
-				}
-			}
-			vertices.push_back(cell.center.x);
-			vertices.push_back(0.f);
-			vertices.push_back(cell.center.y);
-			index++;
-		}
-	}
-
-	m_land_navigation.build(vertices, indices);
+	build_navigation();
 }
 	
 void Board::reload()
 {
-	m_model.reload(m_atlas, m_seed);
+	m_model.reload(m_atlas);
 }
 	
 void Board::display(const util::Camera &camera)
@@ -199,4 +212,41 @@ void Board::update_model()
 void Board::occupy_tiles(uint32_t start, uint32_t occupier, uint32_t radius, std::vector<uint32_t> &occupied_tiles)
 {
 	m_atlas.occupy_tiles(start, occupier, radius, occupied_tiles);
+}
+	
+void Board::build_navigation()
+{
+	std::vector<float> vertices;
+	std::vector<int> indices;
+	int index = 0;
+
+	const auto &graph = m_atlas.graph();
+	for (const auto &vertex : graph.vertices) {
+		vertices.push_back(vertex.position.x);
+		vertices.push_back(0.f);
+		vertices.push_back(vertex.position.y);
+		index++;
+	}
+	const auto &tiles = m_atlas.tiles();
+	for (const auto &cell : graph.cells) {
+		const auto &tile = tiles[cell.index];
+		if (tile.relief == ReliefType::LOWLAND || tile.relief == ReliefType::HILLS) {
+			for (const auto &edge : cell.edges) {
+				indices.push_back(index);
+				if (geom::clockwise(cell.center, edge->left_vertex->position, edge->right_vertex->position)) {
+					indices.push_back(edge->left_vertex->index);
+					indices.push_back(edge->right_vertex->index);
+				} else {
+					indices.push_back(edge->right_vertex->index);
+					indices.push_back(edge->left_vertex->index);
+				}
+			}
+			vertices.push_back(cell.center.x);
+			vertices.push_back(0.f);
+			vertices.push_back(cell.center.y);
+			index++;
+		}
+	}
+
+	m_land_navigation.build(vertices, indices);
 }
