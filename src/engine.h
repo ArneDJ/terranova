@@ -43,6 +43,7 @@ public:
 	gfx::Shader debug;
 	gfx::Shader tilemap;
 	gfx::Shader culling;
+	gfx::Shader terrain;
 public:
 	ShaderGroup();
 };

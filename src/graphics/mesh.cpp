@@ -355,6 +355,44 @@ const geom::AABB& Mesh::bounds() const
 	return m_bounding_box;
 }
 	
+void TesselationMesh::create(uint32_t resolution, const geom::Rectangle &bounds)
+{
+	m_vertices.clear();
+
+	const glm::vec2 offset = { 
+		glm::distance(bounds.min.x, bounds.max.x) / float(resolution), 
+		glm::distance(bounds.min.y, bounds.max.y) / float(resolution) 
+	};
+
+	glm::vec3 origin = { bounds.min.x, 0.f, bounds.min.y };
+	for (int x = 0; x < resolution; x++) {
+		for (int z = 0; z < resolution; z++) {
+			m_vertices.push_back(glm::vec3(origin.x, origin.y, origin.z));
+			m_vertices.push_back(glm::vec3(origin.x + offset.x, origin.y, origin.z));
+			m_vertices.push_back(glm::vec3(origin.x, origin.y, origin.z + offset.y));
+			m_vertices.push_back(glm::vec3(origin.x + offset.x, origin.y, origin.z + offset.y));
+			origin.x += offset.x;
+		}
+		origin.x = bounds.min.x;
+		origin.z += offset.y;
+	}
+
+	m_vao.bind();
+
+	m_vbo.set_target(GL_ARRAY_BUFFER);
+	m_vbo.store_mutable(sizeof(glm::vec3) * m_vertices.size(), m_vertices.data(), GL_STATIC_DRAW);
+
+	m_vao.set_attribute(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (char*)0);
+}
+	
+void TesselationMesh::draw() const
+{
+	m_vao.bind();
+
+	glPatchParameteri(GL_PATCH_VERTICES, 4);
+	glDrawArrays(GL_PATCHES, 0, m_vertices.size());
+}
+	
 GLenum index_type(size_t size)
 {
 	switch (size) {

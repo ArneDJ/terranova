@@ -56,6 +56,12 @@ ShaderGroup::ShaderGroup()
 
 	culling.compile("shaders/culling.comp", GL_COMPUTE_SHADER);
 	culling.link();
+
+	terrain.compile("shaders/terrain.vert", GL_VERTEX_SHADER);
+	terrain.compile("shaders/terrain.tesc", GL_TESS_CONTROL_SHADER);
+	terrain.compile("shaders/terrain.tese", GL_TESS_EVALUATION_SHADER);
+	terrain.compile("shaders/terrain.frag", GL_FRAGMENT_SHADER);
+	terrain.link();
 }
 
 Engine::Engine()
@@ -183,7 +189,7 @@ void Engine::run()
 	campaign.init(&shaders->debug, &shaders->culling, &shaders->tilemap);
 	campaign.camera.set_projection(video_settings.fov, video_settings.canvas.x, video_settings.canvas.y, 0.1f, 900.f);
 	
-	battle.init(&shaders->debug, &shaders->culling);
+	battle.init(&shaders->debug, &shaders->culling, &shaders->terrain);
 	battle.camera.set_projection(video_settings.fov, video_settings.canvas.x, video_settings.canvas.y, 0.1f, 900.f);
 
 	std::random_device rd;

@@ -170,6 +170,16 @@ private:
 	std::vector<Primitive> m_primitives;
 };
 
+class TesselationMesh {
+public:
+	void create(uint32_t resolution, const geom::Rectangle &bounds);
+	void draw() const;
+private:
+	BufferObject m_vbo;
+	VertexArrayObject m_vao;
+	std::vector<glm::vec3> m_vertices;
+};
+
 GLenum index_type(size_t size);
 
 };

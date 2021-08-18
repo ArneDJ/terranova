@@ -34,14 +34,15 @@
 
 #include "battle.h"
 
-void Battle::init(const gfx::Shader *visual, const gfx::Shader *culling)
+void Battle::init(const gfx::Shader *visual, const gfx::Shader *culling, const gfx::Shader *tesselation)
 {
 	scene = std::make_unique<gfx::SceneGroup>(visual, culling);
 	scene->set_scene_type(gfx::SceneType::DYNAMIC);
 
+	terrain = std::make_unique<Terrain>(tesselation);
+
 	transform = std::make_unique<geom::Transform>();
 	transform->position = glm::vec3(0.f, 0.f, 0.f);
-	transform->scale = glm::vec3(0.1f, 0.1f, 0.1f);
 
 	auto model = MediaManager::load_model("media/models/dragon.glb");
 	auto object = scene->find_object(model);
@@ -55,7 +56,7 @@ void Battle::update(float delta)
 {
 	// update camera
 	float modifier = 10.f * delta;
-	float speed = 2.f * modifier;
+	float speed = 10.f * modifier;
 	if (util::InputManager::key_down(SDL_BUTTON_LEFT)) {
 		glm::vec2 offset = modifier * 0.05f * util::InputManager::rel_mouse_coords();
 		camera.add_offset(offset);
@@ -73,4 +74,8 @@ void Battle::display()
 	scene->update(camera);
 	scene->cull_frustum();
 	scene->display();
+
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	terrain->display(camera);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
