@@ -20,6 +20,7 @@
 #include "../util/camera.h"
 #include "../util/timer.h"
 #include "../util/navigation.h"
+#include "../util/image.h"
 #include "../geometry/geometry.h"
 #include "../geometry/transform.h"
 #include "../graphics/shader.h"
@@ -50,6 +51,11 @@ void Battle::init(const gfx::Shader *visual, const gfx::Shader *culling, const g
 
 	camera.position = glm::vec3(5.f, 5.f, 5.f);
 	camera.target(transform->position);
+}
+
+void Battle::prepare(int seed)
+{
+	terrain->generate(seed);
 }
 
 void Battle::update(float delta)

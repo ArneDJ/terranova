@@ -261,6 +261,8 @@ void Engine::update_battle_menu()
 	
 void Engine::run_battle()
 {
+	battle.prepare(1337);
+
 	while (state == EngineState::BATTLE) {
 		frame_timer.begin();
 	

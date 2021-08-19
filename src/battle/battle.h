@@ -9,6 +9,7 @@ public:
 	std::unique_ptr<Terrain> terrain;
 public:
 	void init(const gfx::Shader *visual, const gfx::Shader *culling, const gfx::Shader *tesselation);
+	void prepare(int seed);
 	void update(float delta);
 	void display();
 };
