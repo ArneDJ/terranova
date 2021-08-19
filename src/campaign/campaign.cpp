@@ -24,6 +24,7 @@
 #include "../util/camera.h"
 #include "../util/timer.h"
 #include "../util/navigation.h"
+#include "../util/image.h"
 #include "../geometry/geometry.h"
 #include "../geometry/transform.h"
 #include "../geometry/voronoi.h"

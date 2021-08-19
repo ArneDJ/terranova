@@ -30,11 +30,14 @@
 Terrain::Terrain(const gfx::Shader *shader)
 	: m_shader(shader)
 {
-	m_mesh.create(32, m_bounds);
+	geom::Rectangle bounds = { { 0.F, 0.F }, { m_scale.x, m_scale.z } };
+	m_mesh.create(32, bounds);
 
 	m_heightmap.resize(512, 512, util::COLORSPACE_GRAYSCALE);
 
 	m_texture.create(m_heightmap);
+	
+	m_height_field = std::make_unique<fysx::HeightField>(m_heightmap, m_scale);
 }
 
 void Terrain::generate(int seed) 
@@ -66,9 +69,15 @@ void Terrain::display(const util::Camera &camera) const
 {
 	m_shader->use();
 	m_shader->uniform_mat4("CAMERA_VP", camera.VP);
-	m_shader->uniform_vec3("MAP_SCALE", glm::vec3(1024.f, 64.f, 1024.f));
+	m_shader->uniform_vec3("MAP_SCALE", m_scale);
 
 	m_texture.bind(GL_TEXTURE0);
 
 	m_mesh.draw();
 }
+
+fysx::HeightField* Terrain::height_field()
+{
+	return m_height_field.get();
+}
+	

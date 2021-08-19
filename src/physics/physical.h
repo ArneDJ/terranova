@@ -17,9 +17,14 @@ public:
 	void update(float delta);
 	void add_body(btRigidBody *body);
 	void remove_body(btRigidBody *body);
+	void add_object(btCollisionObject *object);
+	void remove_object(btCollisionObject *object);
 	void clear_objects();
 public:
 	RayResult cast_ray(const glm::vec3 &origin, const glm::vec3 &end) const; 
+public:
+	const btDynamicsWorld* world() const;
+	btDynamicsWorld* world();
 private:
 	std::unique_ptr<btCollisionConfiguration> m_config;
 	std::unique_ptr<btCollisionDispatcher> m_dispatcher;

@@ -49,7 +49,7 @@ public:
 	void color_tile(uint32_t tile, const glm::vec3 &color);
 	void update_model();
 public:
-	fysx::HeightField& height_field();
+	fysx::PlaneField& height_field();
 	const util::Navigation& navigation() const;
 	const Atlas& atlas() const { return m_atlas; }
 	const Tile* tile_at(const glm::vec2 &position) const;
@@ -73,7 +73,7 @@ private:
 	int m_seed;
 	Atlas m_atlas;
 	BoardModel m_model;
-	fysx::HeightField m_height_field;
+	fysx::PlaneField m_height_field;
 	util::Navigation m_land_navigation;
 private:
 	void build_navigation();

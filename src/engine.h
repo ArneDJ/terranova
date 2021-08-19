@@ -16,13 +16,14 @@
 #include "graphics/scene.h"
 #include "physics/physical.h"
 #include "physics/heightfield.h"
+#include "physics/bumper.h"
+
+#include "debugger.h"
+#include "media.h"
 
 #include "campaign/campaign.h"
 
 #include "battle/battle.h"
-
-#include "media.h"
-#include "debugger.h"
 
 struct VideoSettings {
 	glm::ivec2 canvas = {};

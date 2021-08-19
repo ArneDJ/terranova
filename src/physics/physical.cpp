@@ -39,6 +39,16 @@ void PhysicalSystem::remove_body(btRigidBody *body)
 {
 	m_world->removeRigidBody(body);
 }
+
+void PhysicalSystem::add_object(btCollisionObject *object)
+{
+	m_world->addCollisionObject(object);
+}
+
+void PhysicalSystem::remove_object(btCollisionObject *object)
+{
+	m_world->removeCollisionObject(object);
+}
 	
 void PhysicalSystem::clear_objects()
 {
@@ -69,6 +79,16 @@ RayResult PhysicalSystem::cast_ray(const glm::vec3 &origin, const glm::vec3 &end
 	}
 
 	return result;
+}
+
+const btDynamicsWorld* PhysicalSystem::world() const
+{
+	return m_world.get();
+}
+
+btDynamicsWorld* PhysicalSystem::world()
+{
+	return m_world.get();
 }
 
 };

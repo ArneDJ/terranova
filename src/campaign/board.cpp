@@ -14,6 +14,7 @@
 #include "../geometry/transform.h"
 #include "../util/camera.h"
 #include "../util/navigation.h"
+#include "../util/image.h"
 #include "../graphics/mesh.h"
 #include "../graphics/shader.h"
 #include "../physics/physical.h"
@@ -178,7 +179,7 @@ void Board::display(const util::Camera &camera)
 	m_model.display(camera);
 }
 	
-fysx::HeightField& Board::height_field()
+fysx::PlaneField& Board::height_field()
 {
 	return m_height_field;
 }
