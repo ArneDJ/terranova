@@ -11,6 +11,7 @@
 #include "geometry/voronoi.h"
 #include "graphics/shader.h"
 #include "graphics/mesh.h"
+#include "graphics/texture.h"
 #include "graphics/model.h"
 #include "graphics/scene.h"
 #include "physics/physical.h"

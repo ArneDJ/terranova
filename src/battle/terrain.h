@@ -8,6 +8,7 @@ public:
 private:
 	const gfx::Shader *m_shader;
 	gfx::TesselationMesh m_mesh;
+	gfx::Texture m_texture;
 	geom::Rectangle m_bounds = { { 0.F, 0.F }, { 1024.F, 1024.F } };
 	util::Image<uint8_t> m_heightmap;
 };

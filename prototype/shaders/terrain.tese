@@ -8,6 +8,8 @@ out TESSEVAL {
 	float zclipspace;
 } tesseval;
 
+uniform sampler2D DISPLACEMENT;
+
 uniform mat4 CAMERA_VP;
 uniform vec3 MAP_SCALE;
 
@@ -18,6 +20,8 @@ void main(void)
 	vec4 position = mix(p1, p2, gl_TessCoord.x);
 
 	tesseval.texcoord = position.xz / MAP_SCALE.xz;
+
+	position.y = MAP_SCALE.y * texture(DISPLACEMENT, tesseval.texcoord).r;
 
 	tesseval.position = position.xyz;
 

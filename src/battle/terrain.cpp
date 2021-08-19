@@ -20,6 +20,7 @@
 #include "../geometry/transform.h"
 #include "../graphics/shader.h"
 #include "../graphics/mesh.h"
+#include "../graphics/texture.h"
 #include "../graphics/model.h"
 #include "../physics/physical.h"
 #include "../physics/heightfield.h"
@@ -32,6 +33,8 @@ Terrain::Terrain(const gfx::Shader *shader)
 	m_mesh.create(32, m_bounds);
 
 	m_heightmap.resize(512, 512, util::COLORSPACE_GRAYSCALE);
+
+	m_texture.create(m_heightmap);
 }
 
 void Terrain::generate(int seed) 
@@ -56,12 +59,16 @@ void Terrain::generate(int seed)
 	}
 
 	// store heightmap in texture
+	m_texture.reload(m_heightmap);
 }
 	
 void Terrain::display(const util::Camera &camera) const
 {
 	m_shader->use();
 	m_shader->uniform_mat4("CAMERA_VP", camera.VP);
+	m_shader->uniform_vec3("MAP_SCALE", glm::vec3(1024.f, 64.f, 1024.f));
+
+	m_texture.bind(GL_TEXTURE0);
 
 	m_mesh.draw();
 }
