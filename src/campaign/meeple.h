@@ -43,6 +43,7 @@ public:
 	void add_troops(uint32_t troop_type, int count);
 public:
 	const geom::Transform* transform() const;
+	const fysx::TriggerSphere* trigger() const;
 public:
 	template <class Archive>
 	void serialize(Archive &archive)
@@ -54,6 +55,8 @@ private:
 	float m_speed = 1.f;
 	PathFinder m_path_finder;
 	std::unique_ptr<geom::Transform> m_transform;
+private:
+	std::unique_ptr<fysx::TriggerSphere> m_trigger;
 private:
 	std::unordered_map<uint32_t, int> m_troops;
 };

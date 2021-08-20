@@ -17,6 +17,7 @@
 #include "physics/physical.h"
 #include "physics/heightfield.h"
 #include "physics/bumper.h"
+#include "physics/trigger.h"
 
 #include "debugger.h"
 #include "media.h"

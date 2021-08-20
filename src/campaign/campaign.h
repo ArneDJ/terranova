@@ -17,6 +17,9 @@ public:
 	std::vector<std::unique_ptr<Meeple>> meeples;
 	std::unordered_map<uint32_t, std::unique_ptr<Settlement>> settlements;
 public:
+	bool display_debug = false;
+	std::unique_ptr<Debugger> debugger;
+public:
 	void load(const std::string &filepath);
 	void save(const std::string &filepath);
 	void generate(int seed);

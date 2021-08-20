@@ -34,6 +34,7 @@
 #include "../graphics/scene.h"
 #include "../physics/physical.h"
 #include "../physics/heightfield.h"
+#include "../physics/trigger.h"
 
 #include "../debugger.h"
 #include "../media.h"
@@ -42,6 +43,8 @@
 	
 void Campaign::init(const gfx::Shader *visual, const gfx::Shader *culling, const gfx::Shader *tilemap)
 {
+	debugger = std::make_unique<Debugger>(tilemap, visual, culling);
+
 	scene = std::make_unique<gfx::SceneGroup>(visual, culling);
 	scene->set_scene_type(gfx::SceneType::DYNAMIC);
 	
@@ -95,10 +98,15 @@ void Campaign::generate(int seed)
 	
 	for (int i = 0; i < 1000; i++) {
 		glm::vec2 point = { dis_x(gen), dis_y(gen) };
-		auto meeple = std::make_unique<Meeple>();
-		meeple->teleport(point);
-		meeple->set_name("Testificate Army");
-		meeples.push_back(std::move(meeple));
+		const auto &tile = board->tile_at(point);
+		if (tile) {
+			if (tile->relief == ReliefType::LOWLAND || tile->relief == ReliefType::HILLS) {
+				auto meeple = std::make_unique<Meeple>();
+				meeple->teleport(point);
+				meeple->set_name("Testificate Army");
+				meeples.push_back(std::move(meeple));
+			}
+		}
 	}
 }
 	
@@ -121,10 +129,14 @@ void Campaign::prepare()
 
 	player.sync();
 	duck_object->add_transform(player.transform());
+	debugger->add_sphere(player.trigger()->form(), player.trigger()->transform());
 
 	for (auto &meeple : meeples) {
 		meeple->sync();
 		duck_object->add_transform(meeple->transform());
+		// debug trigger volumes
+		auto trigger = meeple->trigger();
+		debugger->add_sphere(trigger->form(), trigger->transform());
 	}
 	
 	// add physical objects
@@ -135,6 +147,8 @@ void Campaign::clear()
 {
 	// first clear the model instances
 	scene->clear_instances();
+
+	debugger->clear();
 
 	// clear physical objects
 	physics.clear_objects();
@@ -172,6 +186,11 @@ void Campaign::update(float delta)
 	}
 
 	player.update(delta);
+	for (auto &meeple : meeples) {
+		meeple->update(delta);
+	}
+	
+	debugger->update(camera);
 }
 	
 void Campaign::display()
@@ -181,4 +200,8 @@ void Campaign::display()
 	scene->display();
 
 	board->display(camera);
+	
+	if (display_debug) {
+		debugger->display_wireframe();
+	}
 }

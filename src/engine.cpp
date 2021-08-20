@@ -167,6 +167,7 @@ void Engine::update_campaign_menu()
 	ImGui::Text("cam position: %f, %f, %f", campaign.camera.position.x, campaign.camera.position.y, campaign.camera.position.z);
 	ImGui::Text("%.2f ms/frame (%.1d fps)", (frame_timer.FPS_UPDATE_TIME / frame_timer.frames_per_second()), frame_timer.frames_per_second());
 	ImGui::Text("%.4f frame delta", frame_timer.delta_seconds());
+	ImGui::Checkbox("Show debug objects", &campaign.display_debug);
 	ImGui::Separator();
 	if (ImGui::Button("Generate World")) { g_generate = true; }
 	if (ImGui::Button("Save World")) { 
@@ -183,8 +184,6 @@ void Engine::run()
 	state = EngineState::CAMPAIGN;
 
 	shaders = std::make_unique<ShaderGroup>();
-
-	Debugger debugger = Debugger(&shaders->tilemap, &shaders->debug, &shaders->culling);
 
 	campaign.init(&shaders->debug, &shaders->culling, &shaders->tilemap);
 	campaign.camera.set_projection(video_settings.fov, video_settings.canvas.x, video_settings.canvas.y, 0.1f, 900.f);
@@ -212,20 +211,12 @@ void Engine::run()
 			campaign.clear();
 			campaign.generate(distrib(gen));
 			campaign.prepare();
-			const auto &navigation = campaign.board->navigation();
-			debugger.clear();
-			//debugger.add_navmesh(navigation.navmesh());
 		}
-
-		debugger.update(campaign.camera);
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glViewport(0, 0, video_settings.canvas.x, video_settings.canvas.y);
 
 		campaign.display();
-
-		debugger.display();
-		debugger.display_wireframe();
 
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
