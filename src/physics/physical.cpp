@@ -25,14 +25,24 @@ PhysicalSystem::PhysicalSystem()
 	m_world->setGravity(GRAVITY);
 }
 	
+PhysicalSystem::~PhysicalSystem()
+{
+	clear_objects();
+}
+	
 void PhysicalSystem::update(float delta)
 {
 	m_world->stepSimulation(delta, MAX_SUB_STEPS);
 }
-
-void PhysicalSystem::add_body(btRigidBody *body)
+	
+void PhysicalSystem::update_collision_only()
 {
-	m_world->addRigidBody(body);
+	m_world->performDiscreteCollisionDetection();
+}
+
+void PhysicalSystem::add_body(btRigidBody *body, int group, int mask)
+{
+	m_world->addRigidBody(body, group, mask);
 }
 
 void PhysicalSystem::remove_body(btRigidBody *body)
@@ -40,26 +50,22 @@ void PhysicalSystem::remove_body(btRigidBody *body)
 	m_world->removeRigidBody(body);
 }
 
-void PhysicalSystem::add_object(btCollisionObject *object)
+void PhysicalSystem::add_object(btCollisionObject *object, int group, int mask)
 {
-	m_world->addCollisionObject(object);
+	m_world->addCollisionObject(object, group, mask);
 }
 
 void PhysicalSystem::remove_object(btCollisionObject *object)
 {
 	m_world->removeCollisionObject(object);
 }
-	
+
 void PhysicalSystem::clear_objects()
 {
-	// remove the rigidbodies from the dynamics world
-	for (int i = 0; i < m_world->getNumCollisionObjects(); i++) {
-		btCollisionObject *obj = m_world->getCollisionObjectArray()[i];
-		m_world->removeCollisionObject(obj);
-	}
+	m_world->getCollisionObjectArray().clear();
 }
 	
-RayResult PhysicalSystem::cast_ray(const glm::vec3 &origin, const glm::vec3 &end) const
+RayResult PhysicalSystem::cast_ray(const glm::vec3 &origin, const glm::vec3 &end, int mask) const
 {
 	RayResult result = { false, glm::vec3(0.f) };
 
@@ -67,9 +73,8 @@ RayResult PhysicalSystem::cast_ray(const glm::vec3 &origin, const glm::vec3 &end
 	const btVector3 to = vec3_to_bt(end);
 
 	btCollisionWorld::ClosestRayResultCallback callback(from, to);
-	//callback.m_collisionFilterGroup = masks;
-	//callback.m_collisionFilterGroup |= COLLISION_GROUP_RAY;
-	//callback.m_collisionFilterMask = masks;
+	//callback.m_collisionFilterGroup = mask;
+	//callback.m_collisionFilterMask = mask;
 
 	m_world->rayTest(from, to, callback);
 

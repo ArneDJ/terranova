@@ -28,8 +28,14 @@ TriggerSphere::TriggerSphere(const geom::Sphere &form)
 	m_ghost_object = std::make_unique<btGhostObject>();
 	m_ghost_object->setCollisionShape(m_shape.get());
 	m_ghost_object->setWorldTransform(transform);
-		
+
 	m_transform = std::make_unique<geom::Transform>();
+}
+
+void TriggerSphere::set_position(const glm::vec3 &position) 
+{
+	m_ghost_object->getWorldTransform().setOrigin(vec3_to_bt(position));
+	m_transform->position = position;
 }
 
 };

@@ -40,6 +40,13 @@
 #include "../media.h"
 
 #include "campaign.h"
+
+enum CampaignCollisionGroup {
+	COLLISION_GROUP_NONE = 0,
+	COLLISION_GROUP_RAY = 1 << 0,
+	COLLISION_GROUP_GHOSTS = 1 << 1,
+	COLLISION_GROUP_HEIGHTMAP = 1 << 2
+};
 	
 void Campaign::init(const gfx::Shader *visual, const gfx::Shader *culling, const gfx::Shader *tilemap)
 {
@@ -130,6 +137,7 @@ void Campaign::prepare()
 	player.sync();
 	duck_object->add_transform(player.transform());
 	debugger->add_sphere(player.trigger()->form(), player.trigger()->transform());
+	physics.add_object(player.trigger()->ghost_object(), COLLISION_GROUP_GHOSTS, COLLISION_GROUP_RAY);
 
 	for (auto &meeple : meeples) {
 		meeple->sync();
@@ -137,10 +145,13 @@ void Campaign::prepare()
 		// debug trigger volumes
 		auto trigger = meeple->trigger();
 		debugger->add_sphere(trigger->form(), trigger->transform());
+		physics.add_object(trigger->ghost_object(), COLLISION_GROUP_GHOSTS, COLLISION_GROUP_RAY);
 	}
 	
 	// add physical objects
-	physics.add_body(board->height_field().body());
+	int group = COLLISION_GROUP_GHOSTS;
+	int mask = COLLISION_GROUP_RAY;
+	physics.add_body(board->height_field().body(), group, mask);
 }
 	
 void Campaign::clear()
@@ -159,6 +170,8 @@ void Campaign::clear()
 
 void Campaign::update(float delta)
 {
+	physics.update_collision_only();
+
 	// update camera
 	float modifier = 10.f * delta;
 	float speed = 10.f * modifier;
@@ -175,7 +188,7 @@ void Campaign::update(float delta)
 
 	if (util::InputManager::key_pressed(SDL_BUTTON_RIGHT)) {
 		glm::vec3 ray = camera.ndc_to_ray(util::InputManager::abs_mouse_coords());
-		auto result = physics.cast_ray(camera.position, camera.position + (1000.f * ray));
+		auto result = physics.cast_ray(camera.position, camera.position + (1000.f * ray), COLLISION_GROUP_GHOSTS);
 		if (result.hit) {
 			marker.teleport(result.point);
 			std::list<glm::vec2> nodes;

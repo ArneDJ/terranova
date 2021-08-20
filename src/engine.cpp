@@ -232,6 +232,8 @@ void Engine::run()
 			state = EngineState::EXIT;
 		}
 	}
+
+	campaign.clear();
 }
 
 void Engine::update_battle_menu()

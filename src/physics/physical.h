@@ -13,15 +13,18 @@ struct RayResult {
 class PhysicalSystem {
 public:
 	PhysicalSystem();
+	~PhysicalSystem();
 public:
 	void update(float delta);
-	void add_body(btRigidBody *body);
+	void update_collision_only();
+public:
+	void add_body(btRigidBody *body, int group = btBroadphaseProxy::DefaultFilter, int mask = btBroadphaseProxy::AllFilter);
 	void remove_body(btRigidBody *body);
-	void add_object(btCollisionObject *object);
+	void add_object(btCollisionObject *object, int group = btBroadphaseProxy::DefaultFilter, int mask = btBroadphaseProxy::AllFilter);
 	void remove_object(btCollisionObject *object);
 	void clear_objects();
 public:
-	RayResult cast_ray(const glm::vec3 &origin, const glm::vec3 &end) const; 
+	RayResult cast_ray(const glm::vec3 &origin, const glm::vec3 &end, int mask = btBroadphaseProxy::AllFilter) const; 
 public:
 	const btDynamicsWorld* world() const;
 	btDynamicsWorld* world();
