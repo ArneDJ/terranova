@@ -32,14 +32,28 @@ class Meeple {
 public:
 	Meeple();
 public:
-	void set_speed(float speed);
-	void set_path(const std::list<glm::vec2> &nodes);
 	void update(float delta);
 	void teleport(const glm::vec2 &position);
+	void sync();
+public:
+	void set_name(const std::string &name);
+	void set_speed(float speed);
+	void set_path(const std::list<glm::vec2> &nodes);
+public:
+	void add_troops(uint32_t troop_type, int count);
 public:
 	const geom::Transform* transform() const;
+public:
+	template <class Archive>
+	void serialize(Archive &archive)
+	{
+		archive(m_name, m_speed, m_transform->position, m_transform->rotation, m_transform->scale);
+	}
 private:
+	std::string m_name = {};
 	float m_speed = 1.f;
 	PathFinder m_path_finder;
 	std::unique_ptr<geom::Transform> m_transform;
+private:
+	std::unordered_map<uint32_t, int> m_troops;
 };

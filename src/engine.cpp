@@ -197,7 +197,7 @@ void Engine::run()
 	std::uniform_int_distribution<int> distrib;
 
 	campaign.load(user_dir.saves + "test.save");
-	campaign.board->reload();
+	campaign.prepare();
 
 	while (state == EngineState::CAMPAIGN) {
 		frame_timer.begin();
@@ -209,8 +209,9 @@ void Engine::run()
 		campaign.update(frame_timer.delta_seconds());
 	
 		if (g_generate) {
+			campaign.clear();
 			campaign.generate(distrib(gen));
-			campaign.board->reload();
+			campaign.prepare();
 			const auto &navigation = campaign.board->navigation();
 			debugger.clear();
 			//debugger.add_navmesh(navigation.navmesh());

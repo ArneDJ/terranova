@@ -14,11 +14,14 @@ public:
 	std::unique_ptr<gfx::SceneGroup> scene;
 	Marker marker;
 	Meeple player;
+	std::vector<std::unique_ptr<Meeple>> meeples;
 	std::unordered_map<uint32_t, std::unique_ptr<Settlement>> settlements;
 public:
 	void load(const std::string &filepath);
 	void save(const std::string &filepath);
 	void generate(int seed);
+	void prepare();
+	void clear();
 public:
 	void init(const gfx::Shader *visual, const gfx::Shader *culling, const gfx::Shader *tilemap);
 	void update(float delta);

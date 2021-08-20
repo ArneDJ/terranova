@@ -1,5 +1,7 @@
 #include <list>
 #include <memory>
+#include <string>
+#include <unordered_map>
 
 #include <glm/glm.hpp>
 #include <glm/vec3.hpp>
@@ -76,6 +78,8 @@ Meeple::Meeple()
 const geom::Transform* Meeple::transform() const { return m_transform.get(); }
 
 void Meeple::set_speed(float speed) { m_speed = speed; }
+	
+void Meeple::set_name(const std::string &name) { m_name = name; }
 
 void Meeple::set_path(const std::list<glm::vec2> &nodes)
 {
@@ -105,4 +109,27 @@ void Meeple::teleport(const glm::vec2 &position)
 	m_transform->position.z = position.y;
 
 	m_path_finder.teleport(position);
+}
+
+void Meeple::sync()
+{
+	m_path_finder.teleport(glm::vec2(m_transform->position.x, m_transform->position.z));
+}
+	
+void Meeple::add_troops(uint32_t troop_type, int count)
+{
+	int instances = 0;
+
+	auto search = m_troops.find(troop_type);
+	if (search != m_troops.end()) {
+		instances = search->second;
+	}
+
+	instances += count;
+
+	if (instances < 0) {
+		instances = 0;
+	}
+		
+	m_troops[troop_type] = instances;
 }
