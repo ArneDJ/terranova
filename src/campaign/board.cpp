@@ -36,18 +36,15 @@ void BoardMesh::add_cell(const geom::VoronoiCell &cell, const glm::vec3 &color)
 	for (const auto &edge : cell.edges) {
 		BoardMeshVertex vertex_a = {
 			edge->left_vertex->position,
-			color,
-			glm::vec3(1.f, 0.f, 0.f)
+			color
 		};
 		BoardMeshVertex vertex_b = {
 			edge->right_vertex->position,
-			color,
-			glm::vec3(0.f, 1.f, 0.f)
+			color
 		};
 		BoardMeshVertex vertex_c = {
 			cell.center,
-			color,
-			glm::vec3(0.f, 0.f, 1.f)
+			color
 		};
 		if (!geom::clockwise(edge->left_vertex->position, edge->right_vertex->position, cell.center)) {
 			std::swap(vertex_a.position, vertex_b.position);
@@ -80,7 +77,6 @@ void BoardMesh::create()
 
 	m_vao.set_attribute(0, 2, GL_FLOAT, GL_FALSE, sizeof(BoardMeshVertex), (char*)(offsetof(BoardMeshVertex, position)));
 	m_vao.set_attribute(1, 3, GL_FLOAT, GL_FALSE, sizeof(BoardMeshVertex), (char*)(offsetof(BoardMeshVertex, color)));
-	m_vao.set_attribute(2, 3, GL_FLOAT, GL_FALSE, sizeof(BoardMeshVertex), (char*)(offsetof(BoardMeshVertex, barycentric)));
 }
 	
 void BoardMesh::refresh()
@@ -93,7 +89,8 @@ void BoardMesh::draw() const
 {
 	m_vao.bind();
 
-	glDrawArrays(GL_TRIANGLES, 0, m_vertices.size());
+	glPatchParameteri(GL_PATCH_VERTICES, 3);
+	glDrawArrays(GL_PATCHES, 0, m_vertices.size());
 }
 
 void BoardMesh::color_tile(uint32_t tile, const glm::vec3 &color)
@@ -176,7 +173,9 @@ void Board::reload()
 	
 void Board::display(const util::Camera &camera)
 {
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	m_model.display(camera);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 	
 fysx::PlaneField& Board::height_field()

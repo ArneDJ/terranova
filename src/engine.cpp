@@ -51,6 +51,8 @@ ShaderGroup::ShaderGroup()
 	debug.link();
 
 	tilemap.compile("shaders/tilemap.vert", GL_VERTEX_SHADER);
+	tilemap.compile("shaders/tilemap.tesc", GL_TESS_CONTROL_SHADER);
+	tilemap.compile("shaders/tilemap.tese", GL_TESS_EVALUATION_SHADER);
 	tilemap.compile("shaders/tilemap.frag", GL_FRAGMENT_SHADER);
 	tilemap.link();
 
@@ -130,7 +132,7 @@ void Engine::init_opengl()
 		exit(EXIT_FAILURE);
 	}
 
-	glClearColor(0.5f, 0.5f, 0.5f, 1.f);
+	glClearColor(0.5f, 0.5f, 0.8f, 1.f);
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
 	glEnable(GL_DEPTH_TEST);

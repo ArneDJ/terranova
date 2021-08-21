@@ -2,7 +2,6 @@
 struct BoardMeshVertex {
 	glm::vec2 position = {};
 	glm::vec3 color = {};
-	glm::vec3 barycentric = {}; // barycentric coordinates
 };
 
 class BoardMesh {

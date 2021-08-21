@@ -1,15 +1,19 @@
-#version 460 core
+#version 430 core
 
-in vec3 position;
-in vec3 color;
-in vec3 barycentric;
+in TESSEVAL {
+	vec3 position;
+	vec3 barycentric;
+	vec3 color;
+	vec2 texcoord;
+	float zclipspace;
+} fragment;
 
-void main()
+void main(void)
 {
-	vec3 final_color = color;
+	vec3 final_color = fragment.color;
 
-	if (barycentric.b < 0.1) {
-		float strength = 1.0 - barycentric.b;
+	if (fragment.barycentric.b < 0.1) {
+		float strength = 1.0 - fragment.barycentric.b;
 		final_color = mix(final_color, vec3(1.0, 1.0, 1.0), 0.1 * pow(strength, 6));
 	}
 
