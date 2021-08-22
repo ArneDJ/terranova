@@ -81,11 +81,16 @@ Meeple::Meeple()
 		1.5f
 	};
 	m_trigger = std::make_unique<fysx::TriggerSphere>(sphere);
+
+	sphere.radius = 50.f;
+	m_visibility = std::make_unique<fysx::TriggerSphere>(sphere);
 }
 
 const geom::Transform* Meeple::transform() const { return m_transform.get(); }
 	
 const fysx::TriggerSphere* Meeple::trigger() const { return m_trigger.get(); }
+
+const fysx::TriggerSphere* Meeple::visibility() const { return m_visibility.get(); }
 
 void Meeple::set_speed(float speed) { m_speed = speed; }
 	
@@ -108,6 +113,7 @@ void Meeple::update(float delta)
 	glm::vec3 trigger_position = m_transform->position;
 	trigger_position.y += 1.f;
 	m_trigger->set_position(trigger_position);
+	m_visibility->set_position(trigger_position);
 
 	// update rotation
 	if (m_path_finder.state() == PathState::MOVING) {

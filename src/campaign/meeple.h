@@ -44,6 +44,7 @@ public:
 public:
 	const geom::Transform* transform() const;
 	const fysx::TriggerSphere* trigger() const;
+	const fysx::TriggerSphere* visibility() const;
 public:
 	template <class Archive>
 	void serialize(Archive &archive)
@@ -57,6 +58,7 @@ private:
 	std::unique_ptr<geom::Transform> m_transform;
 private:
 	std::unique_ptr<fysx::TriggerSphere> m_trigger;
+	std::unique_ptr<fysx::TriggerSphere> m_visibility;
 private:
 	std::unordered_map<uint32_t, int> m_troops;
 };

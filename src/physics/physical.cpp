@@ -78,8 +78,7 @@ RayResult PhysicalSystem::cast_ray(const glm::vec3 &origin, const glm::vec3 &end
 	const btVector3 to = vec3_to_bt(end);
 
 	btCollisionWorld::ClosestRayResultCallback callback(from, to);
-	//callback.m_collisionFilterGroup = mask;
-	//callback.m_collisionFilterMask = mask;
+	callback.m_collisionFilterMask = mask;
 
 	m_world->rayTest(from, to, callback);
 

@@ -44,8 +44,9 @@
 enum CampaignCollisionGroup {
 	COLLISION_GROUP_NONE = 0,
 	COLLISION_GROUP_RAY = 1 << 0,
-	COLLISION_GROUP_GHOSTS = 1 << 1,
-	COLLISION_GROUP_HEIGHTMAP = 1 << 2
+	COLLISION_GROUP_INTERACTION = 1 << 1,
+	COLLISION_GROUP_VISIBILITY = 1 << 2,
+	COLLISION_GROUP_HEIGHTMAP = 1 << 3
 };
 	
 void Campaign::init(const gfx::Shader *visual, const gfx::Shader *culling, const gfx::Shader *tilemap)
@@ -103,7 +104,7 @@ void Campaign::generate(int seed)
 	std::uniform_real_distribution<float> dis_x(board->BOUNDS.min.x, board->BOUNDS.max.x);
 	std::uniform_real_distribution<float> dis_y(board->BOUNDS.min.y, board->BOUNDS.max.y);
 	
-	for (int i = 0; i < 1000; i++) {
+	for (int i = 0; i < 100; i++) {
 		glm::vec2 point = { dis_x(gen), dis_y(gen) };
 		const auto &tile = board->tile_at(point);
 		if (tile) {
@@ -134,11 +135,13 @@ void Campaign::prepare()
 	auto duck_model = MediaManager::load_model("media/models/duck.glb");
 	auto duck_object = scene->find_object(duck_model);
 
-	int meeple_mask = COLLISION_GROUP_GHOSTS;
+	int meeple_mask = COLLISION_GROUP_INTERACTION | COLLISION_GROUP_RAY;
 	player.sync();
 	duck_object->add_transform(player.transform());
 	debugger->add_sphere(player.trigger()->form(), player.trigger()->transform());
-	physics.add_object(player.trigger()->ghost_object(), COLLISION_GROUP_GHOSTS, meeple_mask);
+	physics.add_object(player.trigger()->ghost_object(), COLLISION_GROUP_INTERACTION, meeple_mask);
+	debugger->add_sphere(player.visibility()->form(), player.visibility()->transform());
+	physics.add_object(player.visibility()->ghost_object(), COLLISION_GROUP_VISIBILITY, COLLISION_GROUP_INTERACTION);
 
 	for (auto &meeple : meeples) {
 		meeple->sync();
@@ -146,11 +149,14 @@ void Campaign::prepare()
 		// debug trigger volumes
 		auto trigger = meeple->trigger();
 		debugger->add_sphere(trigger->form(), trigger->transform());
-		physics.add_object(trigger->ghost_object(), COLLISION_GROUP_GHOSTS, meeple_mask);
+		physics.add_object(trigger->ghost_object(), COLLISION_GROUP_INTERACTION, meeple_mask);
+		auto visibility = meeple->visibility();
+		debugger->add_sphere(visibility->form(), visibility->transform());
+		physics.add_object(visibility->ghost_object(), COLLISION_GROUP_VISIBILITY, COLLISION_GROUP_INTERACTION);
 	}
 	
 	// add physical objects
-	int group = COLLISION_GROUP_GHOSTS;
+	int group = COLLISION_GROUP_HEIGHTMAP;
 	int mask = COLLISION_GROUP_RAY;
 	physics.add_body(board->height_field().body(), group, mask);
 }
@@ -189,7 +195,7 @@ void Campaign::update(float delta)
 
 	if (util::InputManager::key_pressed(SDL_BUTTON_RIGHT)) {
 		glm::vec3 ray = camera.ndc_to_ray(util::InputManager::abs_mouse_coords());
-		auto result = physics.cast_ray(camera.position, camera.position + (1000.f * ray), COLLISION_GROUP_GHOSTS);
+		auto result = physics.cast_ray(camera.position, camera.position + (1000.f * ray));
 		if (result.hit) {
 			marker.teleport(result.point);
 			std::list<glm::vec2> nodes;
