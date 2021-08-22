@@ -134,10 +134,11 @@ void Campaign::prepare()
 	auto duck_model = MediaManager::load_model("media/models/duck.glb");
 	auto duck_object = scene->find_object(duck_model);
 
+	int meeple_mask = COLLISION_GROUP_GHOSTS;
 	player.sync();
 	duck_object->add_transform(player.transform());
 	debugger->add_sphere(player.trigger()->form(), player.trigger()->transform());
-	physics.add_object(player.trigger()->ghost_object(), COLLISION_GROUP_GHOSTS, COLLISION_GROUP_RAY);
+	physics.add_object(player.trigger()->ghost_object(), COLLISION_GROUP_GHOSTS, meeple_mask);
 
 	for (auto &meeple : meeples) {
 		meeple->sync();
@@ -145,7 +146,7 @@ void Campaign::prepare()
 		// debug trigger volumes
 		auto trigger = meeple->trigger();
 		debugger->add_sphere(trigger->form(), trigger->transform());
-		physics.add_object(trigger->ghost_object(), COLLISION_GROUP_GHOSTS, COLLISION_GROUP_RAY);
+		physics.add_object(trigger->ghost_object(), COLLISION_GROUP_GHOSTS, meeple_mask);
 	}
 	
 	// add physical objects

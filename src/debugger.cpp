@@ -201,5 +201,6 @@ void Debugger::display_wireframe() const
 void Debugger::clear()
 {
 	m_navigation_meshes.clear();
+	m_entities.clear();
 	m_scene.clear_instances();
 }

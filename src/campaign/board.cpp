@@ -173,9 +173,9 @@ void Board::reload()
 	
 void Board::display(const util::Camera &camera)
 {
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	m_model.display(camera);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 	
 fysx::PlaneField& Board::height_field()

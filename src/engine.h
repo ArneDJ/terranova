@@ -80,7 +80,9 @@ private:
 	void init_opengl();
 	void init_imgui();
 private:
-	void run_battle();
+	void run_campaign();
 	void update_campaign_menu();
+private:
+	void run_battle();
 	void update_battle_menu();
 };

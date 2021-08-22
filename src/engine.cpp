@@ -177,27 +177,19 @@ void Engine::update_campaign_menu()
 	}
 	if (ImGui::Button("Visit Tile")) { state = EngineState::BATTLE; }
 	ImGui::Separator();
+	if (ImGui::Button("Exit to Title")) { state = EngineState::TITLE; }
 	if (ImGui::Button("Exit")) { state = EngineState::EXIT; }
 	ImGui::End();
 }
 
-void Engine::run()
+void Engine::run_campaign()
 {
 	state = EngineState::CAMPAIGN;
-
-	shaders = std::make_unique<ShaderGroup>();
-
-	campaign.init(&shaders->debug, &shaders->culling, &shaders->tilemap);
-	campaign.camera.set_projection(video_settings.fov, video_settings.canvas.x, video_settings.canvas.y, 0.1f, 900.f);
-	
-	battle.init(&shaders->debug, &shaders->culling, &shaders->terrain);
-	battle.camera.set_projection(video_settings.fov, video_settings.canvas.x, video_settings.canvas.y, 0.1f, 900.f);
 
 	std::random_device rd;
 	std::mt19937 gen(rd());
 	std::uniform_int_distribution<int> distrib;
-
-	campaign.load(user_dir.saves + "test.save");
+			
 	campaign.prepare();
 
 	while (state == EngineState::CAMPAIGN) {
@@ -236,6 +228,61 @@ void Engine::run()
 	}
 
 	campaign.clear();
+}
+
+void Engine::run()
+{
+	state = EngineState::TITLE;
+
+	shaders = std::make_unique<ShaderGroup>();
+
+	campaign.init(&shaders->debug, &shaders->culling, &shaders->tilemap);
+	campaign.camera.set_projection(video_settings.fov, video_settings.canvas.x, video_settings.canvas.y, 0.1f, 900.f);
+	
+	battle.init(&shaders->debug, &shaders->culling, &shaders->terrain);
+	battle.camera.set_projection(video_settings.fov, video_settings.canvas.x, video_settings.canvas.y, 0.1f, 900.f);
+
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_int_distribution<int> distrib;
+
+	while (state == EngineState::TITLE) {
+		util::InputManager::update();
+		if (util::InputManager::exit_request()) {
+			state = EngineState::EXIT;
+		}
+
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplSDL2_NewFrame(window);
+		ImGui::NewFrame();
+		ImGui::Begin("Main Menu Debug Mode");
+		ImGui::SetWindowSize(ImVec2(400, 200));
+		if (ImGui::Button("New World")) {
+			campaign.clear();
+			campaign.generate(distrib(gen));
+			state = EngineState::CAMPAIGN;
+		}
+		ImGui::Separator();
+		if (ImGui::Button("Load World")) {
+			campaign.clear();
+			campaign.load(user_dir.saves + "test.save");
+			state = EngineState::CAMPAIGN;
+		}
+		ImGui::Separator();
+		if (ImGui::Button("Exit")) { state = EngineState::EXIT; }
+		ImGui::End();
+
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		ImGui::Render();
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+		
+		SDL_GL_SwapWindow(window);
+			
+		if (state == EngineState::CAMPAIGN) {
+			run_campaign();
+		}
+	}
 }
 
 void Engine::update_battle_menu()

@@ -62,6 +62,11 @@ void PhysicalSystem::remove_object(btCollisionObject *object)
 
 void PhysicalSystem::clear_objects()
 {
+	for (int i = m_world->getNumCollisionObjects() - 1; i >= 0; i--) {
+		btCollisionObject* obj = m_world->getCollisionObjectArray()[i];
+		m_world->removeCollisionObject(obj);
+	}
+	// just to be sure
 	m_world->getCollisionObjectArray().clear();
 }
 	
