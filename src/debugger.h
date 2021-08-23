@@ -5,6 +5,7 @@ public:
 public:
 	void update();
 	const geom::Transform* transform() const;
+	const geom::Transform* base_transform() const;
 private:
 	geom::Transform m_shape;
 	const geom::Transform *m_base_transform = nullptr;
@@ -20,6 +21,9 @@ public:
 	void add_cylinder(const glm::vec3 &extents, const geom::Transform *transform);
 	void add_capsule(float radius, float height, const geom::Transform *transform);
 	void add_navmesh(const dtNavMesh *navmesh);
+public:
+	// remove entities containing this transform
+	void remove_entities(const geom::Transform *transform);
 public:
 	void update(const util::Camera &camera);
 	void clear();

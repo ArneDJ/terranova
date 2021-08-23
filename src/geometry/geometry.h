@@ -99,10 +99,10 @@ inline bool point_in_rectangle(const glm::vec2 &p, const Rectangle &r)
 // http://fgiesen.wordpress.com/2013/02/08/triangle-rasterization-in-practice/
 inline int orient(float x0, float y0, float x1, float y1, float x2, float y2)
 {
-	return (int(x1) - int(x0))*(int(y2) - int(y0)) - (int(y1) - int(y0))*(int(x2) - int(x0));
+	return (int(x1) - int(x0)) * (int(y2) - int(y0)) - (int(y1) - int(y0)) * (int(x2) - int(x0));
 }
 
-// TODO check triangle winding
+// this only works for clockwise triangles
 inline bool triangle_overlaps_point(const glm::vec2 &a, const glm::vec2 &b, const glm::vec2 &c, const glm::vec2 &pt)
 {
 	// barycentric coordinates

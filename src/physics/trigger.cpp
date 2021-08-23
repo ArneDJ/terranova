@@ -17,8 +17,6 @@ namespace fysx {
 
 TriggerSphere::TriggerSphere(const geom::Sphere &form)
 {
-	m_form = form;
-
 	m_shape = std::make_unique<btSphereShape>(form.radius);
 
 	btTransform transform;
@@ -30,12 +28,23 @@ TriggerSphere::TriggerSphere(const geom::Sphere &form)
 	m_ghost_object->setWorldTransform(transform);
 
 	m_transform = std::make_unique<geom::Transform>();
+	m_transform->position = form.center;
 }
 
 void TriggerSphere::set_position(const glm::vec3 &position) 
 {
 	m_ghost_object->getWorldTransform().setOrigin(vec3_to_bt(position));
 	m_transform->position = position;
+}
+	
+geom::Sphere TriggerSphere::form() const
+{
+	geom::Sphere sphere = {
+		m_transform->position,
+		m_shape->getRadius()
+	};
+
+	return sphere;
 }
 
 };

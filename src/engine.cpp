@@ -170,6 +170,7 @@ void Engine::update_campaign_menu()
 	ImGui::Text("%.2f ms/frame (%.1d fps)", (frame_timer.FPS_UPDATE_TIME / frame_timer.frames_per_second()), frame_timer.frames_per_second());
 	ImGui::Text("%.4f frame delta", frame_timer.delta_seconds());
 	ImGui::Checkbox("Show debug objects", &campaign.display_debug);
+	ImGui::Checkbox("Show world wireframe", &campaign.wireframe_worldmap);
 	ImGui::Separator();
 	if (ImGui::Button("Generate World")) { g_generate = true; }
 	if (ImGui::Button("Save World")) { 

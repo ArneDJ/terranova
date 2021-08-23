@@ -95,6 +95,7 @@ void Campaign::generate(int seed)
 {
 	board->generate(seed);
 
+	player = {};
 	player.teleport(glm::vec2(512.f));
 	player.set_speed(10.f);
 	player.set_name("Player Army");
@@ -173,6 +174,7 @@ void Campaign::clear()
 
 	// clear entities
 	meeples.clear();
+	player = {};
 }
 
 void Campaign::update(float delta)
@@ -219,7 +221,11 @@ void Campaign::display()
 	scene->cull_frustum();
 	scene->display();
 
-	board->display(camera);
+	if (wireframe_worldmap) {
+		board->display_wireframe(camera);
+	} else {
+		board->display(camera);
+	}
 	
 	if (display_debug) {
 		debugger->display_wireframe();

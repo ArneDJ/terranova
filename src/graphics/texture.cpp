@@ -27,7 +27,6 @@ Texture::~Texture()
 	}
 }
 
-// TODO make more general purpose
 void Texture::create(const util::Image<uint8_t> &image)
 {
 	m_target = GL_TEXTURE_2D;

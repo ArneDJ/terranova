@@ -45,6 +45,11 @@ const geom::Transform* DebugEntity::transform() const
 	return m_final_transform.get();
 }
 	
+const geom::Transform* DebugEntity::base_transform() const
+{
+	return m_base_transform;
+}
+	
 Debugger::Debugger(const gfx::Shader *debug_shader, const gfx::Shader *visual_shader, const gfx::Shader *culling_shader)
 	: m_scene(visual_shader, culling_shader)
 {
@@ -170,6 +175,25 @@ void Debugger::add_navmesh(const dtNavMesh *navmesh)
 	mesh->create(vertices, indices, GL_TRIANGLES);
 
 	m_navigation_meshes.push_back(std::move(mesh));
+}
+	
+void Debugger::remove_entities(const geom::Transform *transform)
+{
+	auto cylinder_object = m_scene.find_object(m_cylinder);
+	auto sphere_object = m_scene.find_object(m_sphere);
+	auto cube_object = m_scene.find_object(m_cube);
+
+	for (auto it = m_entities.begin(); it != m_entities.end(); ) {
+		auto &entity = *it;
+		if (entity->base_transform() == transform) {
+			cylinder_object->remove_transform(entity->transform());
+			sphere_object->remove_transform(entity->transform());
+			cube_object->remove_transform(entity->transform());
+			it = m_entities.erase(it);
+		} else {
+			it++;
+		}
+	}
 }
 	
 void Debugger::update(const util::Camera &camera)

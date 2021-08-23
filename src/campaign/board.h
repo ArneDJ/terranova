@@ -68,6 +68,7 @@ public:
 	}
 public:
 	void display(const util::Camera &camera);
+	void display_wireframe(const util::Camera &camera);
 private:
 	int m_seed;
 	Atlas m_atlas;

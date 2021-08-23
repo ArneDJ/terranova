@@ -225,7 +225,6 @@ void VoronoiGraph::add_cell_to_regions(const VoronoiCell *cell)
 		for (int px = min_x; px <= max_x; px++) {
 			int index = px + py * CELL_REGION_RES;
 			if (index >= 0 && index < m_spatial_map.size()) {
-				// TODO check if this step is necessary
 				if (cell_overlaps_rectangle(cell, m_spatial_map[index].bounds)) {
 					m_spatial_map[index].cells.push_back(cell);
 				}
