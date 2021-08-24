@@ -210,19 +210,9 @@ void Board::find_path(const glm::vec2 &start, const glm::vec2 &end, std::list<gl
 	m_land_navigation.find_2D_path(start, end, path);
 }
 	
-void Board::color_tile(uint32_t tile, const glm::vec3 &color)
-{
-	m_model.color_tile(tile, color);
-}
-	
 void Board::update_model()
 {
 	m_model.update_mesh();
-}
-	
-void Board::occupy_tiles(uint32_t start, uint32_t occupier, uint32_t radius, std::vector<uint32_t> &occupied_tiles)
-{
-	m_atlas.occupy_tiles(start, occupier, radius, occupied_tiles);
 }
 	
 void Board::build_navigation()

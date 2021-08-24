@@ -44,8 +44,6 @@ public:
 public:
 	void generate(int seed);
 	void reload();
-	void occupy_tiles(uint32_t start, uint32_t occupier, uint32_t radius, std::vector<uint32_t> &occupied_tiles);
-	void color_tile(uint32_t tile, const glm::vec3 &color);
 	void update_model();
 public:
 	fysx::PlaneField& height_field();

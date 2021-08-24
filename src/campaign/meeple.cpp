@@ -92,6 +92,11 @@ const fysx::TriggerSphere* Meeple::trigger() const { return m_trigger.get(); }
 
 const fysx::TriggerSphere* Meeple::visibility() const { return m_visibility.get(); }
 
+glm::vec2 Meeple::position() const
+{
+	return glm::vec2(m_transform->position.x, m_transform->position.z);
+}
+
 void Meeple::set_speed(float speed) { m_speed = speed; }
 	
 void Meeple::set_name(const std::string &name) { m_name = name; }

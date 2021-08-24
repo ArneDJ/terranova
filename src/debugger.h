@@ -21,9 +21,10 @@ public:
 	void add_cylinder(const glm::vec3 &extents, const geom::Transform *transform);
 	void add_capsule(float radius, float height, const geom::Transform *transform);
 	void add_navmesh(const dtNavMesh *navmesh);
+	void add_segment(const geom::Transform *a, const geom::Transform *b);
 public:
 	// remove entities containing this transform
-	void remove_entities(const geom::Transform *transform);
+	void remove_transform(const geom::Transform *transform);
 public:
 	void update(const util::Camera &camera);
 	void clear();

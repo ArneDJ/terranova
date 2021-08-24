@@ -45,6 +45,7 @@ public:
 	const geom::Transform* transform() const;
 	const fysx::TriggerSphere* trigger() const;
 	const fysx::TriggerSphere* visibility() const;
+	glm::vec2 position() const;
 public:
 	template <class Archive>
 	void serialize(Archive &archive)

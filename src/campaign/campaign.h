@@ -13,7 +13,7 @@ public:
 	std::unique_ptr<Board> board;
 	std::unique_ptr<gfx::SceneGroup> scene;
 	Marker marker;
-	Meeple player;
+	std::unique_ptr<Meeple> player;
 	std::vector<std::unique_ptr<Meeple>> meeples;
 	std::unordered_map<uint32_t, std::unique_ptr<Settlement>> settlements;
 public:
@@ -30,4 +30,7 @@ public:
 	void init(const gfx::Shader *visual, const gfx::Shader *culling, const gfx::Shader *tilemap);
 	void update(float delta);
 	void display();
+private:
+	void prepare_collision();
+	void prepare_graphics();
 };

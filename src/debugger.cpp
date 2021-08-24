@@ -177,7 +177,7 @@ void Debugger::add_navmesh(const dtNavMesh *navmesh)
 	m_navigation_meshes.push_back(std::move(mesh));
 }
 	
-void Debugger::remove_entities(const geom::Transform *transform)
+void Debugger::remove_transform(const geom::Transform *transform)
 {
 	auto cylinder_object = m_scene.find_object(m_cylinder);
 	auto sphere_object = m_scene.find_object(m_sphere);
@@ -212,6 +212,8 @@ void Debugger::display() const
 	m_scene.display();
 
 	m_shader->use();
+	m_shader->uniform_bool("INDIRECT_DRAW", false);
+	m_shader->uniform_mat4("MODEL", glm::mat4(1.f));
 	for (const auto &mesh : m_navigation_meshes) {
 		mesh->draw();
 	}

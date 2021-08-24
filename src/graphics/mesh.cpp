@@ -392,7 +392,7 @@ void TesselationMesh::draw() const
 	glPatchParameteri(GL_PATCH_VERTICES, 4);
 	glDrawArrays(GL_PATCHES, 0, m_vertices.size());
 }
-	
+
 GLenum index_type(size_t size)
 {
 	switch (size) {

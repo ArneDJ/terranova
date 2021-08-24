@@ -51,12 +51,14 @@ enum CampaignCollisionGroup {
 	
 void Campaign::init(const gfx::Shader *visual, const gfx::Shader *culling, const gfx::Shader *tilemap)
 {
-	debugger = std::make_unique<Debugger>(tilemap, visual, culling);
+	debugger = std::make_unique<Debugger>(visual, visual, culling);
 
 	scene = std::make_unique<gfx::SceneGroup>(visual, culling);
 	scene->set_scene_type(gfx::SceneType::DYNAMIC);
 	
 	board = std::make_unique<Board>(tilemap);
+
+	player = std::make_unique<Meeple>();
 }
 	
 void Campaign::load(const std::string &filepath)
@@ -95,10 +97,10 @@ void Campaign::generate(int seed)
 {
 	board->generate(seed);
 
-	player = {};
-	player.teleport(glm::vec2(512.f));
-	player.set_speed(10.f);
-	player.set_name("Player Army");
+	player = std::make_unique<Meeple>();
+	player->teleport(glm::vec2(512.f));
+	player->set_speed(10.f);
+	player->set_name("Player Army");
 
 	// add meeples
 	std::mt19937 gen(seed);
@@ -122,11 +124,41 @@ void Campaign::generate(int seed)
 void Campaign::prepare()
 {
 	// prepare camera
-	camera.position = player.transform()->position + glm::vec3(0.f, 10.f, -10.f);
-	camera.target(player.transform()->position);
+	camera.position = player->transform()->position + glm::vec3(0.f, 10.f, -10.f);
+	camera.target(player->transform()->position);
+
+	player->sync();
+	for (auto &meeple : meeples) {
+		meeple->sync();
+	}
 	
-	// add grapics models
+	prepare_collision();
+
+	prepare_graphics();
+}
+
+void Campaign::prepare_collision()
+{
+	int meeple_mask = COLLISION_GROUP_INTERACTION | COLLISION_GROUP_RAY;
+
+	physics.add_object(player->trigger()->ghost_object(), COLLISION_GROUP_INTERACTION, meeple_mask);
+	physics.add_object(player->visibility()->ghost_object(), COLLISION_GROUP_VISIBILITY, COLLISION_GROUP_INTERACTION);
+
+	for (auto &meeple : meeples) {
+		auto trigger = meeple->trigger();
+		physics.add_object(trigger->ghost_object(), COLLISION_GROUP_INTERACTION, meeple_mask);
+		auto visibility = meeple->visibility();
+		physics.add_object(visibility->ghost_object(), COLLISION_GROUP_VISIBILITY, COLLISION_GROUP_INTERACTION);
+	}
 	
+	// add physical objects
+	int group = COLLISION_GROUP_HEIGHTMAP;
+	int mask = COLLISION_GROUP_RAY;
+	physics.add_body(board->height_field().body(), group, mask);
+}
+
+void Campaign::prepare_graphics()
+{
 	board->reload();
 
 	auto cone_model = MediaManager::load_model("media/models/primitives/cone.glb");
@@ -136,30 +168,18 @@ void Campaign::prepare()
 	auto duck_model = MediaManager::load_model("media/models/duck.glb");
 	auto duck_object = scene->find_object(duck_model);
 
-	int meeple_mask = COLLISION_GROUP_INTERACTION | COLLISION_GROUP_RAY;
-	player.sync();
-	duck_object->add_transform(player.transform());
-	debugger->add_sphere(player.trigger()->form(), player.trigger()->transform());
-	physics.add_object(player.trigger()->ghost_object(), COLLISION_GROUP_INTERACTION, meeple_mask);
-	debugger->add_sphere(player.visibility()->form(), player.visibility()->transform());
-	physics.add_object(player.visibility()->ghost_object(), COLLISION_GROUP_VISIBILITY, COLLISION_GROUP_INTERACTION);
+	duck_object->add_transform(player->transform());
+	debugger->add_sphere(player->trigger()->form(), player->trigger()->transform());
+	debugger->add_sphere(player->visibility()->form(), player->visibility()->transform());
 
 	for (auto &meeple : meeples) {
-		meeple->sync();
 		duck_object->add_transform(meeple->transform());
 		// debug trigger volumes
 		auto trigger = meeple->trigger();
 		debugger->add_sphere(trigger->form(), trigger->transform());
-		physics.add_object(trigger->ghost_object(), COLLISION_GROUP_INTERACTION, meeple_mask);
 		auto visibility = meeple->visibility();
 		debugger->add_sphere(visibility->form(), visibility->transform());
-		physics.add_object(visibility->ghost_object(), COLLISION_GROUP_VISIBILITY, COLLISION_GROUP_INTERACTION);
 	}
-	
-	// add physical objects
-	int group = COLLISION_GROUP_HEIGHTMAP;
-	int mask = COLLISION_GROUP_RAY;
-	physics.add_body(board->height_field().body(), group, mask);
 }
 	
 void Campaign::clear()
@@ -174,7 +194,7 @@ void Campaign::clear()
 
 	// clear entities
 	meeples.clear();
-	player = {};
+	player = std::make_unique<Meeple>();
 }
 
 void Campaign::update(float delta)
@@ -200,14 +220,15 @@ void Campaign::update(float delta)
 		auto result = physics.cast_ray(camera.position, camera.position + (1000.f * ray));
 		if (result.hit) {
 			marker.teleport(result.point);
+			glm::vec2 hitpoint = glm::vec2(result.point.x, result.point.z);
 			std::list<glm::vec2> nodes;
 			
-			board->find_path(glm::vec2(player.transform()->position.x, player.transform()->position.z), glm::vec2(result.point.x, result.point.z), nodes);
-			player.set_path(nodes);
+			board->find_path(glm::vec2(player->position()), hitpoint, nodes);
+			player->set_path(nodes);
 		}
 	}
 
-	player.update(delta);
+	player->update(delta);
 	for (auto &meeple : meeples) {
 		meeple->update(delta);
 	}
