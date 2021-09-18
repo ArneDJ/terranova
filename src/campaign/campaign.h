@@ -13,8 +13,7 @@ public:
 	std::unique_ptr<Board> board;
 	std::unique_ptr<gfx::SceneGroup> scene;
 	Marker marker;
-	std::unique_ptr<Meeple> player;
-	std::vector<std::unique_ptr<Meeple>> meeples;
+	MeepleController meeple_controller;
 	std::unordered_map<uint32_t, std::unique_ptr<Settlement>> settlements;
 public:
 	bool display_debug = false;

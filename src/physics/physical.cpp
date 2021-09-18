@@ -23,6 +23,9 @@ PhysicalSystem::PhysicalSystem()
 
 	m_world = std::make_unique<btDiscreteDynamicsWorld>(m_dispatcher.get(), m_broadphase.get(), m_solver.get(), m_config.get());
 	m_world->setGravity(GRAVITY);
+
+	m_ghost_callback = std::make_unique<btGhostPairCallback>();
+	m_world->getBroadphase()->getOverlappingPairCache()->setInternalGhostPairCallback(m_ghost_callback.get());
 }
 	
 PhysicalSystem::~PhysicalSystem()

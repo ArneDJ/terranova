@@ -1,4 +1,5 @@
 #include <list>
+#include <vector>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -158,4 +159,27 @@ void Meeple::add_troops(uint32_t troop_type, int count)
 	}
 		
 	m_troops[troop_type] = instances;
+}
+	
+void MeepleController::update(float delta)
+{
+	// visibility collision triggers
+	puts("visibility collision triggers");
+	for (auto &meeple : meeples) {
+		if (meeple->state() == MeepleState::ROAMING) {
+			auto visibility = meeple->visibility();
+			auto ghost_object = visibility->ghost_object();
+			int count = ghost_object->getNumOverlappingObjects();
+			printf("number of objects inside ghost: %d\n", count);
+			for (int i = 0; i < count; i++) {
+				btCollisionObject *obj = ghost_object->getOverlappingObject(i);
+				//printf("obj[%d] = %p\n", i,  obj);
+			}
+		}
+	}
+
+	player->update(delta);
+	for (auto &meeple : meeples) {
+		meeple->update(delta);
+	}
 }

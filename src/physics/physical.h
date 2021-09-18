@@ -34,6 +34,7 @@ private:
 	std::unique_ptr<btBroadphaseInterface> m_broadphase;
 	std::unique_ptr<btConstraintSolver> m_solver;
 	std::unique_ptr<btDynamicsWorld> m_world;
+	std::unique_ptr<btGhostPairCallback> m_ghost_callback;
 };
 
 inline glm::vec3 bt_to_vec3(const btVector3 &v)

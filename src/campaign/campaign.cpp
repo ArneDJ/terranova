@@ -58,7 +58,7 @@ void Campaign::init(const gfx::Shader *visual, const gfx::Shader *culling, const
 	
 	board = std::make_unique<Board>(tilemap);
 
-	player = std::make_unique<Meeple>();
+	meeple_controller.player = std::make_unique<Meeple>();
 }
 	
 void Campaign::load(const std::string &filepath)
@@ -70,8 +70,8 @@ void Campaign::load(const std::string &filepath)
 		archive(name);
 		board->load(archive);
 		archive(camera);
-		archive(player);
-		archive(meeples);
+		archive(meeple_controller.player);
+		archive(meeple_controller.meeples);
 	} else {
 		LOG_F(ERROR, "Game loading error: could not open save file %s", filepath.c_str());
 	}
@@ -86,8 +86,8 @@ void Campaign::save(const std::string &filepath)
 		archive(name);
 		board->save(archive);
 		archive(camera);
-		archive(player);
-		archive(meeples);
+		archive(meeple_controller.player);
+		archive(meeple_controller.meeples);
 	} else {
 		LOG_F(ERROR, "Game saving error: could not open save file %s", filepath.c_str());
 	}
@@ -97,10 +97,10 @@ void Campaign::generate(int seed)
 {
 	board->generate(seed);
 
-	player = std::make_unique<Meeple>();
-	player->teleport(glm::vec2(512.f));
-	player->set_speed(10.f);
-	player->set_name("Player Army");
+	meeple_controller.player = std::make_unique<Meeple>();
+	meeple_controller.player->teleport(glm::vec2(512.f));
+	meeple_controller.player->set_speed(10.f);
+	meeple_controller.player->set_name("Player Army");
 
 	// add meeples
 	std::mt19937 gen(seed);
@@ -115,7 +115,7 @@ void Campaign::generate(int seed)
 				auto meeple = std::make_unique<Meeple>();
 				meeple->teleport(point);
 				meeple->set_name("Testificate Army");
-				meeples.push_back(std::move(meeple));
+				meeple_controller.meeples.push_back(std::move(meeple));
 			}
 		}
 	}
@@ -124,11 +124,11 @@ void Campaign::generate(int seed)
 void Campaign::prepare()
 {
 	// prepare camera
-	camera.position = player->transform()->position + glm::vec3(0.f, 10.f, -10.f);
-	camera.target(player->transform()->position);
+	camera.position = meeple_controller.player->transform()->position + glm::vec3(0.f, 10.f, -10.f);
+	camera.target(meeple_controller.player->transform()->position);
 
-	player->sync();
-	for (auto &meeple : meeples) {
+	meeple_controller.player->sync();
+	for (auto &meeple : meeple_controller.meeples) {
 		meeple->sync();
 	}
 	
@@ -139,12 +139,12 @@ void Campaign::prepare()
 
 void Campaign::prepare_collision()
 {
-	int meeple_mask = COLLISION_GROUP_INTERACTION | COLLISION_GROUP_RAY;
+	int meeple_mask = COLLISION_GROUP_INTERACTION | COLLISION_GROUP_VISIBILITY | COLLISION_GROUP_RAY;
 
-	physics.add_object(player->trigger()->ghost_object(), COLLISION_GROUP_INTERACTION, meeple_mask);
-	physics.add_object(player->visibility()->ghost_object(), COLLISION_GROUP_VISIBILITY, COLLISION_GROUP_INTERACTION);
+	physics.add_object(meeple_controller.player->trigger()->ghost_object(), COLLISION_GROUP_INTERACTION, meeple_mask);
+	physics.add_object(meeple_controller.player->visibility()->ghost_object(), COLLISION_GROUP_VISIBILITY, COLLISION_GROUP_INTERACTION);
 
-	for (auto &meeple : meeples) {
+	for (auto &meeple : meeple_controller.meeples) {
 		auto trigger = meeple->trigger();
 		physics.add_object(trigger->ghost_object(), COLLISION_GROUP_INTERACTION, meeple_mask);
 		auto visibility = meeple->visibility();
@@ -168,11 +168,11 @@ void Campaign::prepare_graphics()
 	auto duck_model = MediaManager::load_model("media/models/duck.glb");
 	auto duck_object = scene->find_object(duck_model);
 
-	duck_object->add_transform(player->transform());
-	debugger->add_sphere(player->trigger()->form(), player->trigger()->transform());
-	debugger->add_sphere(player->visibility()->form(), player->visibility()->transform());
+	duck_object->add_transform(meeple_controller.player->transform());
+	debugger->add_sphere(meeple_controller.player->trigger()->form(), meeple_controller.player->trigger()->transform());
+	debugger->add_sphere(meeple_controller.player->visibility()->form(), meeple_controller.player->visibility()->transform());
 
-	for (auto &meeple : meeples) {
+	for (auto &meeple : meeple_controller.meeples) {
 		duck_object->add_transform(meeple->transform());
 		// debug trigger volumes
 		auto trigger = meeple->trigger();
@@ -193,8 +193,8 @@ void Campaign::clear()
 	physics.clear_objects();
 
 	// clear entities
-	meeples.clear();
-	player = std::make_unique<Meeple>();
+	meeple_controller.meeples.clear();
+	meeple_controller.player = std::make_unique<Meeple>();
 }
 
 void Campaign::update(float delta)
@@ -223,15 +223,18 @@ void Campaign::update(float delta)
 			glm::vec2 hitpoint = glm::vec2(result.point.x, result.point.z);
 			std::list<glm::vec2> nodes;
 			
-			board->find_path(glm::vec2(player->position()), hitpoint, nodes);
-			player->set_path(nodes);
+			board->find_path(glm::vec2(meeple_controller.player->position()), hitpoint, nodes);
+			meeple_controller.player->set_path(nodes);
 		}
 	}
 
-	player->update(delta);
-	for (auto &meeple : meeples) {
+	meeple_controller.update(delta);
+	/*
+	meeple_controller.player->update(delta);
+	for (auto &meeple : meeple_controller.meeples) {
 		meeple->update(delta);
 	}
+	*/
 	
 	debugger->update(camera);
 }

@@ -26,6 +26,14 @@ private:
 	PathState m_state = PathState::FINISHED;
 };
 
+enum class MeepleState {
+	IDLING,
+	ROAMING,
+	TRAVELING,
+	FLEEING,
+	TRACKING
+};
+
 // moves on the campaign map
 // either controlled by the player or the AI
 class Meeple {
@@ -39,6 +47,7 @@ public:
 	void set_name(const std::string &name);
 	void set_speed(float speed);
 	void set_path(const std::list<glm::vec2> &nodes);
+	void set_state(MeepleState state) { m_state = state; }
 public:
 	void add_troops(uint32_t troop_type, int count);
 public:
@@ -46,6 +55,7 @@ public:
 	const fysx::TriggerSphere* trigger() const;
 	const fysx::TriggerSphere* visibility() const;
 	glm::vec2 position() const;
+	MeepleState state() const { return m_state; }
 public:
 	template <class Archive>
 	void serialize(Archive &archive)
@@ -55,6 +65,7 @@ public:
 private:
 	std::string m_name = {};
 	float m_speed = 1.f;
+	MeepleState m_state = MeepleState::ROAMING;
 	PathFinder m_path_finder;
 	std::unique_ptr<geom::Transform> m_transform;
 private:
@@ -62,4 +73,12 @@ private:
 	std::unique_ptr<fysx::TriggerSphere> m_visibility;
 private:
 	std::unordered_map<uint32_t, int> m_troops;
+};
+
+class MeepleController {
+public:
+	std::unique_ptr<Meeple> player;
+	std::vector<std::unique_ptr<Meeple>> meeples;
+public:
+	void update(float delta);
 };
