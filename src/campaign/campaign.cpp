@@ -193,7 +193,7 @@ void Campaign::clear()
 	physics.clear_objects();
 
 	// clear entities
-	meeple_controller.meeples.clear();
+	meeple_controller.clear();
 	meeple_controller.player = std::make_unique<Meeple>();
 }
 
@@ -229,12 +229,13 @@ void Campaign::update(float delta)
 	}
 
 	meeple_controller.update(delta);
-	/*
-	meeple_controller.player->update(delta);
-	for (auto &meeple : meeple_controller.meeples) {
-		meeple->update(delta);
+
+	if (meeple_controller.chases.size() > 0 && meeple_controller.chase_time_slice == 0.f) {
+		auto &chase = *meeple_controller.current_chase;
+		std::list<glm::vec2> nodes;
+		board->find_path(chase->chaser->position(), chase->target->position(), nodes);
+		chase->chaser->set_path(nodes);
 	}
-	*/
 	
 	debugger->update(camera);
 }

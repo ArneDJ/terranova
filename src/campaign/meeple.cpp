@@ -17,6 +17,8 @@
 
 #include "meeple.h"
 
+static const float MEEPLE_VISIBILITY_RADIUS = 50.F;
+
 void PathFinder::set_nodes(const std::list<glm::vec2> &nodes)
 {
 	m_nodes.clear();
@@ -83,8 +85,11 @@ Meeple::Meeple()
 	};
 	m_trigger = std::make_unique<fysx::TriggerSphere>(sphere);
 
-	sphere.radius = 50.f;
+	sphere.radius = MEEPLE_VISIBILITY_RADIUS;
 	m_visibility = std::make_unique<fysx::TriggerSphere>(sphere);
+
+	m_visibility->ghost_object()->setUserPointer(this);
+	m_trigger->ghost_object()->setUserPointer(this);
 }
 
 const geom::Transform* Meeple::transform() const { return m_transform.get(); }
@@ -161,25 +166,73 @@ void Meeple::add_troops(uint32_t troop_type, int count)
 	m_troops[troop_type] = instances;
 }
 	
+MeepleController::MeepleController()
+{
+	current_chase = chases.begin();
+}
+
 void MeepleController::update(float delta)
 {
 	// visibility collision triggers
-	puts("visibility collision triggers");
+	//puts("visibility collision triggers");
 	for (auto &meeple : meeples) {
 		if (meeple->state() == MeepleState::ROAMING) {
 			auto visibility = meeple->visibility();
 			auto ghost_object = visibility->ghost_object();
 			int count = ghost_object->getNumOverlappingObjects();
-			printf("number of objects inside ghost: %d\n", count);
 			for (int i = 0; i < count; i++) {
 				btCollisionObject *obj = ghost_object->getOverlappingObject(i);
-				//printf("obj[%d] = %p\n", i,  obj);
+				Meeple *target = static_cast<Meeple*>(obj->getUserPointer());
+				if (target) {
+					if (target != meeple.get()) {
+						float dist = glm::distance(meeple->position(), target->position());
+						if (dist < MEEPLE_VISIBILITY_RADIUS) {
+				
+							meeple->set_state(MeepleState::TRACKING);
+							add_chase(meeple.get(), target);
+							break;
+						}
+					}
+				}
 			}
 		}
+	}
+
+	// update chases
+	chase_time_slice += delta;
+	if (chases.size() > 0 && chase_time_slice > 0.02f) {
+		chase_time_slice = 0.f;
+		std::advance(current_chase, 1);
+	}
+	if (current_chase == chases.end()) {
+		current_chase = chases.begin();
 	}
 
 	player->update(delta);
 	for (auto &meeple : meeples) {
 		meeple->update(delta);
 	}
+}
+	
+void MeepleController::add_chase(Meeple *chaser, Meeple *target)
+{
+	for (const auto &chase : chases) {
+		if (chase->chaser == chaser && chase->target == target) {
+			return;
+		}
+	}
+
+	auto chase = std::make_unique<MeepleChase>();
+	chase->chaser = chaser;
+	chase->target = target;
+	chase->finished = false;
+
+	chases.push_back(std::move(chase));
+}
+	
+void MeepleController::clear()
+{
+	chases.clear();
+	current_chase = chases.begin();
+	meeples.clear();
 }

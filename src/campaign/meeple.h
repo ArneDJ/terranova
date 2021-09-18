@@ -64,7 +64,7 @@ public:
 	}
 private:
 	std::string m_name = {};
-	float m_speed = 1.f;
+	float m_speed = 10.f;
 	MeepleState m_state = MeepleState::ROAMING;
 	PathFinder m_path_finder;
 	std::unique_ptr<geom::Transform> m_transform;
@@ -75,10 +75,24 @@ private:
 	std::unordered_map<uint32_t, int> m_troops;
 };
 
+struct MeepleChase {
+	Meeple *chaser = nullptr;
+	Meeple *target = nullptr;
+	bool finished = false;
+};
+
 class MeepleController {
+public:
+	MeepleController();
 public:
 	std::unique_ptr<Meeple> player;
 	std::vector<std::unique_ptr<Meeple>> meeples;
 public:
+	std::list<std::unique_ptr<MeepleChase>> chases;
+	std::list<std::unique_ptr<MeepleChase>>::iterator current_chase;
+	float chase_time_slice = 0.f;
+public:
+	void add_chase(Meeple *chaser, Meeple *target);
 	void update(float delta);
+	void clear();
 };
