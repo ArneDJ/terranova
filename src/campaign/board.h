@@ -45,6 +45,7 @@ public:
 	void generate(int seed);
 	void reload();
 	void update_model();
+	void color_tile(uint32_t tile, const glm::vec3 &color);
 public:
 	fysx::PlaneField& height_field();
 	const util::Navigation& navigation() const;

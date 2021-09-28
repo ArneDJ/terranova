@@ -4,6 +4,7 @@
 #include "meeple.h"
 #include "marker.h"
 #include "settlement.h"
+#include "faction.h"
 
 class Campaign {
 public:
@@ -15,6 +16,7 @@ public:
 	Marker marker;
 	MeepleController meeple_controller;
 	std::unordered_map<uint32_t, std::unique_ptr<Settlement>> settlements;
+	FactionController faction_controller;
 public:
 	bool display_debug = false;
 	bool wireframe_worldmap = false;
@@ -32,4 +34,6 @@ public:
 private:
 	void prepare_collision();
 	void prepare_graphics();
+private:
+	void remove_meeple(Meeple *meeple);
 };

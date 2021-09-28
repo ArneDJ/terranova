@@ -198,7 +198,7 @@ void MeepleController::update(float delta)
 		}
 	}
 
-	// update chases
+	// update chase time slice
 	chase_time_slice += delta;
 	if (chases.size() > 0 && chase_time_slice > 0.02f) {
 		chase_time_slice = 0.f;
@@ -235,4 +235,26 @@ void MeepleController::clear()
 	chases.clear();
 	current_chase = chases.begin();
 	meeples.clear();
+}
+	
+void MeepleController::remove_meeple(Meeple *meeple)
+{
+	for (auto it = chases.begin(); it != chases.end(); ) {
+		auto &chase = *it;
+		if (chase->chaser == meeple || chase->target == meeple) {
+			if (it == current_chase) {
+				current_chase++;
+			}
+			it = chases.erase(it);
+		} else {
+			++it;
+		}
+	}
+
+	for (int i = 0; i < meeples.size(); i++) {
+		if (meeples[i].get() == meeple) {
+			meeples.erase(meeples.begin() + i);
+			break;
+		}
+	}
 }

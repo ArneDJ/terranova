@@ -171,6 +171,11 @@ void Board::reload()
 	m_model.reload(m_atlas);
 }
 	
+void Board::color_tile(uint32_t tile, const glm::vec3 &color)
+{
+	m_model.color_tile(tile, color);
+}
+
 void Board::display(const util::Camera &camera)
 {
 	m_model.display(camera);

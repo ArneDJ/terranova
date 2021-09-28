@@ -95,4 +95,5 @@ public:
 	void add_chase(Meeple *chaser, Meeple *target);
 	void update(float delta);
 	void clear();
+	void remove_meeple(Meeple *meeple);
 };

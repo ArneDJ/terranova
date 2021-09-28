@@ -97,15 +97,37 @@ void Campaign::generate(int seed)
 {
 	board->generate(seed);
 
+	std::mt19937 gen(seed);
+	std::uniform_real_distribution<float> dis_x(board->BOUNDS.min.x, board->BOUNDS.max.x);
+	std::uniform_real_distribution<float> dis_y(board->BOUNDS.min.y, board->BOUNDS.max.y);
+	std::uniform_int_distribution<uint8_t> color_dist;
+	// spawn factions
+	for (int i = 0; i < 100; i++) {
+		glm::vec2 point = { dis_x(gen), dis_y(gen) };
+		const auto &tile = board->tile_at(point);
+		if (tile) {
+			if (tile->relief == ReliefType::LOWLAND || tile->relief == ReliefType::HILLS) {
+
+				auto search = faction_controller.tile_owners.find(tile->index);
+				if (search == faction_controller.tile_owners.end()) {
+
+					auto faction = std::make_unique<Faction>(faction_controller.factions.size() + 1);
+					
+					FactionColor color = { color_dist(gen), color_dist(gen), color_dist(gen) };
+					faction->set_color(color);
+					faction_controller.tile_owners[tile->index] = faction->ID();
+					faction_controller.factions.push_back(std::move(faction));
+				}
+			}
+		}
+	}
+
 	meeple_controller.player = std::make_unique<Meeple>();
 	meeple_controller.player->teleport(glm::vec2(512.f));
 	meeple_controller.player->set_speed(10.f);
 	meeple_controller.player->set_name("Player Army");
 
 	// add meeples
-	std::mt19937 gen(seed);
-	std::uniform_real_distribution<float> dis_x(board->BOUNDS.min.x, board->BOUNDS.max.x);
-	std::uniform_real_distribution<float> dis_y(board->BOUNDS.min.y, board->BOUNDS.max.y);
 	
 	for (int i = 0; i < 100; i++) {
 		glm::vec2 point = { dis_x(gen), dis_y(gen) };
@@ -180,6 +202,16 @@ void Campaign::prepare_graphics()
 		auto visibility = meeple->visibility();
 		debugger->add_sphere(visibility->form(), visibility->transform());
 	}
+
+	// color map factions
+	for (auto &tile : faction_controller.tile_owners) {
+		uint32_t ID = tile.first;
+		auto faction_color = faction_controller.factions[tile.second - 1]->color(); // FIXME use lookup
+		glm::vec3 color = { faction_color.red / 255.f, faction_color.green / 255.f, faction_color.blue / 255.f };
+		board->color_tile(ID, color);
+	}
+
+	board->update_model();
 }
 	
 void Campaign::clear()
@@ -236,6 +268,22 @@ void Campaign::update(float delta)
 		board->find_path(chase->chaser->position(), chase->target->position(), nodes);
 		chase->chaser->set_path(nodes);
 	}
+
+	// battle triggers
+	std::vector<Meeple*> losers;
+	for (auto &chase : meeple_controller.chases) {
+		float dist = glm::distance(chase->chaser->position(), chase->target->position());
+		if (dist < 1.f) {
+			chase->finished = true;
+			losers.push_back(chase->target);
+		}
+	}
+
+	for (int i = 0; i < losers.size(); i++) {
+		if (losers[i] != meeple_controller.player.get()) {
+			remove_meeple(losers[i]);
+		}
+	}
 	
 	debugger->update(camera);
 }
@@ -255,4 +303,19 @@ void Campaign::display()
 	if (display_debug) {
 		debugger->display_wireframe();
 	}
+}
+	
+void Campaign::remove_meeple(Meeple *meeple)
+{
+	physics.remove_object(meeple->trigger()->ghost_object());
+	physics.remove_object(meeple->visibility()->ghost_object());
+
+	auto duck_model = MediaManager::load_model("media/models/duck.glb");
+	auto duck_object = scene->find_object(duck_model);
+	duck_object->remove_transform(meeple->transform());
+
+	debugger->remove_transform(meeple->trigger()->transform());
+	debugger->remove_transform(meeple->visibility()->transform());
+
+	meeple_controller.remove_meeple(meeple);
 }
