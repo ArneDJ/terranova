@@ -72,6 +72,8 @@ void Campaign::load(const std::string &filepath)
 		archive(camera);
 		archive(meeple_controller.player);
 		archive(meeple_controller.meeples);
+		archive(faction_controller.factions);
+		archive(faction_controller.tile_owners);
 	} else {
 		LOG_F(ERROR, "Game loading error: could not open save file %s", filepath.c_str());
 	}
@@ -88,6 +90,8 @@ void Campaign::save(const std::string &filepath)
 		archive(camera);
 		archive(meeple_controller.player);
 		archive(meeple_controller.meeples);
+		archive(faction_controller.factions);
+		archive(faction_controller.tile_owners);
 	} else {
 		LOG_F(ERROR, "Game saving error: could not open save file %s", filepath.c_str());
 	}
@@ -111,11 +115,13 @@ void Campaign::generate(int seed)
 				auto search = faction_controller.tile_owners.find(tile->index);
 				if (search == faction_controller.tile_owners.end()) {
 
-					auto faction = std::make_unique<Faction>(faction_controller.factions.size() + 1);
+					auto faction = std::make_unique<Faction>();
+					faction->set_ID(faction_controller.factions.size() + 1);
 					
 					FactionColor color = { color_dist(gen), color_dist(gen), color_dist(gen) };
 					faction->set_color(color);
 					faction_controller.tile_owners[tile->index] = faction->ID();
+					faction->frontier_tiles.push_back(tile->index);
 					faction_controller.factions.push_back(std::move(faction));
 				}
 			}
@@ -127,33 +133,20 @@ void Campaign::generate(int seed)
 	meeple_controller.player->set_speed(10.f);
 	meeple_controller.player->set_name("Player Army");
 
-	// add meeples
-	
-	for (int i = 0; i < 100; i++) {
-		glm::vec2 point = { dis_x(gen), dis_y(gen) };
-		const auto &tile = board->tile_at(point);
-		if (tile) {
-			if (tile->relief == ReliefType::LOWLAND || tile->relief == ReliefType::HILLS) {
-				auto meeple = std::make_unique<Meeple>();
-				meeple->teleport(point);
-				meeple->set_name("Testificate Army");
-				meeple_controller.meeples.push_back(std::move(meeple));
-			}
-		}
-	}
+	// prepare camera
+	camera.position = meeple_controller.player->transform()->position + glm::vec3(0.f, 10.f, -10.f);
+	camera.target(meeple_controller.player->transform()->position);
 }
 	
 void Campaign::prepare()
 {
-	// prepare camera
-	camera.position = meeple_controller.player->transform()->position + glm::vec3(0.f, 10.f, -10.f);
-	camera.target(meeple_controller.player->transform()->position);
+	faction_controller.time_slot = 0.f;
 
 	meeple_controller.player->sync();
 	for (auto &meeple : meeple_controller.meeples) {
 		meeple->sync();
 	}
-	
+
 	prepare_collision();
 
 	prepare_graphics();
@@ -262,29 +255,23 @@ void Campaign::update(float delta)
 
 	meeple_controller.update(delta);
 
-	if (meeple_controller.chases.size() > 0 && meeple_controller.chase_time_slice == 0.f) {
-		auto &chase = *meeple_controller.current_chase;
-		std::list<glm::vec2> nodes;
-		board->find_path(chase->chaser->position(), chase->target->position(), nodes);
-		chase->chaser->set_path(nodes);
+	faction_controller.time_slot += delta;
+	if (faction_controller.time_slot > 10.f) {
+		faction_controller.time_slot = 0.f;
+		auto &atlas = board->atlas();
+		for (auto &faction : faction_controller.factions) {
+			std::vector<uint32_t> changed_tiles;
+			atlas.expand_frontier(faction->frontier_tiles, faction->ID(), 2, changed_tiles);
+			for (auto &tile : changed_tiles) {
+				faction_controller.tile_owners[tile] = faction->ID();
+				auto faction_color = faction->color();			
+				glm::vec3 color = { faction_color.red / 255.f, faction_color.green / 255.f, faction_color.blue / 255.f };
+				board->color_tile(tile, color);
+			}
+		}
+		board->update_model();
 	}
 
-	// battle triggers
-	std::vector<Meeple*> losers;
-	for (auto &chase : meeple_controller.chases) {
-		float dist = glm::distance(chase->chaser->position(), chase->target->position());
-		if (dist < 1.f) {
-			chase->finished = true;
-			losers.push_back(chase->target);
-		}
-	}
-
-	for (int i = 0; i < losers.size(); i++) {
-		if (losers[i] != meeple_controller.player.get()) {
-			remove_meeple(losers[i]);
-		}
-	}
-	
 	debugger->update(camera);
 }
 	

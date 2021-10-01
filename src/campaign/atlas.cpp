@@ -170,3 +170,47 @@ void Atlas::occupy_tiles(uint32_t start, uint32_t occupier, uint32_t radius, std
 		}
 	}
 }
+
+void Atlas::expand_frontier(std::vector<uint32_t> &frontier, uint32_t occupier, uint32_t radius, std::vector<uint32_t> &changed_tiles)
+{
+	std::vector<uint32_t> new_frontier;
+
+	std::unordered_map<uint32_t, bool> visited;
+	std::unordered_map<uint32_t, uint32_t> depth;
+	std::queue<Tile*> nodes;
+	
+	for (const auto &index : frontier) {
+		visited[index] = true;
+		depth[index] = 0;
+		Tile *node = &m_tiles[index]; // TODO safe check
+		nodes.push(node);
+	}
+
+	while (!nodes.empty()) {
+		Tile *node = nodes.front();
+		nodes.pop();
+		node->occupier = occupier;
+		changed_tiles.push_back(node->index);
+		uint32_t layer = depth[node->index] + 1;
+		if (layer < radius) {
+			auto &cell = m_graph.cells[node->index];
+			for (const auto &neighbor : cell.neighbors) {
+				Tile *neighbor_tile = &m_tiles[neighbor->index];
+				auto search = visited.find(neighbor->index);
+				if (search == visited.end()) {
+					visited[neighbor->index] = true;
+					depth[neighbor->index] = layer;
+					bool valid_relief = neighbor_tile->relief == ReliefType::LOWLAND || neighbor_tile->relief == ReliefType::HILLS;
+					bool can_occupy = neighbor_tile->occupier == 0;
+					if (can_occupy && valid_relief) {
+						nodes.push(neighbor_tile);
+					}
+				}
+			}
+		} else if (layer == radius) {
+			new_frontier.push_back(node->index);
+		}
+	}
+
+	frontier = new_frontier;
+}

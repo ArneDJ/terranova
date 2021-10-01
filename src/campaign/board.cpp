@@ -98,7 +98,7 @@ void BoardMesh::color_tile(uint32_t tile, const glm::vec3 &color)
 	auto search = m_tile_vertices.find(tile);
 	if (search != m_tile_vertices.end()) {
 		for (const auto &index : search->second) {
-			m_vertices[index].color *= color;
+			m_vertices[index].color = color;
 		}
 	}
 }

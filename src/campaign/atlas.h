@@ -57,6 +57,7 @@ class Atlas {
 public:
 	void generate(int seed, const geom::Rectangle &bounds, const AtlasParameters &parameters);
 	void occupy_tiles(uint32_t start, uint32_t occupier, uint32_t radius, std::vector<uint32_t> &occupied_tiles);
+	void expand_frontier(std::vector<uint32_t> &frontier, uint32_t occupier, uint32_t radius, std::vector<uint32_t> &changed_tiles);
 public:
 	const geom::VoronoiGraph& graph() const;
 	const std::vector<Tile>& tiles() const;
