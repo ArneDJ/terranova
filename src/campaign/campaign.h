@@ -15,7 +15,7 @@ public:
 	std::unique_ptr<gfx::SceneGroup> scene;
 	Marker marker;
 	MeepleController meeple_controller;
-	std::unordered_map<uint32_t, std::unique_ptr<Settlement>> settlements;
+	SettlementController settlement_controller;
 	FactionController faction_controller;
 public:
 	bool display_debug = false;

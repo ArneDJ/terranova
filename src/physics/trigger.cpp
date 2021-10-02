@@ -40,7 +40,7 @@ void TriggerSphere::set_position(const glm::vec3 &position)
 geom::Sphere TriggerSphere::form() const
 {
 	geom::Sphere sphere = {
-		m_transform->position,
+		glm::vec3(0.f),
 		m_shape->getRadius()
 	};
 

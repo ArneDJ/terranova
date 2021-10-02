@@ -7,9 +7,23 @@ public:
 public:
 	void set_position(const glm::vec3 &position);
 	void set_faction(uint32_t faction);
+	void sync();
 public:
 	const geom::Transform* transform() const;
+	const fysx::TriggerSphere* trigger() const;
+public:
+	template <class Archive>
+	void serialize(Archive &archive)
+	{
+		archive(m_faction, m_transform->position, m_transform->rotation, m_transform->scale);
+	}
 private:
 	std::unique_ptr<geom::Transform> m_transform;
+	std::unique_ptr<fysx::TriggerSphere> m_trigger;
 	uint32_t m_faction = 0;
+};
+
+class SettlementController {
+public:
+	std::vector<std::unique_ptr<Settlement>> settlements;
 };

@@ -74,6 +74,7 @@ void Campaign::load(const std::string &filepath)
 		archive(meeple_controller.meeples);
 		archive(faction_controller.factions);
 		archive(faction_controller.tile_owners);
+		archive(settlement_controller.settlements);
 	} else {
 		LOG_F(ERROR, "Game loading error: could not open save file %s", filepath.c_str());
 	}
@@ -92,6 +93,7 @@ void Campaign::save(const std::string &filepath)
 		archive(meeple_controller.meeples);
 		archive(faction_controller.factions);
 		archive(faction_controller.tile_owners);
+		archive(settlement_controller.settlements);
 	} else {
 		LOG_F(ERROR, "Game saving error: could not open save file %s", filepath.c_str());
 	}
@@ -122,7 +124,14 @@ void Campaign::generate(int seed)
 					faction->set_color(color);
 					faction_controller.tile_owners[tile->index] = faction->ID();
 					faction->frontier_tiles.push_back(tile->index);
+
+					auto settlement = std::make_unique<Settlement>();
+					glm::vec2 center = board->tile_center(tile->index);
+					settlement->set_position(glm::vec3(center.x, 0.f, center.y));
+					settlement->set_faction(faction->ID());
+
 					faction_controller.factions.push_back(std::move(faction));
+					settlement_controller.settlements.push_back(std::move(settlement));
 				}
 			}
 		}
@@ -147,6 +156,10 @@ void Campaign::prepare()
 		meeple->sync();
 	}
 
+	for (auto &settlement : settlement_controller.settlements) {
+		settlement->sync();
+	}
+
 	prepare_collision();
 
 	prepare_graphics();
@@ -164,6 +177,11 @@ void Campaign::prepare_collision()
 		physics.add_object(trigger->ghost_object(), COLLISION_GROUP_INTERACTION, meeple_mask);
 		auto visibility = meeple->visibility();
 		physics.add_object(visibility->ghost_object(), COLLISION_GROUP_VISIBILITY, COLLISION_GROUP_INTERACTION);
+	}
+
+	for (auto &settlement : settlement_controller.settlements) {
+		auto trigger = settlement->trigger();
+		physics.add_object(trigger->ghost_object(), COLLISION_GROUP_INTERACTION, meeple_mask);
 	}
 	
 	// add physical objects
@@ -196,6 +214,14 @@ void Campaign::prepare_graphics()
 		debugger->add_sphere(visibility->form(), visibility->transform());
 	}
 
+	auto cylinder_model = MediaManager::load_model("media/models/primitives/cylinder.glb");
+	auto cylinder_object = scene->find_object(cylinder_model);
+	for (auto &settlement : settlement_controller.settlements) {
+		cylinder_object->add_transform(settlement->transform());
+		auto trigger = settlement->trigger();
+		debugger->add_sphere(trigger->form(), trigger->transform());
+	}
+
 	// color map factions
 	for (auto &tile : faction_controller.tile_owners) {
 		uint32_t ID = tile.first;
@@ -220,6 +246,10 @@ void Campaign::clear()
 	// clear entities
 	meeple_controller.clear();
 	meeple_controller.player = std::make_unique<Meeple>();
+
+	faction_controller.clear();
+
+	settlement_controller.settlements.clear();
 }
 
 void Campaign::update(float delta)

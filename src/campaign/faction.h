@@ -36,4 +36,10 @@ public:
 	std::unordered_map<uint32_t, uint32_t> tile_owners; // left: tile ID, right: faction ID, 0 means tile is not occupied by a faction
 	std::vector<std::unique_ptr<Faction>> factions;
 	float time_slot = 0.f;
+public:
+	void clear()
+	{
+		tile_owners.clear();
+		factions.clear();
+	}
 };
