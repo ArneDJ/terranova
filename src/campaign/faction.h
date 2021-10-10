@@ -7,8 +7,6 @@ struct FactionColor {
 
 class Faction {
 public:
-	std::vector<uint32_t> frontier_tiles;
-public:
 	uint32_t ID() const { return m_ID; };
 	FactionColor color() const { return m_color; };
 public:
@@ -24,9 +22,10 @@ public:
 	template <class Archive>
 	void serialize(Archive &archive)
 	{
-		archive(m_ID, m_color.red, m_color.green, m_color.blue, frontier_tiles);
+		archive(m_ID, m_color.red, m_color.green, m_color.blue, m_desired_tiles);
 	}
 private:
+	std::vector<uint32_t> m_desired_tiles; // desired tiles to build settlements
 	uint32_t m_ID = 0;
 	FactionColor m_color = {};
 };
@@ -36,6 +35,12 @@ public:
 	std::unordered_map<uint32_t, uint32_t> tile_owners; // left: tile ID, right: faction ID, 0 means tile is not occupied by a faction
 	std::vector<std::unique_ptr<Faction>> factions;
 	float time_slot = 0.f;
+public:
+	template <class Archive>
+	void serialize(Archive &archive)
+	{
+		archive(factions, tile_owners);
+	}
 public:
 	void clear()
 	{

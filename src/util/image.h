@@ -54,6 +54,16 @@ public:
 
 		return m_raster[index];
 	}
+	T sample_relative(float x, float y, uint8_t channel) const
+	{
+		return sample(x * m_width, y * m_height, channel);
+	}
+public:
+	template <class Archive>
+	void serialize(Archive &archive)
+	{
+		archive(m_width, m_height, m_channels, m_raster);
+	}
 public:
 	uint8_t channels() const { return m_channels; }
 	uint16_t width() const { return m_width; }

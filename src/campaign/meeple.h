@@ -48,6 +48,7 @@ public:
 	void set_speed(float speed);
 	void set_path(const std::list<glm::vec2> &nodes);
 	void set_state(MeepleState state) { m_state = state; }
+	void set_vertical_offset(float offset);
 public:
 	void add_troops(uint32_t troop_type, int count);
 public:

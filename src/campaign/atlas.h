@@ -55,6 +55,8 @@ struct AtlasParameters {
 // generates a tile map with geography data (relief, temperatures, ...)
 class Atlas {
 public:
+	Atlas();
+public:
 	void generate(int seed, const geom::Rectangle &bounds, const AtlasParameters &parameters);
 	void occupy_tiles(uint32_t start, uint32_t occupier, uint32_t radius, std::vector<uint32_t> &occupied_tiles);
 	void expand_frontier(std::vector<uint32_t> &frontier, uint32_t occupier, uint32_t radius, std::vector<uint32_t> &changed_tiles);
@@ -63,19 +65,21 @@ public:
 	const std::vector<Tile>& tiles() const;
 	const std::vector<Corner>& corners() const;
 	const std::vector<Border>& borders() const;
+	const util::Image<uint8_t>& heightmap() const;
 	const Tile* tile_at(const glm::vec2 &position) const;
 	glm::vec2 tile_center(uint32_t index) const;
 public:
 	template <class Archive>
 	void serialize(Archive &archive)
 	{
-		archive(m_graph, m_tiles, m_corners, m_borders);
+		archive(m_graph, m_tiles, m_corners, m_borders, m_heightmap);
 	}
 private:
 	geom::VoronoiGraph m_graph;
 	std::vector<Tile> m_tiles;
 	std::vector<Corner> m_corners;
 	std::vector<Border> m_borders;
+	util::Image<uint8_t> m_heightmap;
 private:
 	void clear();
 };

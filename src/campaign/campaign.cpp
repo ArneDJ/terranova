@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <list>
 #include <memory>
+#include <queue>
 #include <random>
 #include <fstream>
 #include <SDL2/SDL.h>
@@ -31,6 +32,7 @@
 #include "../graphics/shader.h"
 #include "../graphics/mesh.h"
 #include "../graphics/model.h"
+#include "../graphics/texture.h"
 #include "../graphics/scene.h"
 #include "../physics/physical.h"
 #include "../physics/heightfield.h"
@@ -72,8 +74,7 @@ void Campaign::load(const std::string &filepath)
 		archive(camera);
 		archive(meeple_controller.player);
 		archive(meeple_controller.meeples);
-		archive(faction_controller.factions);
-		archive(faction_controller.tile_owners);
+		archive(faction_controller);
 		archive(settlement_controller.settlements);
 	} else {
 		LOG_F(ERROR, "Game loading error: could not open save file %s", filepath.c_str());
@@ -91,8 +92,7 @@ void Campaign::save(const std::string &filepath)
 		archive(camera);
 		archive(meeple_controller.player);
 		archive(meeple_controller.meeples);
-		archive(faction_controller.factions);
-		archive(faction_controller.tile_owners);
+		archive(faction_controller);
 		archive(settlement_controller.settlements);
 	} else {
 		LOG_F(ERROR, "Game saving error: could not open save file %s", filepath.c_str());
@@ -107,35 +107,6 @@ void Campaign::generate(int seed)
 	std::uniform_real_distribution<float> dis_x(board->BOUNDS.min.x, board->BOUNDS.max.x);
 	std::uniform_real_distribution<float> dis_y(board->BOUNDS.min.y, board->BOUNDS.max.y);
 	std::uniform_int_distribution<uint8_t> color_dist;
-	// spawn factions
-	for (int i = 0; i < 100; i++) {
-		glm::vec2 point = { dis_x(gen), dis_y(gen) };
-		const auto &tile = board->tile_at(point);
-		if (tile) {
-			if (tile->relief == ReliefType::LOWLAND || tile->relief == ReliefType::HILLS) {
-
-				auto search = faction_controller.tile_owners.find(tile->index);
-				if (search == faction_controller.tile_owners.end()) {
-
-					auto faction = std::make_unique<Faction>();
-					faction->set_ID(faction_controller.factions.size() + 1);
-					
-					FactionColor color = { color_dist(gen), color_dist(gen), color_dist(gen) };
-					faction->set_color(color);
-					faction_controller.tile_owners[tile->index] = faction->ID();
-					faction->frontier_tiles.push_back(tile->index);
-
-					auto settlement = std::make_unique<Settlement>();
-					glm::vec2 center = board->tile_center(tile->index);
-					settlement->set_position(glm::vec3(center.x, 0.f, center.y));
-					settlement->set_faction(faction->ID());
-
-					faction_controller.factions.push_back(std::move(faction));
-					settlement_controller.settlements.push_back(std::move(settlement));
-				}
-			}
-		}
-	}
 
 	meeple_controller.player = std::make_unique<Meeple>();
 	meeple_controller.player->teleport(glm::vec2(512.f));
@@ -187,7 +158,7 @@ void Campaign::prepare_collision()
 	// add physical objects
 	int group = COLLISION_GROUP_HEIGHTMAP;
 	int mask = COLLISION_GROUP_RAY;
-	physics.add_body(board->height_field().body(), group, mask);
+	physics.add_object(board->height_field()->object(), group, mask);
 }
 
 void Campaign::prepare_graphics()
@@ -220,14 +191,6 @@ void Campaign::prepare_graphics()
 		cylinder_object->add_transform(settlement->transform());
 		auto trigger = settlement->trigger();
 		debugger->add_sphere(trigger->form(), trigger->transform());
-	}
-
-	// color map factions
-	for (auto &tile : faction_controller.tile_owners) {
-		uint32_t ID = tile.first;
-		auto faction_color = faction_controller.factions[tile.second - 1]->color(); // FIXME use lookup
-		glm::vec3 color = { faction_color.red / 255.f, faction_color.green / 255.f, faction_color.blue / 255.f };
-		board->color_tile(ID, color);
 	}
 
 	board->update_model();
@@ -285,22 +248,11 @@ void Campaign::update(float delta)
 
 	meeple_controller.update(delta);
 
-	faction_controller.time_slot += delta;
-	if (faction_controller.time_slot > 10.f) {
-		faction_controller.time_slot = 0.f;
-		auto &atlas = board->atlas();
-		for (auto &faction : faction_controller.factions) {
-			std::vector<uint32_t> changed_tiles;
-			atlas.expand_frontier(faction->frontier_tiles, faction->ID(), 2, changed_tiles);
-			for (auto &tile : changed_tiles) {
-				faction_controller.tile_owners[tile] = faction->ID();
-				auto faction_color = faction->color();			
-				glm::vec3 color = { faction_color.red / 255.f, faction_color.green / 255.f, faction_color.blue / 255.f };
-				board->color_tile(tile, color);
-			}
-		}
-		board->update_model();
-	}
+	glm::vec2 player_position = meeple_controller.player->position();
+	glm::vec3 origin = { player_position.x, 128.f, player_position.y };
+	glm::vec3 end = { player_position.x, 0.f, player_position.y };
+	auto result = physics.cast_ray(origin, end, COLLISION_GROUP_HEIGHTMAP);
+	meeple_controller.player->set_vertical_offset(result.point.y);
 
 	debugger->update(camera);
 }

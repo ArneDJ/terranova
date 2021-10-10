@@ -17,6 +17,7 @@
 #include "../util/image.h"
 #include "../graphics/mesh.h"
 #include "../graphics/shader.h"
+#include "../graphics/texture.h"
 #include "../physics/physical.h"
 #include "../physics/heightfield.h"
 
@@ -103,9 +104,16 @@ void BoardMesh::color_tile(uint32_t tile, const glm::vec3 &color)
 	}
 }
 
-BoardModel::BoardModel(const gfx::Shader *shader)
+BoardModel::BoardModel(const gfx::Shader *shader, const util::Image<uint8_t> &heightmap)
 {
 	m_shader = shader;
+
+	m_texture.create(heightmap);
+}
+	
+void BoardModel::set_scale(const glm::vec3 &scale)
+{
+	m_scale = scale;
 }
 
 void BoardModel::reload(const Atlas &atlas)
@@ -131,6 +139,8 @@ void BoardModel::reload(const Atlas &atlas)
 	}
 
 	m_mesh.create();
+	
+	m_texture.reload(atlas.heightmap());
 }
 	
 void BoardModel::color_tile(uint32_t tile, const glm::vec3 &color)
@@ -147,13 +157,17 @@ void BoardModel::display(const util::Camera &camera) const
 {
 	m_shader->use();
 	m_shader->uniform_mat4("CAMERA_VP", camera.VP);
+	m_shader->uniform_vec3("MAP_SCALE", m_scale);
+	
+	m_texture.bind(GL_TEXTURE0);
 
 	m_mesh.draw();
 }
 	
 Board::Board(const gfx::Shader *tilemap)
-	: m_model(tilemap)
+	: m_model(tilemap, m_atlas.heightmap())
 {
+	m_height_field = std::make_unique<fysx::HeightField>(m_atlas.heightmap(), SCALE);
 }
 	
 void Board::generate(int seed)
@@ -169,6 +183,7 @@ void Board::generate(int seed)
 void Board::reload()
 {
 	m_model.reload(m_atlas);
+	m_model.set_scale(SCALE);
 }
 	
 void Board::color_tile(uint32_t tile, const glm::vec3 &color)
@@ -190,9 +205,9 @@ void Board::display_wireframe(const util::Camera &camera)
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 	
-fysx::PlaneField& Board::height_field()
+fysx::HeightField* Board::height_field()
 {
-	return m_height_field;
+	return m_height_field.get();
 }
 	
 const util::Navigation& Board::navigation() const

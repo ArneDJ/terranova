@@ -8,7 +8,7 @@ out vec3 tesscolor[];
 
 void main(void)
 {
-	float detail = 1;
+	float detail = 2;
 	if (gl_InvocationID == 0) {
 		gl_TessLevelOuter[0] = detail;
 		gl_TessLevelOuter[1] = detail;

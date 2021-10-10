@@ -13,9 +13,15 @@
 #include "../geometry/geometry.h"
 #include "../geometry/voronoi.h"
 #include "../geometry/transform.h"
+#include "../util/image.h"
 
 #include "atlas.h"
 	
+Atlas::Atlas()
+{
+	m_heightmap.resize(1024, 1024, util::COLORSPACE_GRAYSCALE);
+}
+
 void Atlas::generate(int seed, const geom::Rectangle &bounds, const AtlasParameters &parameters)
 {
 	// clear all data
@@ -67,12 +73,20 @@ void Atlas::generate(int seed, const geom::Rectangle &bounds, const AtlasParamet
 	fastnoise.SetPerturbFrequency(parameters.perturb_frequency);
 	fastnoise.SetGradientPerturbAmp(parameters.perturb_amp);
 
+	for (int i = 0; i < m_heightmap.width(); i++) {
+		for (int j = 0; j < m_heightmap.height(); j++) {
+			float x = i; float y = j;
+			fastnoise.GradientPerturbFractal(x, y);
+			float height = 0.5f * (fastnoise.GetNoise(x, y) + 1.f);
+			m_heightmap.plot(i, j, util::CHANNEL_RED, 255 * height);
+		}
+	}
+
 	for (auto &tile : m_tiles) {
 		glm::vec2 center = m_graph.cells[tile.index].center;
-		float x = center.x; float y = center.y;
-		fastnoise.GradientPerturbFractal(x, y);
-		float height = 0.5f * (fastnoise.GetNoise(x, y) + 1.f);
-		tile.height = 255 * height;
+		float x = center.x / bounds.max.x; 
+		float y = center.y / bounds.max.y;
+		tile.height = m_heightmap.sample_relative(x, y, util::CHANNEL_RED);
 		if (tile.height > parameters.mountains) {
 			tile.relief = ReliefType::MOUNTAINS;
 		} else if (tile.height > parameters.hills) {
@@ -92,6 +106,8 @@ void Atlas::clear()
 	m_borders.clear();
 
 	m_graph.clear();
+
+	m_heightmap.wipe();
 }
 	
 const geom::VoronoiGraph& Atlas::graph() const
@@ -114,6 +130,11 @@ const std::vector<Border>& Atlas::borders() const
 	return m_borders;
 }
 	
+const util::Image<uint8_t>& Atlas::heightmap() const
+{
+	return m_heightmap;
+}
+
 const Tile* Atlas::tile_at(const glm::vec2 &position) const
 {
 	auto search = m_graph.cell_at(position);

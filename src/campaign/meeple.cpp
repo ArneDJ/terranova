@@ -112,6 +112,17 @@ void Meeple::set_path(const std::list<glm::vec2> &nodes)
 	m_path_finder.set_nodes(nodes);
 }
 
+void Meeple::set_vertical_offset(float offset)
+{
+	m_transform->position.y = offset;
+
+	// FIXME autocalculate this
+	glm::vec3 trigger_position = m_transform->position;
+	trigger_position.y += 1.f;
+	m_trigger->set_position(trigger_position);
+	m_visibility->set_position(trigger_position);
+}
+
 void Meeple::update(float delta)
 {
 	m_path_finder.update(delta, m_speed);

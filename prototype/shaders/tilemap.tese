@@ -33,7 +33,7 @@ void main(void)
 
 	tesseval.texcoord = position.xz / MAP_SCALE.xz;
 
-	//position.y = MAP_SCALE.y * texture(DISPLACEMENT, tesseval.texcoord).r;
+	position.y = MAP_SCALE.y * texture(DISPLACEMENT, tesseval.texcoord).r;
 
 	tesseval.position = position.xyz;
 

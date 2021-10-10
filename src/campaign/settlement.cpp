@@ -28,8 +28,15 @@ void Settlement::sync()
 {
 	m_trigger->set_position(m_transform->position);
 }
+	
+void Settlement::expand_radius()
+{
+	m_tile_radius++;
+}
 
 const fysx::TriggerSphere* Settlement::trigger() const { return m_trigger.get(); }
+	
+uint32_t Settlement::radius() const { return m_tile_radius; }
 
 void Settlement::set_position(const glm::vec3 &position)
 {

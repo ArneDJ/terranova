@@ -24,8 +24,9 @@ private:
 
 class BoardModel {
 public:
-	BoardModel(const gfx::Shader *shader);
+	BoardModel(const gfx::Shader *shader, const util::Image<uint8_t> &heightmap);
 public:
+	void set_scale(const glm::vec3 &scale);
 	void reload(const Atlas &atlas);
 	void color_tile(uint32_t tile, const glm::vec3 &color);
 	void update_mesh();
@@ -33,7 +34,9 @@ public:
 	void display(const util::Camera &camera) const;
 private:
 	const gfx::Shader *m_shader = nullptr;
+	glm::vec3 m_scale = { 1.f, 1.f, 1.f };
 	BoardMesh m_mesh;
+	gfx::Texture m_texture;
 };
 
 class Board {
@@ -41,13 +44,14 @@ public:
 	Board(const gfx::Shader *tilemap);
 public:
 	const geom::Rectangle BOUNDS = { { 0.F, 0.F }, { 1024.F, 1024.F } };
+	const glm::vec3 SCALE = { 1024.f, 16.f, 1024.f };
 public:
 	void generate(int seed);
 	void reload();
 	void update_model();
 	void color_tile(uint32_t tile, const glm::vec3 &color);
 public:
-	fysx::PlaneField& height_field();
+	fysx::HeightField* height_field();
 	const util::Navigation& navigation() const;
 	const Atlas& atlas() const { return m_atlas; }
 	Atlas& atlas() { return m_atlas; }
@@ -73,7 +77,7 @@ private:
 	int m_seed;
 	Atlas m_atlas;
 	BoardModel m_model;
-	fysx::PlaneField m_height_field;
+	std::unique_ptr<fysx::HeightField> m_height_field;
 	util::Navigation m_land_navigation;
 private:
 	void build_navigation();
