@@ -2,6 +2,7 @@
 #include <vector>
 #include <chrono>
 #include <memory>
+#include <unordered_map>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>

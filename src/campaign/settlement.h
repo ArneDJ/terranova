@@ -67,5 +67,12 @@ private:
 
 class SettlementController {
 public:
-	//std::vector<std::unique_ptr<Settlement>> settlements;
+	std::unordered_map<uint32_t, std::unique_ptr<Town>> towns;
+	std::unordered_map<uint32_t, std::unique_ptr<County>> counties;
+public:
+	template <class Archive>
+	void serialize(Archive &archive)
+	{
+		archive(towns, counties);
+	}
 };

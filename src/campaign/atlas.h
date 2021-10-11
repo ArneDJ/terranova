@@ -20,7 +20,6 @@ struct Tile {
 	uint32_t index;
 	uint8_t height = 0;
 	ReliefType relief = ReliefType::SEABED;
-	uint32_t occupier = 0; // faction ID of occupier, 0 means unoccupied
 };
 
 template <class Archive>
@@ -38,7 +37,7 @@ void serialize(Archive &archive, Corner &corner)
 template <class Archive>
 void serialize(Archive &archive, Tile &tile)
 {
-	archive(tile.index, tile.height, tile.relief, tile.occupier);
+	archive(tile.index, tile.height, tile.relief);
 }
 
 struct AtlasParameters {
@@ -58,7 +57,6 @@ public:
 	Atlas();
 public:
 	void generate(int seed, const geom::Rectangle &bounds, const AtlasParameters &parameters);
-	void occupy_tiles(uint32_t start, uint32_t occupier, uint32_t radius, std::vector<uint32_t> &occupied_tiles);
 public:
 	const geom::VoronoiGraph& graph() const;
 	const std::vector<Tile>& tiles() const;

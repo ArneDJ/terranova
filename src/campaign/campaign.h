@@ -33,8 +33,7 @@ public:
 	void update(float delta);
 	void display();
 private:
-	void prepare_collision();
-	void prepare_graphics();
+	void add_meeple(Meeple *meeple);
 private:
 	float vertical_offset(const glm::vec2 &position);
 };

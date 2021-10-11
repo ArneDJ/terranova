@@ -77,7 +77,7 @@ void Campaign::load(const std::string &filepath)
 		archive(meeple_controller.player);
 		archive(meeple_controller.meeples);
 		archive(faction_controller);
-		//archive(settlement_controller.settlements);
+		archive(settlement_controller);
 	} else {
 		LOG_F(ERROR, "Game loading error: could not open save file %s", filepath.c_str());
 	}
@@ -96,7 +96,7 @@ void Campaign::save(const std::string &filepath)
 		archive(meeple_controller.player);
 		archive(meeple_controller.meeples);
 		archive(faction_controller);
-		//archive(settlement_controller.settlements);
+		archive(settlement_controller);
 	} else {
 		LOG_F(ERROR, "Game saving error: could not open save file %s", filepath.c_str());
 	}
@@ -120,63 +120,28 @@ void Campaign::generate(int seed)
 	
 void Campaign::prepare()
 {
-	// add physical objects
-	int group = COLLISION_GROUP_HEIGHTMAP;
-	int mask = COLLISION_GROUP_RAY;
-	physics.add_object(board->height_field()->object(), group, mask);
-
-	meeple_controller.player->sync();
-	for (auto &meeple : meeple_controller.meeples) {
-		meeple->sync();
-	}
-
-	prepare_collision();
-
-	prepare_graphics();
-
-	board->update();
-}
-
-void Campaign::prepare_collision()
-{
-	int meeple_mask = COLLISION_GROUP_INTERACTION | COLLISION_GROUP_VISIBILITY | COLLISION_GROUP_RAY | COLLISION_GROUP_TOWN;
-
-	physics.add_object(meeple_controller.player->trigger()->ghost_object(), COLLISION_GROUP_INTERACTION, meeple_mask);
-	physics.add_object(meeple_controller.player->visibility()->ghost_object(), COLLISION_GROUP_VISIBILITY, COLLISION_GROUP_INTERACTION);
-
-	for (auto &meeple : meeple_controller.meeples) {
-		auto trigger = meeple->trigger();
-		physics.add_object(trigger->ghost_object(), COLLISION_GROUP_INTERACTION, meeple_mask);
-		auto visibility = meeple->visibility();
-		physics.add_object(visibility->ghost_object(), COLLISION_GROUP_VISIBILITY, COLLISION_GROUP_INTERACTION);
-	}
-}
-
-void Campaign::prepare_graphics()
-{
 	board->reload();
 
 	auto cone_model = MediaManager::load_model("media/models/primitives/cone.glb");
 	auto cone_object = scene->find_object(cone_model);
 	cone_object->add_transform(marker.transform());
 
-	auto duck_model = MediaManager::load_model("media/models/duck.glb");
-	auto duck_object = scene->find_object(duck_model);
+	// add physical objects
+	int group = COLLISION_GROUP_HEIGHTMAP;
+	int mask = COLLISION_GROUP_RAY;
+	physics.add_object(board->height_field()->object(), group, mask);
 
-	duck_object->add_transform(meeple_controller.player->transform());
-	debugger->add_sphere(meeple_controller.player->trigger()->form(), meeple_controller.player->trigger()->transform());
-	debugger->add_sphere(meeple_controller.player->visibility()->form(), meeple_controller.player->visibility()->transform());
+	meeple_controller.player->sync();
+	add_meeple(meeple_controller.player.get());
 
 	for (auto &meeple : meeple_controller.meeples) {
-		duck_object->add_transform(meeple->transform());
-		// debug trigger volumes
-		auto trigger = meeple->trigger();
-		debugger->add_sphere(trigger->form(), trigger->transform());
-		auto visibility = meeple->visibility();
-		debugger->add_sphere(visibility->form(), visibility->transform());
+		meeple->sync();
+		add_meeple(meeple.get());
 	}
+
+	board->update();
 }
-	
+
 void Campaign::clear()
 {
 	// first clear the model instances
@@ -255,10 +220,28 @@ void Campaign::display()
 	
 float Campaign::vertical_offset(const glm::vec2 &position)
 {
-	glm::vec3 origin = { position.x, 128.f, position.y };
-	glm::vec3 end = { position.x, 0.f, position.y };
+	glm::vec3 origin = { position.x, 2.F * board->SCALE.y, position.y };
+	glm::vec3 end = { position.x, 0.F, position.y };
 
 	auto result = physics.cast_ray(origin, end, COLLISION_GROUP_HEIGHTMAP);
 	
 	return result.point.y;
+}
+	
+void Campaign::add_meeple(Meeple *meeple)
+{
+	int meeple_mask = COLLISION_GROUP_INTERACTION | COLLISION_GROUP_VISIBILITY | COLLISION_GROUP_RAY | COLLISION_GROUP_TOWN;
+
+	auto trigger = meeple->trigger();
+	physics.add_object(trigger->ghost_object(), COLLISION_GROUP_INTERACTION, meeple_mask);
+	auto visibility = meeple->visibility();
+	physics.add_object(visibility->ghost_object(), COLLISION_GROUP_VISIBILITY, COLLISION_GROUP_INTERACTION);
+
+	auto duck_model = MediaManager::load_model("media/models/duck.glb");
+	auto duck_object = scene->find_object(duck_model);
+	duck_object->add_transform(meeple->transform());
+
+	// debug trigger volumes
+	debugger->add_sphere(trigger->form(), trigger->transform());
+	debugger->add_sphere(visibility->form(), visibility->transform());
 }
