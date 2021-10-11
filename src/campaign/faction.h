@@ -1,16 +1,10 @@
 
-struct FactionColor {
-	uint8_t red = 0;
-	uint8_t green = 0;
-	uint8_t blue = 0;
-};
-
 class Faction {
 public:
 	uint32_t ID() const { return m_ID; };
-	FactionColor color() const { return m_color; };
+	glm::vec3 color() const { return m_color; };
 public:
-	void set_color(const FactionColor &color)
+	void set_color(const glm::vec3 &color)
 	{
 		m_color = color;
 	}
@@ -22,18 +16,18 @@ public:
 	template <class Archive>
 	void serialize(Archive &archive)
 	{
-		archive(m_ID, m_color.red, m_color.green, m_color.blue, m_desired_tiles);
+		archive(m_ID, m_color, m_desired_tiles);
 	}
 private:
 	std::vector<uint32_t> m_desired_tiles; // desired tiles to build settlements
 	uint32_t m_ID = 0;
-	FactionColor m_color = {};
+	glm::vec3 m_color = {};
 };
 
 class FactionController {
 public:
 	std::unordered_map<uint32_t, uint32_t> tile_owners; // left: tile ID, right: faction ID, 0 means tile is not occupied by a faction
-	std::vector<std::unique_ptr<Faction>> factions;
+	std::unordered_map<uint32_t, std::unique_ptr<Faction>> factions;
 	float time_slot = 0.f;
 public:
 	template <class Archive>

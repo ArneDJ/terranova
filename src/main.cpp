@@ -1,5 +1,6 @@
 #include <iostream>
 #include <list>
+#include <queue>
 #include <chrono>
 #include <SDL2/SDL.h>
 #include <GL/glew.h>

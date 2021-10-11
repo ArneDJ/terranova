@@ -36,4 +36,10 @@ private:
 	void prepare_graphics();
 private:
 	void remove_meeple(Meeple *meeple);
+	void spawn_factions(int seed);
+	void create_faction(uint32_t id, const glm::vec3 &color);
+	bool create_settlement(uint32_t tile, uint32_t faction_id);
+	void transfer_settlement(Settlement *settlement, uint32_t faction);
+	void add_settlement(Settlement *settlement);
+	float vertical_offset(const glm::vec2 &position);
 };

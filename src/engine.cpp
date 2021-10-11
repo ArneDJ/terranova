@@ -2,6 +2,7 @@
 #include <chrono>
 #include <unordered_map>
 #include <list>
+#include <queue>
 #include <memory>
 #include <random>
 #include <fstream>
@@ -22,7 +23,6 @@
 
 #include "engine.h"
 
-static bool g_generate = false;
 static const char *GAME_NAME = "terranova";
 
 bool UserDirectory::locate(const char *base)
@@ -159,10 +159,9 @@ void Engine::init_imgui()
 	
 void Engine::update_campaign_menu()
 {
-	g_generate = false;
-
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplSDL2_NewFrame(window);
+
 	ImGui::NewFrame();
 	ImGui::Begin("Campaign Debug");
 	ImGui::SetWindowSize(ImVec2(400, 300));
@@ -172,7 +171,6 @@ void Engine::update_campaign_menu()
 	ImGui::Checkbox("Show debug objects", &campaign.display_debug);
 	ImGui::Checkbox("Show world wireframe", &campaign.wireframe_worldmap);
 	ImGui::Separator();
-	if (ImGui::Button("Generate World")) { g_generate = true; }
 	if (ImGui::Button("Save World")) { 
 		campaign.save(user_dir.saves + "test.save");
 	}
@@ -180,6 +178,7 @@ void Engine::update_campaign_menu()
 	ImGui::Separator();
 	if (ImGui::Button("Exit to Title")) { state = EngineState::TITLE; }
 	if (ImGui::Button("Exit")) { state = EngineState::EXIT; }
+
 	ImGui::End();
 }
 
@@ -202,12 +201,6 @@ void Engine::run_campaign()
 
 		campaign.update(frame_timer.delta_seconds());
 	
-		if (g_generate) {
-			campaign.clear();
-			campaign.generate(distrib(gen));
-			campaign.prepare();
-		}
-
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glViewport(0, 0, video_settings.canvas.x, video_settings.canvas.y);
 

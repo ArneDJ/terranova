@@ -39,6 +39,11 @@ private:
 	gfx::Texture m_texture;
 };
 
+struct PaintJob {
+	uint32_t tile;
+	glm::vec3 color;
+};
+
 class Board {
 public:
 	Board(const gfx::Shader *tilemap);
@@ -48,8 +53,9 @@ public:
 public:
 	void generate(int seed);
 	void reload();
-	void update_model();
-	void color_tile(uint32_t tile, const glm::vec3 &color);
+	void update();
+	//void color_tile(uint32_t tile, const glm::vec3 &color);
+	void add_paint_job(uint32_t tile, const glm::vec3 &color);
 public:
 	fysx::HeightField* height_field();
 	const util::Navigation& navigation() const;
@@ -79,6 +85,7 @@ private:
 	BoardModel m_model;
 	std::unique_ptr<fysx::HeightField> m_height_field;
 	util::Navigation m_land_navigation;
+	std::queue<PaintJob> m_paint_jobs;
 private:
 	void build_navigation();
 };

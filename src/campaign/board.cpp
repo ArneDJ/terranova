@@ -2,6 +2,7 @@
 #include <random>
 #include <memory>
 #include <list>
+#include <queue>
 #include <GL/glew.h>
 #include <GL/gl.h>
 #include <glm/vec3.hpp>
@@ -186,9 +187,16 @@ void Board::reload()
 	m_model.set_scale(SCALE);
 }
 	
+/*
 void Board::color_tile(uint32_t tile, const glm::vec3 &color)
 {
 	m_model.color_tile(tile, color);
+}
+*/
+void Board::add_paint_job(uint32_t tile, const glm::vec3 &color)
+{
+	PaintJob job = { tile, color };
+	m_paint_jobs.push(job);
 }
 
 void Board::display(const util::Camera &camera)
@@ -230,9 +238,18 @@ void Board::find_path(const glm::vec2 &start, const glm::vec2 &end, std::list<gl
 	m_land_navigation.find_2D_path(start, end, path);
 }
 	
-void Board::update_model()
+void Board::update()
 {
-	m_model.update_mesh();
+	if (!m_paint_jobs.empty()) {
+		while (!m_paint_jobs.empty()) {
+			auto order = m_paint_jobs.front();
+			m_model.color_tile(order.tile, order.color);
+			m_paint_jobs.pop();
+		}
+
+		// tile colors have been changed, update mesh
+		m_model.update_mesh();
+	}
 }
 	
 void Board::build_navigation()
