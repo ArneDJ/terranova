@@ -77,7 +77,7 @@ void Campaign::load(const std::string &filepath)
 		archive(meeple_controller.player);
 		archive(meeple_controller.meeples);
 		archive(faction_controller);
-		archive(settlement_controller.settlements);
+		//archive(settlement_controller.settlements);
 	} else {
 		LOG_F(ERROR, "Game loading error: could not open save file %s", filepath.c_str());
 	}
@@ -96,7 +96,7 @@ void Campaign::save(const std::string &filepath)
 		archive(meeple_controller.player);
 		archive(meeple_controller.meeples);
 		archive(faction_controller);
-		archive(settlement_controller.settlements);
+		//archive(settlement_controller.settlements);
 	} else {
 		LOG_F(ERROR, "Game saving error: could not open save file %s", filepath.c_str());
 	}
@@ -120,8 +120,6 @@ void Campaign::generate(int seed)
 	
 void Campaign::prepare()
 {
-	faction_controller.time_slot = 0.f;
-
 	// add physical objects
 	int group = COLLISION_GROUP_HEIGHTMAP;
 	int mask = COLLISION_GROUP_RAY;
@@ -135,10 +133,6 @@ void Campaign::prepare()
 	prepare_collision();
 
 	prepare_graphics();
-
-	for (auto &settlement : settlement_controller.settlements) {
-		//add_settlement(settlement.get());
-	}
 
 	board->update();
 }
@@ -198,8 +192,6 @@ void Campaign::clear()
 	meeple_controller.player = std::make_unique<Meeple>();
 
 	faction_controller.clear();
-
-	settlement_controller.settlements.clear();
 }
 
 void Campaign::update(float delta)
@@ -235,11 +227,8 @@ void Campaign::update(float delta)
 	
 	meeple_controller.update(delta);
 
-	glm::vec2 player_position = meeple_controller.player->position();
-	glm::vec3 origin = { player_position.x, 128.f, player_position.y };
-	glm::vec3 end = { player_position.x, 0.f, player_position.y };
-	auto result = physics.cast_ray(origin, end, COLLISION_GROUP_HEIGHTMAP);
-	meeple_controller.player->set_vertical_offset(result.point.y);
+	float offset = vertical_offset(meeple_controller.player->position());
+	meeple_controller.player->set_vertical_offset(offset);
 
 	debugger->update(camera);
 

@@ -44,6 +44,7 @@ public:
 	void teleport(const glm::vec2 &position);
 	void sync();
 public:
+	void set_id(uint32_t id);
 	void set_name(const std::string &name);
 	void set_speed(float speed);
 	void set_path(const std::list<glm::vec2> &nodes);
@@ -52,6 +53,7 @@ public:
 public:
 	void add_troops(uint32_t troop_type, int count);
 public:
+	uint32_t id() const;
 	const geom::Transform* transform() const;
 	const fysx::TriggerSphere* trigger() const;
 	const fysx::TriggerSphere* visibility() const;
@@ -61,9 +63,10 @@ public:
 	template <class Archive>
 	void serialize(Archive &archive)
 	{
-		archive(m_name, m_speed, m_transform->position, m_transform->rotation, m_transform->scale);
+		archive(m_id, m_name, m_speed, m_transform->position, m_transform->rotation, m_transform->scale);
 	}
 private:
+	uint32_t m_id = 0;
 	std::string m_name = {};
 	float m_speed = 10.f;
 	MeepleState m_state = MeepleState::ROAMING;

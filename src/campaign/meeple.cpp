@@ -103,6 +103,10 @@ glm::vec2 Meeple::position() const
 	return glm::vec2(m_transform->position.x, m_transform->position.z);
 }
 
+uint32_t Meeple::id() const { return m_id; };
+
+void Meeple::set_id(uint32_t id) { m_id = id; };
+
 void Meeple::set_speed(float speed) { m_speed = speed; }
 	
 void Meeple::set_name(const std::string &name) { m_name = name; }
@@ -116,7 +120,6 @@ void Meeple::set_vertical_offset(float offset)
 {
 	m_transform->position.y = offset;
 
-	// FIXME autocalculate this
 	glm::vec3 trigger_position = m_transform->position;
 	trigger_position.y += 1.f;
 	m_trigger->set_position(trigger_position);
@@ -131,7 +134,6 @@ void Meeple::update(float delta)
 	m_transform->position.x = location.x;
 	m_transform->position.z = location.y;
 
-	// FIXME autocalculate this
 	glm::vec3 trigger_position = m_transform->position;
 	trigger_position.y += 1.f;
 	m_trigger->set_position(trigger_position);

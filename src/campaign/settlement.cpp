@@ -13,7 +13,7 @@
 
 #include "settlement.h"
 	
-Settlement::Settlement()
+Town::Town()
 {
 	m_transform = std::make_unique<geom::Transform>();
 
@@ -25,51 +25,97 @@ Settlement::Settlement()
 	m_trigger = std::make_unique<fysx::TriggerSphere>(sphere);
 	m_trigger->ghost_object()->setUserPointer(this);
 }
-	
-void Settlement::sync()
+
+uint32_t Town::id() const
 {
-	m_trigger->set_position(m_transform->position);
-}
-	
-const fysx::TriggerSphere* Settlement::trigger() const { return m_trigger.get(); }
-	
-void Settlement::set_position(const glm::vec3 &position)
-{
-	m_transform->position = position;
-	m_trigger->set_position(position);
-}
-	
-void Settlement::set_faction(uint32_t faction)
-{
-	m_faction = faction;
+	return m_id;
 }
 
-void Settlement::set_home_tile(uint32_t tile)
-{
-	m_home_tile = tile;
-}
-	
-void Settlement::add_tile(uint32_t tile)
-{
-	m_tiles.push_back(tile);
-}
-
-const geom::Transform* Settlement::transform() const
-{
-	return m_transform.get();
-}
-	
-uint32_t Settlement::faction() const
+uint32_t Town::faction() const
 {
 	return m_faction;
 }
 
-uint32_t Settlement::home_tile() const
+uint32_t Town::tile() const
 {
-	return m_home_tile;
+	return m_tile;
 }
-	
-const std::vector<uint32_t>& Settlement::tiles() const
+
+uint32_t Town::county() const
+{
+	return m_county;
+}
+
+const fysx::TriggerSphere* Town::trigger() const { return m_trigger.get(); }
+
+const geom::Transform* Town::transform() const
+{
+	return m_transform.get();
+}
+
+void Town::set_id(uint32_t id)
+{
+	m_id = id;
+	m_trigger->ghost_object()->setUserIndex(id);
+}
+
+void Town::set_faction(uint32_t faction)
+{
+	m_faction = faction;
+}
+
+void Town::set_tile(uint32_t tile)
+{
+	m_tile = tile;
+}
+
+void Town::set_county(uint32_t county)
+{
+	m_county = county;
+}
+
+void Town::set_position(const glm::vec3 &position)
+{
+	m_transform->position = position;
+	m_trigger->set_position(position);
+}
+
+uint32_t County::id() const
+{
+	return m_id;
+}
+
+uint32_t County::faction() const
+{
+	return m_faction;
+}
+
+uint32_t County::town() const
+{
+	return m_town;
+}
+
+const std::vector<uint32_t>& County::tiles() const
 {
 	return m_tiles;
+}
+
+void County::set_id(uint32_t id)
+{
+	m_id = id;
+}
+
+void County::set_faction(uint32_t faction)
+{
+	m_faction = faction;
+}
+
+void County::set_town(uint32_t town)
+{
+	m_town = town;
+}
+
+void County::add_tile(uint32_t tile)
+{
+	m_tiles.push_back(tile);
 }
