@@ -117,6 +117,15 @@ void Campaign::generate(int seed)
 
 	board->generate(seed);
 
+	const auto &atlas = board->atlas();	
+	const auto &tiles = atlas.tiles();	
+	for (const auto &tile : tiles) {
+		faction_controller.tile_owners[tile.index] = 0;
+	}
+
+	// spawn factions
+	spawn_factions(seed);
+
 	meeple_controller.player = std::make_unique<Meeple>();
 	meeple_controller.player->teleport(glm::vec2(512.f));
 	meeple_controller.player->set_speed(10.f);
@@ -141,11 +150,24 @@ void Campaign::prepare()
 	physics.add_object(board->height_field()->object(), group, mask);
 
 	meeple_controller.player->sync();
-	add_meeple(meeple_controller.player.get());
+	place_meeple(meeple_controller.player.get());
 
 	for (auto &meeple : meeple_controller.meeples) {
 		meeple->sync();
-		add_meeple(meeple.get());
+		place_meeple(meeple.get());
+	}
+
+	// place towns
+	for (auto &town : settlement_controller.towns) {
+		place_town(town.second.get());
+	}
+
+	// paint county tiles
+	for (const auto &county : settlement_controller.counties) {
+		glm::vec3 color = faction_controller.factions[county.second->faction()]->color();
+		for (const auto &tile : county.second->tiles()) {
+			board->add_paint_job(tile, color);
+		}
 	}
 
 	board->update();
@@ -166,6 +188,8 @@ void Campaign::clear()
 	meeple_controller.player = std::make_unique<Meeple>();
 
 	faction_controller.clear();
+
+	settlement_controller.clear();
 }
 
 void Campaign::update(float delta)
@@ -204,6 +228,18 @@ void Campaign::update(float delta)
 	float offset = vertical_offset(meeple_controller.player->position());
 	meeple_controller.player->set_vertical_offset(offset);
 
+	if (util::InputManager::key_pressed(SDLK_b)) { 
+		const Tile *tile = board->atlas().tile_at(meeple_controller.player->position());
+		if (tile) {
+			uint32_t id = spawn_town(tile->index, 1);
+			if (id) {
+				Town *town = settlement_controller.towns[id].get();
+				place_town(town);
+				spawn_county(town);
+			}
+		}
+	}
+
 	debugger->update(camera);
 
 	// campaign map paint jobs
@@ -237,7 +273,7 @@ float Campaign::vertical_offset(const glm::vec2 &position)
 	return result.point.y;
 }
 	
-void Campaign::add_meeple(Meeple *meeple)
+void Campaign::place_meeple(Meeple *meeple)
 {
 	int meeple_mask = COLLISION_GROUP_INTERACTION | COLLISION_GROUP_VISIBILITY | COLLISION_GROUP_RAY | COLLISION_GROUP_TOWN;
 
@@ -253,4 +289,121 @@ void Campaign::add_meeple(Meeple *meeple)
 	// debug trigger volumes
 	debugger->add_sphere(trigger->form(), trigger->transform());
 	debugger->add_sphere(visibility->form(), visibility->transform());
+}
+	
+void Campaign::spawn_factions(int seed)
+{
+	std::mt19937 gen(seed);
+	std::uniform_real_distribution<float> dis(0.2f, 1.f);
+
+	for (int i = 0; i < 10; i++) {
+		std::unique_ptr<Faction> faction = std::make_unique<Faction>();
+		auto id = id_generator.generate();
+		faction->set_id(id);
+		glm::vec3 color = { dis(gen), dis(gen), dis(gen) };
+		faction->set_color(color);
+		faction_controller.factions[id] = std::move(faction);
+	}
+}
+	
+// returns the id of the town if it could be added on an unoccupied tile
+uint32_t Campaign::spawn_town(uint32_t tile, uint32_t faction)
+{
+	auto search = faction_controller.tile_owners.find(tile);
+	if (search == faction_controller.tile_owners.end() || search->second == 0) {
+		std::unique_ptr<Town> town = std::make_unique<Town>();
+		auto id = id_generator.generate();
+		town->set_id(id);
+		town->set_faction(faction);
+		town->set_tile(tile);
+
+		auto trigger = town->trigger();
+		trigger->ghost_object()->setUserIndex(id);
+
+		settlement_controller.towns[id] = std::move(town);
+
+		faction_controller.tile_owners[tile] = faction;
+
+		return id;
+	}
+
+	return 0;
+}
+
+void Campaign::spawn_county(Town *town)
+{
+	int radius = 4;
+
+	const auto faction = town->faction();
+
+	const auto id = id_generator.generate();
+
+	std::unique_ptr<County> county = std::make_unique<County>();
+	county->set_id(id);
+	county->set_faction(faction);
+	county->set_town(town->id());
+
+	town->set_county(id);
+
+	// breadth first search
+	const auto &atlas = board->atlas();	
+	const auto &cells = atlas.graph().cells;	
+	const auto &tiles = atlas.tiles();	
+
+	std::unordered_map<uint32_t, uint32_t> depth;
+	std::queue<uint32_t> nodes;
+
+	nodes.push(town->tile());
+	depth[town->tile()] = 0;
+	faction_controller.tile_owners[town->tile()] = faction;
+
+	while (!nodes.empty()) {
+		auto node = nodes.front();
+		nodes.pop();
+		county->add_tile(node);
+		uint32_t layer = depth[node] + 1;
+		if (layer < radius) {
+			const auto &cell = cells[node];
+			for (const auto &neighbor : cell.neighbors) {
+				const Tile *tile = &tiles[neighbor->index];
+				bool valid_relief = tile->relief == ReliefType::LOWLAND || tile->relief == ReliefType::HILLS;
+				if (valid_relief) {
+					if (faction_controller.tile_owners[tile->index] == 0) {
+						depth[tile->index] = layer;
+						faction_controller.tile_owners[tile->index] = faction;
+						nodes.push(tile->index);
+					}
+				}
+			}
+		}
+	}
+
+	// add tile paint jobs
+	glm::vec3 color = faction_controller.factions[faction]->color();
+	for (const auto &tile : county->tiles()) {
+		board->add_paint_job(tile, color);
+	}
+
+	settlement_controller.counties[id] = std::move(county);
+}
+
+// place the town entity on the campaign map
+void Campaign::place_town(Town *town)
+{
+	glm::vec2 center = board->tile_center(town->tile());
+	float offset = vertical_offset(center);
+
+	town->set_position(glm::vec3(center.x, offset, center.y));
+
+	auto cylinder_model = MediaManager::load_model(module.board_module.town);
+	auto cylinder_object = scene->find_object(cylinder_model);
+	cylinder_object->add_transform(town->transform());
+
+	// debug collision
+	auto trigger = town->trigger();
+	debugger->add_sphere(trigger->form(), trigger->transform());
+
+	const int mask = COLLISION_GROUP_INTERACTION | COLLISION_GROUP_VISIBILITY | COLLISION_GROUP_RAY;
+
+	physics.add_object(trigger->ghost_object(), COLLISION_GROUP_TOWN, mask);
 }

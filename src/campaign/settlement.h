@@ -75,4 +75,10 @@ public:
 	{
 		archive(towns, counties);
 	}
+public:
+	void clear()
+	{
+		towns.clear();
+		counties.clear();
+	}
 };

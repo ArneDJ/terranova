@@ -34,7 +34,11 @@ public:
 	void update(float delta);
 	void display();
 private:
-	void add_meeple(Meeple *meeple);
+	void spawn_factions(int seed);
+	uint32_t spawn_town(uint32_t tile, uint32_t faction);
+	void spawn_county(Town *town);
+	void place_town(Town *town);
+	void place_meeple(Meeple *meeple);
 private:
 	float vertical_offset(const glm::vec2 &position);
 };

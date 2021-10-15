@@ -19,18 +19,18 @@ private:
 
 class FactionController {
 public:
-	//std::unordered_map<uint32_t, uint32_t> tile_owners; // left: tile ID, right: faction ID, 0 means tile is not occupied by a faction
+	std::unordered_map<uint32_t, uint32_t> tile_owners; // left: tile ID, right: faction ID, 0 means tile is not occupied by a faction
 	std::unordered_map<uint32_t, std::unique_ptr<Faction>> factions;
 public:
 	template <class Archive>
 	void serialize(Archive &archive)
 	{
-		archive(factions);
+		archive(factions,  tile_owners);
 	}
 public:
 	void clear()
 	{
-		//tile_owners.clear();
+		tile_owners.clear();
 		factions.clear();
 	}
 };
