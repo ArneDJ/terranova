@@ -21,6 +21,8 @@
 
 #include "extern/cereal/archives/binary.hpp"
 
+#include "extern/freetypegl/freetype-gl.h"
+
 #include "engine.h"
 
 static const char *GAME_NAME = "terranova";
@@ -138,6 +140,12 @@ void Engine::init_opengl()
 	glEnable(GL_DEPTH_TEST);
 	glLineWidth(2.f);
 	glEnable(GL_POLYGON_OFFSET_LINE);
+
+	glEnable(GL_BLEND);
+	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glBlendEquation(GL_FUNC_ADD);
+	glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+
 	glPolygonOffset(-1.0f, -1.0f);
 }
 	

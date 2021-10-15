@@ -14,6 +14,7 @@
 #include "graphics/texture.h"
 #include "graphics/model.h"
 #include "graphics/scene.h"
+#include "graphics/label.h"
 #include "physics/physical.h"
 #include "physics/heightfield.h"
 #include "physics/bumper.h"

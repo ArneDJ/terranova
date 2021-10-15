@@ -13,6 +13,8 @@ find_package(OpenGL REQUIRED COMPONENTS OpenGL)
 find_package(GLEW REQUIRED)
 include_directories(GLEW::GLEW)
 
+find_package(Freetype REQUIRED)
+
 include_directories("src/extern")
 include_directories("src/extern/bullet")
 
@@ -45,6 +47,7 @@ target_link_libraries(${PROJECT_NAME} dl)
 target_link_libraries(${PROJECT_NAME} SDL2::SDL2 SDL2::SDL2main)
 target_link_libraries(${PROJECT_NAME} GLEW::GLEW)
 target_link_libraries(${PROJECT_NAME} OpenGL::OpenGL)
+target_link_libraries(${PROJECT_NAME} Freetype::Freetype)
 
 target_link_libraries(${PROJECT_NAME}  ${CMAKE_SOURCE_DIR}/lib/libBulletDynamics.a)
 target_link_libraries(${PROJECT_NAME}  ${CMAKE_SOURCE_DIR}/lib/libBulletCollision.a)
@@ -53,3 +56,5 @@ target_link_libraries(${PROJECT_NAME}  ${CMAKE_SOURCE_DIR}/lib/libLinearMath.a)
 target_link_libraries(${PROJECT_NAME}  ${CMAKE_SOURCE_DIR}/lib/libRecast.a)
 target_link_libraries(${PROJECT_NAME}  ${CMAKE_SOURCE_DIR}/lib/libDetour.a)
 target_link_libraries(${PROJECT_NAME}  ${CMAKE_SOURCE_DIR}/lib/libDetourCrowd.a)
+
+target_link_libraries(${PROJECT_NAME}  ${CMAKE_SOURCE_DIR}/lib/libfreetype-gl.a)

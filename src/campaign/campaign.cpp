@@ -20,6 +20,8 @@
 #include "../extern/cereal/archives/binary.hpp"
 #include "../extern/cereal/archives/json.hpp"
 
+#include "../extern/freetypegl/freetype-gl.h"
+
 #include "../util/serialize.h"
 #include "../util/config.h"
 #include "../util/input.h"
@@ -35,6 +37,7 @@
 #include "../graphics/model.h"
 #include "../graphics/texture.h"
 #include "../graphics/scene.h"
+#include "../graphics/label.h"
 #include "../physics/physical.h"
 #include "../physics/heightfield.h"
 #include "../physics/trigger.h"
@@ -57,6 +60,8 @@ enum CampaignCollisionGroup {
 void Campaign::init(const gfx::Shader *visual, const gfx::Shader *culling, const gfx::Shader *tilemap)
 {
 	debugger = std::make_unique<Debugger>(visual, visual, culling);
+
+	labeler = std::make_unique<gfx::Labeler>("fonts/arial.ttf", 30);
 
 	scene = std::make_unique<gfx::SceneGroup>(visual, culling);
 	scene->set_scene_type(gfx::SceneType::DYNAMIC);
@@ -261,6 +266,8 @@ void Campaign::display()
 	if (display_debug) {
 		debugger->display_wireframe();
 	}
+
+	labeler->display(camera);
 }
 	
 float Campaign::vertical_offset(const glm::vec2 &position)
@@ -406,4 +413,10 @@ void Campaign::place_town(Town *town)
 	const int mask = COLLISION_GROUP_INTERACTION | COLLISION_GROUP_VISIBILITY | COLLISION_GROUP_RAY;
 
 	physics.add_object(trigger->ghost_object(), COLLISION_GROUP_TOWN, mask);
+
+	// add label
+	glm::vec3 color = faction_controller.factions[town->faction()]->color();
+	glm::vec3 position = town->transform()->position;
+	position.y += 5.f;
+	labeler->add_label("Town", color, position);
 }

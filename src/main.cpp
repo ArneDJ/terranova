@@ -11,6 +11,8 @@
 
 #include "extern/loguru/loguru.hpp"
 
+#include "extern/freetypegl/freetype-gl.h"
+
 #include "engine.h"
 
 int main(int argc, char *argv[])
