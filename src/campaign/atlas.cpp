@@ -33,7 +33,7 @@ void Atlas::generate(int seed, const geom::Rectangle &bounds, const AtlasParamet
 	std::uniform_real_distribution<float> dis_y(bounds.min.y, bounds.max.y);
 	
 	std::vector<glm::vec2> points;
-	for (int i = 0; i < 10000; i++) {
+	for (int i = 0; i < 6000; i++) {
 		glm::vec2 point = { dis_x(gen), dis_y(gen) };
 		points.push_back(point);
 	}

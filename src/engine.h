@@ -21,6 +21,7 @@
 
 #include "debugger.h"
 #include "media.h"
+#include "module.h"
 
 #include "campaign/campaign.h"
 

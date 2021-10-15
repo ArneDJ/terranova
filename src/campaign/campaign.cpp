@@ -18,6 +18,7 @@
 #include "../extern/imgui/imgui.h"
 
 #include "../extern/cereal/archives/binary.hpp"
+#include "../extern/cereal/archives/json.hpp"
 
 #include "../util/serialize.h"
 #include "../util/config.h"
@@ -40,6 +41,7 @@
 
 #include "../debugger.h"
 #include "../media.h"
+#include "../module.h"
 
 #include "campaign.h"
 
@@ -62,6 +64,13 @@ void Campaign::init(const gfx::Shader *visual, const gfx::Shader *culling, const
 	board = std::make_unique<Board>(tilemap);
 
 	meeple_controller.player = std::make_unique<Meeple>();
+
+	// load module
+	std::ifstream stream("modules/native/board.json");
+	if (stream.is_open()) {
+		cereal::JSONInputArchive archive(stream);
+		archive(module.board_module);
+	}
 }
 	
 void Campaign::load(const std::string &filepath)
@@ -122,7 +131,7 @@ void Campaign::prepare()
 {
 	board->reload();
 
-	auto cone_model = MediaManager::load_model("media/models/primitives/cone.glb");
+	auto cone_model = MediaManager::load_model(module.board_module.marker);
 	auto cone_object = scene->find_object(cone_model);
 	cone_object->add_transform(marker.transform());
 
@@ -237,7 +246,7 @@ void Campaign::add_meeple(Meeple *meeple)
 	auto visibility = meeple->visibility();
 	physics.add_object(visibility->ghost_object(), COLLISION_GROUP_VISIBILITY, COLLISION_GROUP_INTERACTION);
 
-	auto duck_model = MediaManager::load_model("media/models/duck.glb");
+	auto duck_model = MediaManager::load_model(module.board_module.meeple);
 	auto duck_object = scene->find_object(duck_model);
 	duck_object->add_transform(meeple->transform());
 

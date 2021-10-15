@@ -54,9 +54,9 @@ Debugger::Debugger(const gfx::Shader *debug_shader, const gfx::Shader *visual_sh
 	: m_scene(visual_shader, culling_shader)
 {
 	m_shader = debug_shader;
-	m_sphere = MediaManager::load_model("media/models/primitives/sphere.glb");
-	m_cube = MediaManager::load_model("media/models/primitives/cube.glb");
-	m_cylinder = MediaManager::load_model("media/models/primitives/cylinder.glb");
+	m_sphere = MediaManager::load_model("debug/shapes/sphere.glb");
+	m_cube = MediaManager::load_model("debug/shapes/cube.glb");
+	m_cylinder = MediaManager::load_model("debug/shapes/cylinder.glb");
 
 	m_scene.set_scene_type(gfx::SceneType::DYNAMIC);
 }

@@ -8,6 +8,7 @@
 
 class Campaign {
 public:
+	CampaignModule module;
 	std::string name = {};
 	util::IdGenerator id_generator;
 	util::Camera camera;

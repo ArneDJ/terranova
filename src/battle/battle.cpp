@@ -74,9 +74,9 @@ void Battle::init(const gfx::Shader *visual, const gfx::Shader *culling, const g
 	terrain = std::make_unique<Terrain>(tesselation);
 
 	transform = std::make_unique<geom::Transform>();
-	transform->position = glm::vec3(0.f, 0.f, 0.f);
+	transform->position = glm::vec3(512.f, 64.f, 512.f);
 
-	auto model = MediaManager::load_model("media/models/dragon.glb");
+	auto model = MediaManager::load_model("modules/native/media/models/dragon.glb");
 	auto object = scene->find_object(model);
 	object->add_transform(transform.get());
 

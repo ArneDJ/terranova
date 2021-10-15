@@ -48,7 +48,7 @@ struct AtlasParameters {
 	uint8_t noise_octaves = 6;
 	float noise_lacunarity = 2.5f;
 	float perturb_frequency = 0.002f;
-	float perturb_amp = 300.f;
+	float perturb_amp = 250.f;
 };
 
 // generates a tile map with geography data (relief, temperatures, ...)
