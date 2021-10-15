@@ -49,7 +49,7 @@ public:
 	Board(const gfx::Shader *tilemap);
 public:
 	const geom::Rectangle BOUNDS = { { 0.F, 0.F }, { 1024.F, 1024.F } };
-	const glm::vec3 SCALE = { 1024.f, 16.f, 1024.f };
+	const glm::vec3 SCALE = { 1024.f, 32.f, 1024.f };
 public:
 	void generate(int seed);
 	void reload();

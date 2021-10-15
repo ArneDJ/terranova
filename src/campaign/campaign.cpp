@@ -183,6 +183,8 @@ void Campaign::clear()
 	// first clear the model instances
 	scene->clear_instances();
 
+	labeler->clear();
+
 	debugger->clear();
 
 	// clear physical objects
@@ -417,6 +419,6 @@ void Campaign::place_town(Town *town)
 	// add label
 	glm::vec3 color = faction_controller.factions[town->faction()]->color();
 	glm::vec3 position = town->transform()->position;
-	position.y += 5.f;
-	labeler->add_label("Town", color, position);
+	position.y += 3.f;
+	labeler->add_label("Town " + std::to_string(town->id()), color, position);
 }

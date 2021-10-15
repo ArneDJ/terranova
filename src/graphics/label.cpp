@@ -92,6 +92,8 @@ void Labeler::add_label(const std::string &text, const glm::vec3 &color, const g
 	glm::vec2 last = { color.x, color.z };
 
 	LabelBuffer label;
+		
+	const uint32_t indices[6] = { 0, 1, 2, 0, 2, 3 };
 
 	for (int i = 0; i < text.length(); i++) {
 		texture_glyph_t *glyph = texture_font_get_glyph(m_font, &text.at(i));
@@ -110,7 +112,6 @@ void Labeler::add_label(const std::string &text, const glm::vec3 &color, const g
 		float s1 = glyph->s1;
 		float t1 = glyph->t1;
 
-		uint32_t indices[6] = { 0, 1, 2, 0, 2, 3 };
 		uint32_t offset = uint32_t(m_buffer.vertices.size()) + uint32_t(label.vertices.size());
 		for (int j = 0; j < 6; j++) {
 			label.indices.push_back(offset + indices[j]);
@@ -131,10 +132,35 @@ void Labeler::add_label(const std::string &text, const glm::vec3 &color, const g
 		pen.x += float(glyph->advance_x);
 	}
 
+	glm::vec2 min = glm::vec2((std::numeric_limits<float>::max)());
+	glm::vec2 max = glm::vec2((std::numeric_limits<float>::min)());
+
 	float halfwidth = 0.5f * last.x;
 	for (int i = 0; i < label.vertices.size(); i++) {
+		// find bounds for background
 		label.vertices[i].position.x -= 0.1f * halfwidth;
+		min = (glm::min)(min, glm::vec2(label.vertices[i].position.x, label.vertices[i].position.y));
+		max = (glm::max)(max, glm::vec2(label.vertices[i].position.x, label.vertices[i].position.y));
 	}
+
+	min -= glm::vec2(0.5f);
+	max += glm::vec2(0.5f);
+
+	// add background
+	glm::vec3 background_color = { 0.f, 0.f, 0.f };
+	LabelVertex bottom_left = { { min.x, min.y, 0 }, origin, background_color, { 0.f, 0.f } };
+	LabelVertex bottom_right = { { max.x, min.y, 0 }, origin, background_color, { 0.f, 0.f } };
+	LabelVertex top_left = { { min.x, max.y, 0 }, origin, background_color, { 0.f, 0.f } };
+	LabelVertex top_right = { { max.x, max.y, 0 }, origin, background_color, { 0.f, 0.f } };
+	uint32_t offset = uint32_t(m_buffer.vertices.size()) + uint32_t(label.vertices.size());
+	for (int j = 0; j < 6; j++) {
+		label.indices.push_back(offset + indices[j]);
+	}
+
+	label.vertices.push_back(bottom_right);
+	label.vertices.push_back(top_right);
+	label.vertices.push_back(top_left);
+	label.vertices.push_back(bottom_left);
 
 	m_buffer.indices.insert(m_buffer.indices.end(), label.indices.begin(), label.indices.end());
 	m_buffer.vertices.insert(m_buffer.vertices.end(), label.vertices.begin(), label.vertices.end());

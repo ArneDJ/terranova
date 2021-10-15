@@ -11,8 +11,12 @@ void main()
 {    
 	vec4 sampled = vec4(1.0, 1.0, 1.0, texture(text, texcoords).r);
 
+	if (color.r < 0.1) {
+		sampled.a = 1.0;
+	}
+
 	if (sampled.a < 0.5) { discard; }
 
 	fcolor = vec4(color, 1.0) * sampled;
-	//fcolor = vec4(1.0, 0.0, 1.0, 1.0);
+	//fcolor = vec4(0.0, 0.0, 0.0, 1.0);
 } 
