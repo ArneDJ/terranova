@@ -57,16 +57,16 @@ enum CampaignCollisionGroup {
 	COLLISION_GROUP_HEIGHTMAP = 1 << 4
 };
 	
-void Campaign::init(const gfx::Shader *visual, const gfx::Shader *culling, const gfx::Shader *tilemap)
+void Campaign::init(const gfx::ShaderGroup *shaders)
 {
-	debugger = std::make_unique<Debugger>(visual, visual, culling);
+	debugger = std::make_unique<Debugger>(shaders->debug, shaders->debug, shaders->culling);
 
-	labeler = std::make_unique<gfx::Labeler>("fonts/arial.ttf", 30);
+	labeler = std::make_unique<gfx::Labeler>("fonts/arial.ttf", 30, shaders->label);
 
-	scene = std::make_unique<gfx::SceneGroup>(visual, culling);
+	scene = std::make_unique<gfx::SceneGroup>(shaders->debug, shaders->culling);
 	scene->set_scene_type(gfx::SceneType::DYNAMIC);
 	
-	board = std::make_unique<Board>(tilemap);
+	board = std::make_unique<Board>(shaders->tilemap);
 
 	meeple_controller.player = std::make_unique<Meeple>();
 

@@ -1,14 +1,14 @@
 
 class Terrain {
 public:
-	Terrain(const gfx::Shader *shader);
+	Terrain(std::shared_ptr<gfx::Shader> shader);
 public:
 	void generate(int seed);
 	void display(const util::Camera &camera) const;
 public:
 	fysx::HeightField* height_field();
 private:
-	const gfx::Shader *m_shader;
+	std::shared_ptr<gfx::Shader> m_shader;
 	gfx::TesselationMesh m_mesh;
 	gfx::Texture m_texture;
 	glm::vec3 m_scale = { 1024.f, 64.f, 1024.f };

@@ -27,7 +27,7 @@
 
 #include "terrain.h"
 
-Terrain::Terrain(const gfx::Shader *shader)
+Terrain::Terrain(std::shared_ptr<gfx::Shader> shader)
 	: m_shader(shader)
 {
 	geom::Rectangle bounds = { { 0.F, 0.F }, { m_scale.x, m_scale.z } };

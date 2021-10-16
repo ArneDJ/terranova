@@ -31,7 +31,7 @@ public:
 	void prepare();
 	void clear();
 public:
-	void init(const gfx::Shader *visual, const gfx::Shader *culling, const gfx::Shader *tilemap);
+	void init(const gfx::ShaderGroup *shaders);
 	void update(float delta);
 	void display();
 	void reset_camera();

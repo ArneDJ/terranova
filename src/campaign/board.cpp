@@ -105,10 +105,9 @@ void BoardMesh::color_tile(uint32_t tile, const glm::vec3 &color)
 	}
 }
 
-BoardModel::BoardModel(const gfx::Shader *shader, const util::Image<uint8_t> &heightmap)
+BoardModel::BoardModel(std::shared_ptr<gfx::Shader> shader, const util::Image<uint8_t> &heightmap)
+	: m_shader(shader)
 {
-	m_shader = shader;
-
 	m_texture.create(heightmap);
 }
 	
@@ -165,7 +164,7 @@ void BoardModel::display(const util::Camera &camera) const
 	m_mesh.draw();
 }
 	
-Board::Board(const gfx::Shader *tilemap)
+Board::Board(std::shared_ptr<gfx::Shader> tilemap)
 	: m_model(tilemap, m_atlas.heightmap())
 {
 	m_height_field = std::make_unique<fysx::HeightField>(m_atlas.heightmap(), SCALE);

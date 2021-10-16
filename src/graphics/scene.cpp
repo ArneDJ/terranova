@@ -248,7 +248,7 @@ void SceneObject::display() const
 	}
 }
 	
-SceneGroup::SceneGroup(const Shader *visual_shader, const Shader *culling_shader)
+SceneGroup::SceneGroup(std::shared_ptr<Shader> visual_shader, std::shared_ptr<Shader> culling_shader)
 	: m_visual_shader(visual_shader), m_culling_shader(culling_shader)
 {
 	m_camera_ubo.set_target(GL_UNIFORM_BUFFER);

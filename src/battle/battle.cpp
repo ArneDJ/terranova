@@ -64,14 +64,14 @@ glm::vec2 creature_control(const glm::vec3 &view, bool forward, bool backward, b
 	return direction;
 }
 
-void Battle::init(const gfx::Shader *visual, const gfx::Shader *culling, const gfx::Shader *tesselation)
+void Battle::init(const gfx::ShaderGroup *shaders)
 {
-	debugger = std::make_unique<Debugger>(visual, visual, culling);
+	debugger = std::make_unique<Debugger>(shaders->debug, shaders->debug, shaders->culling);
 
-	scene = std::make_unique<gfx::SceneGroup>(visual, culling);
+	scene = std::make_unique<gfx::SceneGroup>(shaders->debug, shaders->culling);
 	scene->set_scene_type(gfx::SceneType::DYNAMIC);
 
-	terrain = std::make_unique<Terrain>(tesselation);
+	terrain = std::make_unique<Terrain>(shaders->terrain);
 
 	transform = std::make_unique<geom::Transform>();
 	transform->position = glm::vec3(512.f, 64.f, 512.f);

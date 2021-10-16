@@ -14,7 +14,7 @@ private:
 
 class Debugger {
 public:
-	Debugger(const gfx::Shader *debug_shader, const gfx::Shader *visual_shader, const gfx::Shader *culling_shader);
+	Debugger(std::shared_ptr<gfx::Shader> debug_shader, std::shared_ptr<gfx::Shader> visual_shader, std::shared_ptr<gfx::Shader> culling_shader);
 public:
 	void add_cube(const geom::AABB &bounds, const geom::Transform *transform);
 	void add_sphere(const geom::Sphere &sphere, const geom::Transform *transform);
@@ -31,7 +31,7 @@ public:
 	void display() const;
 	void display_wireframe() const;
 private:
-	const gfx::Shader *m_shader;
+	std::shared_ptr<gfx::Shader> m_shader;
 	gfx::SceneGroup m_scene;
 	std::vector<std::unique_ptr<DebugEntity>> m_entities;
 	std::vector<std::unique_ptr<gfx::Mesh>> m_navigation_meshes;

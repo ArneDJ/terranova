@@ -11,7 +11,7 @@ public:
 	fysx::PhysicalSystem physics;
 	std::unique_ptr<fysx::Bumper> player;
 public:
-	void init(const gfx::Shader *visual, const gfx::Shader *culling, const gfx::Shader *tesselation);
+	void init(const gfx::ShaderGroup *shaders);
 	void prepare(int seed);
 	void update(float delta);
 	void display();

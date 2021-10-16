@@ -44,16 +44,6 @@ private:
 	bool locate_dir(const char *base, const char *target, std::string &output);
 };
 
-class ShaderGroup {
-public:
-	gfx::Shader debug;
-	gfx::Shader tilemap;
-	gfx::Shader culling;
-	gfx::Shader terrain;
-public:
-	ShaderGroup();
-};
-
 enum class EngineState {
 	TITLE,
 	NEW_CAMPAIGN,
@@ -79,10 +69,11 @@ private:
 	VideoSettings video_settings;
 	Campaign campaign;
 	Battle battle;
-	std::unique_ptr<ShaderGroup> shaders;
+	std::unique_ptr<gfx::ShaderGroup> shaders;
 private:
 	void init_opengl();
 	void init_imgui();
+	void load_shaders();
 	void update_main_menu();
 private:
 	void run_campaign();

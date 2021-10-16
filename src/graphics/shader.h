@@ -32,4 +32,12 @@ private:
 	std::vector<GLuint> m_shaders;
 };
 
+struct ShaderGroup {
+	std::shared_ptr<gfx::Shader> debug;
+	std::shared_ptr<gfx::Shader> tilemap;
+	std::shared_ptr<gfx::Shader> culling;
+	std::shared_ptr<gfx::Shader> terrain;
+	std::shared_ptr<gfx::Shader> label;
+};
+
 };

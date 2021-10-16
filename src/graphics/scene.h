@@ -57,7 +57,7 @@ private:
 
 class SceneGroup {
 public:
-	SceneGroup(const Shader *visual_shader, const Shader *culling_shader);
+	SceneGroup(std::shared_ptr<Shader> visual_shader, std::shared_ptr<Shader> culling_shader);
 public:
 	void set_scene_type(enum SceneType type);
 public:
@@ -73,8 +73,8 @@ private:
 	std::unordered_map<const Model*, std::unique_ptr<SceneObject>> m_objects;
 	BufferObject m_camera_ubo;
 private:
-	const Shader *m_visual_shader = nullptr;
-	const Shader *m_culling_shader = nullptr;
+	std::shared_ptr<Shader> m_visual_shader;
+	std::shared_ptr<Shader> m_culling_shader;
 };
 
 };

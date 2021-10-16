@@ -50,7 +50,7 @@ const geom::Transform* DebugEntity::base_transform() const
 	return m_base_transform;
 }
 	
-Debugger::Debugger(const gfx::Shader *debug_shader, const gfx::Shader *visual_shader, const gfx::Shader *culling_shader)
+Debugger::Debugger(std::shared_ptr<gfx::Shader> debug_shader, std::shared_ptr<gfx::Shader> visual_shader, std::shared_ptr<gfx::Shader> culling_shader)
 	: m_scene(visual_shader, culling_shader)
 {
 	m_shader = debug_shader;

@@ -41,7 +41,7 @@ public:
 
 class Labeler {
 public:
-	Labeler(const std::string &fontpath, size_t fontsize);
+	Labeler(const std::string &fontpath, size_t fontsize, std::shared_ptr<Shader> shader);
 	~Labeler();
 public:
 	void add_label(const geom::Transform *transform, float scale, const glm::vec3 &offset, const std::string &text, const glm::vec3 &color);
@@ -51,7 +51,8 @@ public:
 private:
 	texture_atlas_t *m_atlas = nullptr;
 	texture_font_t *m_font = nullptr;
-	Shader m_shader;
+	//Shader m_shader;
+	std::shared_ptr<Shader> m_shader;
 	std::vector<std::unique_ptr<LabelEntity>> m_entities;
 };
 

@@ -46,28 +46,6 @@ bool UserDirectory::locate_dir(const char *base, const char *target, std::string
 	return false;
 }
 
-ShaderGroup::ShaderGroup()
-{
-	debug.compile("shaders/debug.vert", GL_VERTEX_SHADER);
-	debug.compile("shaders/debug.frag", GL_FRAGMENT_SHADER);
-	debug.link();
-
-	tilemap.compile("shaders/tilemap.vert", GL_VERTEX_SHADER);
-	tilemap.compile("shaders/tilemap.tesc", GL_TESS_CONTROL_SHADER);
-	tilemap.compile("shaders/tilemap.tese", GL_TESS_EVALUATION_SHADER);
-	tilemap.compile("shaders/tilemap.frag", GL_FRAGMENT_SHADER);
-	tilemap.link();
-
-	culling.compile("shaders/culling.comp", GL_COMPUTE_SHADER);
-	culling.link();
-
-	terrain.compile("shaders/terrain.vert", GL_VERTEX_SHADER);
-	terrain.compile("shaders/terrain.tesc", GL_TESS_CONTROL_SHADER);
-	terrain.compile("shaders/terrain.tese", GL_TESS_EVALUATION_SHADER);
-	terrain.compile("shaders/terrain.frag", GL_FRAGMENT_SHADER);
-	terrain.link();
-}
-
 Engine::Engine()
 {
 	SDL_Init(SDL_INIT_VIDEO);
@@ -147,6 +125,39 @@ void Engine::init_opengl()
 	glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
 	glPolygonOffset(-1.0f, -1.0f);
+}
+
+void Engine::load_shaders()
+{
+	shaders = std::make_unique<gfx::ShaderGroup>();
+
+	shaders->debug = std::make_shared<gfx::Shader>();
+	shaders->debug->compile("shaders/debug.vert", GL_VERTEX_SHADER);
+	shaders->debug->compile("shaders/debug.frag", GL_FRAGMENT_SHADER);
+	shaders->debug->link();
+
+	shaders->tilemap = std::make_shared<gfx::Shader>();
+	shaders->tilemap->compile("shaders/tilemap.vert", GL_VERTEX_SHADER);
+	shaders->tilemap->compile("shaders/tilemap.tesc", GL_TESS_CONTROL_SHADER);
+	shaders->tilemap->compile("shaders/tilemap.tese", GL_TESS_EVALUATION_SHADER);
+	shaders->tilemap->compile("shaders/tilemap.frag", GL_FRAGMENT_SHADER);
+	shaders->tilemap->link();
+
+	shaders->culling = std::make_shared<gfx::Shader>();
+	shaders->culling->compile("shaders/culling.comp", GL_COMPUTE_SHADER);
+	shaders->culling->link();
+
+	shaders->terrain = std::make_shared<gfx::Shader>();
+	shaders->terrain->compile("shaders/terrain.vert", GL_VERTEX_SHADER);
+	shaders->terrain->compile("shaders/terrain.tesc", GL_TESS_CONTROL_SHADER);
+	shaders->terrain->compile("shaders/terrain.tese", GL_TESS_EVALUATION_SHADER);
+	shaders->terrain->compile("shaders/terrain.frag", GL_FRAGMENT_SHADER);
+	shaders->terrain->link();
+
+	shaders->label = std::make_shared<gfx::Shader>();
+	shaders->label->compile("shaders/label.vert", GL_VERTEX_SHADER);
+	shaders->label->compile("shaders/label.frag", GL_FRAGMENT_SHADER);
+	shaders->label->link();
 }
 	
 void Engine::init_imgui()
@@ -234,12 +245,12 @@ void Engine::run()
 {
 	state = EngineState::TITLE;
 
-	shaders = std::make_unique<ShaderGroup>();
+	load_shaders();
 
-	campaign.init(&shaders->debug, &shaders->culling, &shaders->tilemap);
+	campaign.init(shaders.get());
 	campaign.camera.set_projection(video_settings.fov, video_settings.canvas.x, video_settings.canvas.y, 0.1f, 900.f);
 	
-	battle.init(&shaders->debug, &shaders->culling, &shaders->terrain);
+	battle.init(shaders.get());
 	battle.camera.set_projection(video_settings.fov, video_settings.canvas.x, video_settings.canvas.y, 0.1f, 900.f);
 
 	std::random_device rd;
