@@ -167,15 +167,10 @@ void LabelMesh::display() const
 	
 LabelEntity::LabelEntity()
 {
-	mesh = std::make_unique<LabelMesh>();
+	text_mesh = std::make_unique<LabelMesh>();
 	background_mesh = std::make_unique<LabelMesh>();
 }
 	
-void LabelEntity::display()
-{
-	//mesh->display();
-}
-
 Labeler::Labeler(const std::string &fontpath, size_t fontsize)
 {
 	m_atlas = texture_atlas_new(1024, 1024, 1);
@@ -204,16 +199,17 @@ Labeler::~Labeler()
 	texture_atlas_delete(m_atlas);
 }
 
-void Labeler::add_label(const geom::Transform *transform, const glm::vec3 &offset, const std::string &text, const glm::vec3 &color)
+void Labeler::add_label(const geom::Transform *transform, float scale, const glm::vec3 &offset, const std::string &text, const glm::vec3 &color)
 {
 	auto entity = std::make_unique<LabelEntity>();
 	entity->transform = transform;
+	entity->scale = scale;
 	entity->offset = offset;
 	entity->text = text;
 	entity->color = color;
 
-	entity->mesh->set_text(text, m_font);
-	entity->background_mesh->set_quad(entity->mesh->bounds.min, entity->mesh->bounds.max);
+	entity->text_mesh->set_text(text, m_font);
+	entity->background_mesh->set_quad(entity->text_mesh->bounds.min, entity->text_mesh->bounds.max);
 
 	m_entities.push_back(std::move(entity));
 }
@@ -228,7 +224,6 @@ void Labeler::display(const util::Camera &camera) const
 	glDisable(GL_DEPTH_TEST);
 
 	m_shader.use();
-	m_shader.uniform_float("SCALE", 1.f);
 	m_shader.uniform_mat4("PROJECT", camera.projection);
 	m_shader.uniform_mat4("VIEW", camera.viewing);
 
@@ -238,15 +233,17 @@ void Labeler::display(const util::Camera &camera) const
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, m_atlas->width, m_atlas->height, 0, GL_RED, GL_UNSIGNED_BYTE, m_atlas->data);
 
 	for (const auto &entity : m_entities) {
+		m_shader.uniform_float("SCALE", entity->scale);
 		m_shader.uniform_vec3("ORIGIN", entity->transform->position + entity->offset);
 		m_shader.uniform_vec3("COLOR", glm::vec3(0.f));
 		entity->background_mesh->display();
 	}
 
 	for (const auto &entity : m_entities) {
+		m_shader.uniform_float("SCALE", entity->scale);
 		m_shader.uniform_vec3("ORIGIN", entity->transform->position + entity->offset);
 		m_shader.uniform_vec3("COLOR", entity->color);
-		entity->mesh->display();
+		entity->text_mesh->display();
 	}
 
 	glEnable(GL_DEPTH_TEST);

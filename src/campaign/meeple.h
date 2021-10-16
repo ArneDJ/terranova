@@ -75,8 +75,6 @@ private:
 private:
 	std::unique_ptr<fysx::TriggerSphere> m_trigger;
 	std::unique_ptr<fysx::TriggerSphere> m_visibility;
-private:
-	std::unordered_map<uint32_t, int> m_troops;
 };
 
 struct MeepleChase {

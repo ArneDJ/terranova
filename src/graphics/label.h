@@ -31,13 +31,12 @@ public:
 	LabelEntity();
 public:
 	const geom::Transform *transform = nullptr;
+	float scale = 1.f;
 	glm::vec3 offset = {}; // offset from the transform position
 	glm::vec3 color = {};
 	std::string text = {};
-	std::unique_ptr<LabelMesh> mesh;
+	std::unique_ptr<LabelMesh> text_mesh;
 	std::unique_ptr<LabelMesh> background_mesh;
-public:
-	void display();
 };
 
 class Labeler {
@@ -45,16 +44,13 @@ public:
 	Labeler(const std::string &fontpath, size_t fontsize);
 	~Labeler();
 public:
-	//void add_label(const std::string &text, const glm::vec3 &color, const glm::vec3 &position);
-	void add_label(const geom::Transform *transform, const glm::vec3 &offset, const std::string &text, const glm::vec3 &color);
+	void add_label(const geom::Transform *transform, float scale, const glm::vec3 &offset, const std::string &text, const glm::vec3 &color);
 	//void remove_label(const Transform *transform);
 	void display(const util::Camera &camera) const;
 	void clear();
 private:
 	texture_atlas_t *m_atlas = nullptr;
 	texture_font_t *m_font = nullptr;
-	//LabelBuffer m_buffer;
-	//LabelMesh m_mesh; // TODO mesh for background and text
 	Shader m_shader;
 	std::vector<std::unique_ptr<LabelEntity>> m_entities;
 };

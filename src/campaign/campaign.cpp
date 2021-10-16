@@ -297,6 +297,11 @@ void Campaign::place_meeple(Meeple *meeple)
 	// debug trigger volumes
 	debugger->add_sphere(trigger->form(), trigger->transform());
 	debugger->add_sphere(visibility->form(), visibility->transform());
+
+	// add label
+	//glm::vec3 color = faction_controller.factions[meeple->faction()]->color();
+	glm::vec3 color = glm::vec3(1.f);
+	labeler->add_label(meeple->transform(), 0.2f, glm::vec3(0.f, 2.f, 0.f), "Army " + std::to_string(meeple->id()), color);
 }
 	
 void Campaign::spawn_factions(int seed)
@@ -417,7 +422,7 @@ void Campaign::place_town(Town *town)
 
 	// add label
 	glm::vec3 color = faction_controller.factions[town->faction()]->color();
-	labeler->add_label(town->transform(), glm::vec3(0.f, 3.f, 0.f), "Town " + std::to_string(town->id()), color);
+	labeler->add_label(town->transform(), 1.f, glm::vec3(0.f, 3.f, 0.f), "Town " + std::to_string(town->id()), color);
 }
 	
 void Campaign::reset_camera()

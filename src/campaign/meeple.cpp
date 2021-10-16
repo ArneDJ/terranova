@@ -161,24 +161,6 @@ void Meeple::sync()
 	m_path_finder.teleport(glm::vec2(m_transform->position.x, m_transform->position.z));
 }
 	
-void Meeple::add_troops(uint32_t troop_type, int count)
-{
-	int instances = 0;
-
-	auto search = m_troops.find(troop_type);
-	if (search != m_troops.end()) {
-		instances = search->second;
-	}
-
-	instances += count;
-
-	if (instances < 0) {
-		instances = 0;
-	}
-		
-	m_troops[troop_type] = instances;
-}
-	
 MeepleController::MeepleController()
 {
 	current_chase = chases.begin();
