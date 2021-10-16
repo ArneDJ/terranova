@@ -129,15 +129,19 @@ void LabelMesh::set_text(const std::string &text, texture_font_t *font)
 	glBufferData(GL_ARRAY_BUFFER, sizeof(LabelVertex)*buffer.vertices.size(), buffer.vertices.data(), GL_DYNAMIC_DRAW);
 }
 	
-void LabelMesh::set_quad(const glm::vec2 &min, const glm::vec2 &max)
+void LabelMesh::set_quad(const geom::Rectangle &rectangle)
 {
+	bounds = rectangle;
+
 	buffer.vertices.clear();
 	buffer.indices.clear();
 
+	const glm::vec2 min = rectangle.min;
+	const glm::vec2 max = rectangle.max;
 	LabelVertex bottom_left = { { min.x, min.y }, { 0.f, 0.f } };
-	LabelVertex bottom_right = { { max.x, min.y }, { 0.f, 0.f } };
-	LabelVertex top_left = { { min.x, max.y }, { 0.f, 0.f } };
-	LabelVertex top_right = { { max.x, max.y }, { 0.f, 0.f } };
+	LabelVertex bottom_right = { { max.x, min.y }, { 1.f, 0.f } };
+	LabelVertex top_left = { { min.x, max.y }, { 0.f, 1.f } };
+	LabelVertex top_right = { { max.x, max.y }, { 1.f, 1.f } };
 
 	const uint32_t indices[6] = { 0, 1, 2, 0, 2, 3 };
 	for (int j = 0; j < 6; j++) {
@@ -206,7 +210,7 @@ void Labeler::add_label(const geom::Transform *transform, float scale, const glm
 	entity->color = color;
 
 	entity->text_mesh->set_text(text, m_font);
-	entity->background_mesh->set_quad(entity->text_mesh->bounds.min, entity->text_mesh->bounds.max);
+	entity->background_mesh->set_quad(entity->text_mesh->bounds);
 
 	m_entities.push_back(std::move(entity));
 }

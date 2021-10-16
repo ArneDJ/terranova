@@ -379,13 +379,11 @@ void Campaign::spawn_county(Town *town)
 			const auto &cell = cells[node];
 			for (const auto &neighbor : cell.neighbors) {
 				const Tile *tile = &tiles[neighbor->index];
-				bool valid_relief = tile->relief == ReliefType::LOWLAND || tile->relief == ReliefType::HILLS;
-				if (valid_relief) {
-					if (faction_controller.tile_owners[tile->index] == 0) {
-						depth[tile->index] = layer;
-						faction_controller.tile_owners[tile->index] = faction;
-						nodes.push(tile->index);
-					}
+				bool passable = tile->relief == ReliefType::LOWLAND || tile->relief == ReliefType::HILLS;
+				if (passable && (faction_controller.tile_owners[tile->index] == 0)) {
+					depth[tile->index] = layer;
+					faction_controller.tile_owners[tile->index] = faction;
+					nodes.push(tile->index);
 				}
 			}
 		}

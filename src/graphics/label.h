@@ -16,13 +16,13 @@ public:
 	GLuint VBO = 0;
 	GLuint EBO = 0;
 	LabelBuffer buffer;
-	geom::Bounding<glm::vec2> bounds;
+	geom::Rectangle bounds;
 public:
 	LabelMesh();
 	~LabelMesh();
 public:
 	void set_text(const std::string &text, texture_font_t *font);
-	void set_quad(const glm::vec2 &min, const glm::vec2 &max);
+	void set_quad(const geom::Rectangle &rectangle);
 	void display() const;
 };
 
@@ -51,7 +51,6 @@ public:
 private:
 	texture_atlas_t *m_atlas = nullptr;
 	texture_font_t *m_font = nullptr;
-	//Shader m_shader;
 	std::shared_ptr<Shader> m_shader;
 	std::vector<std::unique_ptr<LabelEntity>> m_entities;
 };
