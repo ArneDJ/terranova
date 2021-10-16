@@ -192,15 +192,13 @@ void Engine::update_campaign_menu()
 
 void Engine::run_campaign()
 {
-	state = EngineState::CAMPAIGN;
+	state = EngineState::RUNNING_CAMPAIGN;
 
 	std::random_device rd;
 	std::mt19937 gen(rd());
 	std::uniform_int_distribution<int> distrib;
 			
-	campaign.prepare();
-
-	while (state == EngineState::CAMPAIGN) {
+	while (state == EngineState::RUNNING_CAMPAIGN) {
 		frame_timer.begin();
 	
 		util::InputManager::update();
@@ -254,25 +252,7 @@ void Engine::run()
 			state = EngineState::EXIT;
 		}
 
-		ImGui_ImplOpenGL3_NewFrame();
-		ImGui_ImplSDL2_NewFrame(window);
-		ImGui::NewFrame();
-		ImGui::Begin("Main Menu Debug Mode");
-		ImGui::SetWindowSize(ImVec2(400, 200));
-		if (ImGui::Button("New World")) {
-			campaign.clear();
-			campaign.generate(distrib(gen));
-			state = EngineState::CAMPAIGN;
-		}
-		ImGui::Separator();
-		if (ImGui::Button("Load World")) {
-			campaign.clear();
-			campaign.load(user_dir.saves + "test.save");
-			state = EngineState::CAMPAIGN;
-		}
-		ImGui::Separator();
-		if (ImGui::Button("Exit")) { state = EngineState::EXIT; }
-		ImGui::End();
+		update_main_menu();
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -281,7 +261,20 @@ void Engine::run()
 		
 		SDL_GL_SwapWindow(window);
 			
-		if (state == EngineState::CAMPAIGN) {
+		if (state == EngineState::NEW_CAMPAIGN) {
+			campaign.clear();
+			campaign.generate(distrib(gen));
+			campaign.prepare();
+			campaign.reset_camera();
+			state = EngineState::RUNNING_CAMPAIGN;
+		}
+		if (state == EngineState::LOADING_CAMPAIGN) {
+			campaign.clear();
+			campaign.load(user_dir.saves + "test.save");
+			campaign.prepare();
+			state = EngineState::RUNNING_CAMPAIGN;
+		}
+		if (state == EngineState::RUNNING_CAMPAIGN) {
 			run_campaign();
 		}
 	}
@@ -298,7 +291,7 @@ void Engine::update_battle_menu()
 	ImGui::Text("%.2f ms/frame (%.1d fps)", (frame_timer.FPS_UPDATE_TIME / frame_timer.frames_per_second()), frame_timer.frames_per_second());
 	ImGui::Text("%.4f frame delta", frame_timer.delta_seconds());
 	ImGui::Separator();
-	if (ImGui::Button("Return to Campaign")) { state = EngineState::CAMPAIGN; }
+	if (ImGui::Button("Return to Campaign")) { state = EngineState::RUNNING_CAMPAIGN; }
 	ImGui::Separator();
 	if (ImGui::Button("Quit Game")) { state = EngineState::EXIT; }
 	ImGui::End();
@@ -333,4 +326,23 @@ void Engine::run_battle()
 			state = EngineState::EXIT;
 		}
 	}
+}
+
+void Engine::update_main_menu()
+{
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplSDL2_NewFrame(window);
+	ImGui::NewFrame();
+	ImGui::Begin("Main Menu Debug Mode");
+	ImGui::SetWindowSize(ImVec2(400, 200));
+	if (ImGui::Button("New World")) {
+		state = EngineState::NEW_CAMPAIGN;
+	}
+	ImGui::Separator();
+	if (ImGui::Button("Load World")) {
+		state = EngineState::LOADING_CAMPAIGN;
+	}
+	ImGui::Separator();
+	if (ImGui::Button("Exit")) { state = EngineState::EXIT; }
+	ImGui::End();
 }

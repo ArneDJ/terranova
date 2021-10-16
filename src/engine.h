@@ -56,7 +56,9 @@ public:
 
 enum class EngineState {
 	TITLE,
-	CAMPAIGN,
+	NEW_CAMPAIGN,
+	LOADING_CAMPAIGN,
+	RUNNING_CAMPAIGN,
 	BATTLE,
 	EXIT
 };
@@ -81,6 +83,7 @@ private:
 private:
 	void init_opengl();
 	void init_imgui();
+	void update_main_menu();
 private:
 	void run_campaign();
 	void update_campaign_menu();

@@ -135,10 +135,6 @@ void Campaign::generate(int seed)
 	meeple_controller.player->teleport(glm::vec2(512.f));
 	meeple_controller.player->set_speed(10.f);
 	meeple_controller.player->set_name("Player Army");
-
-	// prepare camera
-	camera.position = meeple_controller.player->transform()->position + glm::vec3(0.f, 10.f, -10.f);
-	camera.target(meeple_controller.player->transform()->position);
 }
 	
 void Campaign::prepare()
@@ -284,6 +280,9 @@ float Campaign::vertical_offset(const glm::vec2 &position)
 	
 void Campaign::place_meeple(Meeple *meeple)
 {
+	float offset = vertical_offset(meeple->position());
+	meeple->set_vertical_offset(offset);
+
 	int meeple_mask = COLLISION_GROUP_INTERACTION | COLLISION_GROUP_VISIBILITY | COLLISION_GROUP_RAY | COLLISION_GROUP_TOWN;
 
 	auto trigger = meeple->trigger();
@@ -418,7 +417,11 @@ void Campaign::place_town(Town *town)
 
 	// add label
 	glm::vec3 color = faction_controller.factions[town->faction()]->color();
-	glm::vec3 position = town->transform()->position;
-	position.y += 3.f;
-	labeler->add_label("Town " + std::to_string(town->id()), color, position);
+	labeler->add_label(town->transform(), glm::vec3(0.f, 3.f, 0.f), "Town " + std::to_string(town->id()), color);
+}
+	
+void Campaign::reset_camera()
+{
+	camera.position = meeple_controller.player->transform()->position + glm::vec3(0.f, 10.f, -10.f);
+	camera.target(meeple_controller.player->transform()->position);
 }

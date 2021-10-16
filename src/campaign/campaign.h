@@ -34,6 +34,7 @@ public:
 	void init(const gfx::Shader *visual, const gfx::Shader *culling, const gfx::Shader *tilemap);
 	void update(float delta);
 	void display();
+	void reset_camera();
 private:
 	void spawn_factions(int seed);
 	uint32_t spawn_town(uint32_t tile, uint32_t faction);
