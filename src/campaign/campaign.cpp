@@ -56,6 +56,13 @@ enum CampaignCollisionGroup {
 	COLLISION_GROUP_VISIBILITY = 1 << 3,
 	COLLISION_GROUP_HEIGHTMAP = 1 << 4
 };
+
+enum class CampaignEntity : uint8_t {
+	INVALID,
+	MEEPLE,
+	VILLAGE,
+	TOWN
+};
 	
 void Campaign::init(const gfx::ShaderGroup *shaders)
 {
@@ -134,7 +141,6 @@ void Campaign::generate(int seed)
 	meeple_controller.player = std::make_unique<Meeple>();
 	meeple_controller.player->teleport(glm::vec2(512.f));
 	meeple_controller.player->set_speed(10.f);
-	meeple_controller.player->set_name("Player Army");
 }
 	
 void Campaign::prepare()
@@ -215,8 +221,16 @@ void Campaign::update(float delta)
 
 	if (util::InputManager::key_pressed(SDL_BUTTON_RIGHT)) {
 		glm::vec3 ray = camera.ndc_to_ray(util::InputManager::abs_mouse_coords());
-		auto result = physics.cast_ray(camera.position, camera.position + (1000.f * ray));
+		auto result = physics.cast_ray(camera.position, camera.position + (1000.f * ray), COLLISION_GROUP_HEIGHTMAP | COLLISION_GROUP_TOWN);
 		if (result.hit) {
+			if (result.object) {
+				auto type = CampaignEntity(result.object->getUserIndex2());
+				if (type == CampaignEntity::TOWN) {
+					Town *node = static_cast<Town*>(result.object->getUserPointer());
+					if (node) {
+					}
+				}
+			}
 			marker.teleport(result.point);
 			glm::vec2 hitpoint = glm::vec2(result.point.x, result.point.z);
 			std::list<glm::vec2> nodes;
@@ -286,6 +300,8 @@ void Campaign::place_meeple(Meeple *meeple)
 	int meeple_mask = COLLISION_GROUP_INTERACTION | COLLISION_GROUP_VISIBILITY | COLLISION_GROUP_RAY | COLLISION_GROUP_TOWN;
 
 	auto trigger = meeple->trigger();
+	trigger->ghost_object()->setUserIndex(meeple->id());
+	trigger->ghost_object()->setUserIndex2(int(CampaignEntity::MEEPLE));
 	physics.add_object(trigger->ghost_object(), COLLISION_GROUP_INTERACTION, meeple_mask);
 	auto visibility = meeple->visibility();
 	physics.add_object(visibility->ghost_object(), COLLISION_GROUP_VISIBILITY, COLLISION_GROUP_INTERACTION);
@@ -329,9 +345,6 @@ uint32_t Campaign::spawn_town(uint32_t tile, uint32_t faction)
 		town->set_id(id);
 		town->set_faction(faction);
 		town->set_tile(tile);
-
-		auto trigger = town->trigger();
-		trigger->ghost_object()->setUserIndex(id);
 
 		settlement_controller.towns[id] = std::move(town);
 
@@ -410,13 +423,15 @@ void Campaign::place_town(Town *town)
 	auto cylinder_object = scene->find_object(cylinder_model);
 	cylinder_object->add_transform(town->transform());
 
-	// debug collision
-	auto trigger = town->trigger();
-	debugger->add_sphere(trigger->form(), trigger->transform());
-
 	const int mask = COLLISION_GROUP_INTERACTION | COLLISION_GROUP_VISIBILITY | COLLISION_GROUP_RAY;
 
+	auto trigger = town->trigger();
+	trigger->ghost_object()->setUserIndex(town->id());
+	trigger->ghost_object()->setUserIndex2(int(CampaignEntity::TOWN));
 	physics.add_object(trigger->ghost_object(), COLLISION_GROUP_TOWN, mask);
+
+	// debug collision
+	debugger->add_sphere(trigger->form(), trigger->transform());
 
 	// add label
 	glm::vec3 color = faction_controller.factions[town->faction()]->color();

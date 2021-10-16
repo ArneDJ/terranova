@@ -109,8 +109,6 @@ void Meeple::set_id(uint32_t id) { m_id = id; };
 
 void Meeple::set_speed(float speed) { m_speed = speed; }
 	
-void Meeple::set_name(const std::string &name) { m_name = name; }
-
 void Meeple::set_path(const std::list<glm::vec2> &nodes)
 {
 	m_path_finder.set_nodes(nodes);

@@ -8,6 +8,7 @@ namespace fysx {
 struct RayResult {
 	bool hit = false;
 	glm::vec3 point = {};
+	const btCollisionObject *object = nullptr; // the body if ray hit
 };
 
 class PhysicalSystem {

@@ -75,7 +75,7 @@ void PhysicalSystem::clear_objects()
 	
 RayResult PhysicalSystem::cast_ray(const glm::vec3 &origin, const glm::vec3 &end, int mask) const
 {
-	RayResult result = { false, glm::vec3(0.f) };
+	RayResult result = { false, glm::vec3(0.f), nullptr };
 
 	const btVector3 from = vec3_to_bt(origin);
 	const btVector3 to = vec3_to_bt(end);
@@ -88,6 +88,7 @@ RayResult PhysicalSystem::cast_ray(const glm::vec3 &origin, const glm::vec3 &end
 	if (callback.hasHit()) {
 		result.hit = true;
 		result.point = bt_to_vec3(callback.m_hitPointWorld);
+		result.object = callback.m_collisionObject;
 	}
 
 	return result;
