@@ -39,7 +39,7 @@ Terrain::Terrain(std::shared_ptr<gfx::Shader> shader)
 	
 	m_height_field = std::make_unique<fysx::HeightField>(m_heightmap, m_scale);
 }
-
+	
 void Terrain::generate(int seed) 
 {
 	FastNoise fastnoise;

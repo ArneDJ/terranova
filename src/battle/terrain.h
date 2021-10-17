@@ -3,6 +3,7 @@ class Terrain {
 public:
 	Terrain(std::shared_ptr<gfx::Shader> shader);
 public:
+	void set_scale(const glm::vec3 &scale);
 	void generate(int seed);
 	void display(const util::Camera &camera) const;
 public:

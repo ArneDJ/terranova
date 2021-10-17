@@ -37,6 +37,11 @@
 
 #include "battle.h"
 
+const geom::AABB SCENE_SIZE = {
+	{ 0.F, 0.F, 0.F },
+	{ 1024.F, 64.F, 1024.F }
+};
+
 // TODO remove
 glm::vec2 creature_control(const glm::vec3 &view, bool forward, bool backward, bool right, bool left)
 {
@@ -73,27 +78,70 @@ void Battle::init(const gfx::ShaderGroup *shaders)
 
 	terrain = std::make_unique<Terrain>(shaders->terrain);
 
+	landscaper.bounds = {
+		{ SCENE_SIZE.min.x, SCENE_SIZE.min.z },
+		{ SCENE_SIZE.max.x, SCENE_SIZE.max.z }
+	};
+
 	transform = std::make_unique<geom::Transform>();
+	// load building molds
+	auto house = MediaManager::load_model("modules/native/media/models/buildings/houses/medium.glb");
+	landscaper.add_house(1, house->bounds());
+}
+
+void Battle::prepare(int seed)
+{
+	landscaper.clear();
+
+	terrain->generate(seed);
+
+	landscaper.generate(seed, 32, 2);
+	
+	physics.add_object(terrain->height_field()->object());
+
+	auto house_model = MediaManager::load_model("modules/native/media/models/buildings/houses/medium.glb");
+	auto object = scene->find_object(house_model);
+	for (const auto &house : landscaper.houses) {
+		for (const auto &transform : house.second.transforms) {
+			glm::vec3 position = { transform.position.x, 0.f, transform.position.y };
+			position.y = vertical_offset(transform.position.x, transform.position.y);
+			glm::quat rotation = glm::angleAxis(transform.angle, glm::vec3(0.f, 1.f, 0.f));
+			auto transform_ent = std::make_unique<geom::Transform>();
+			transform_ent->position = position;
+			transform_ent->rotation = rotation;
+
+			object->add_transform(transform_ent.get());
+
+			building_transforms.push_back(std::move(transform_ent));
+		}
+	}
+
 	transform->position = glm::vec3(512.f, 64.f, 512.f);
 
-	auto model = MediaManager::load_model("modules/native/media/models/dragon.glb");
-	auto object = scene->find_object(model);
-	object->add_transform(transform.get());
+	auto dragon_model = MediaManager::load_model("modules/native/media/models/dragon.glb");
+	auto dragon_object = scene->find_object(dragon_model);
+	dragon_object->add_transform(transform.get());
 
 	camera.position = glm::vec3(5.f, 5.f, 5.f);
 	camera.target(transform->position);
 	
-	physics.add_object(terrain->height_field()->object());
-
 	player = std::make_unique<fysx::Bumper>(glm::vec3(512.f, 64.f, 512.f), 0.3f, 1.8f);
 	physics.add_body(player->body());
 
 	debugger->add_capsule(player->capsule_height(), player->capsule_radius(), player->transform());
 }
 
-void Battle::prepare(int seed)
+void Battle::clear()
 {
-	terrain->generate(seed);
+	scene->clear_instances();
+
+	debugger->clear();
+
+	// clear physical objects
+	physics.clear_objects();
+
+	// clear entities
+	building_transforms.clear();
 }
 
 void Battle::update(float delta)
@@ -143,4 +191,14 @@ void Battle::display()
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	
 	debugger->display();
+}
+
+float Battle::vertical_offset(float x, float z)
+{
+	glm::vec3 origin = { x, 2.F * SCENE_SIZE.max.y, z };
+	glm::vec3 end = { x, 0.F, z };
+
+	auto result = physics.cast_ray(origin, end);
+	
+	return result.point.y;
 }

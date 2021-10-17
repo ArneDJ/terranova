@@ -339,6 +339,8 @@ void Engine::run_battle()
 			state = EngineState::EXIT;
 		}
 	}
+
+	battle.clear();
 }
 
 void Engine::update_main_menu()

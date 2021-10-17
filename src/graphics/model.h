@@ -9,14 +9,11 @@ struct Node {
 	geom::Transform transform = {};
 	Node *parent = nullptr;
 	std::vector<Node*> children;
-	//skin_t *skeleton = nullptr;
 };
 
 struct Skin {
 	std::string name;
 	std::vector<glm::mat4> inverse_binds;
-	//node_t *root; // skeleton root joint
-	//std::vector<node_t*> joints;
 };
 
 class Model {
