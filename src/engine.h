@@ -74,6 +74,7 @@ private:
 	void init_opengl();
 	void init_imgui();
 	void load_shaders();
+	void load_module();
 	void update_main_menu();
 private:
 	void run_campaign();

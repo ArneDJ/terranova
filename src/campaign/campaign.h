@@ -27,7 +27,7 @@ struct CampaignPlayerData {
 class Campaign {
 public:
 	CampaignState state = CampaignState::PAUSED;
-	CampaignModule module;
+	Module module; // TODO pass this
 	std::string name = {};
 	util::IdGenerator id_generator;
 	util::Camera camera;

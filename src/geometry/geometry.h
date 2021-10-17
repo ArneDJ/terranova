@@ -1,11 +1,18 @@
 #pragma once 
 #include <algorithm>
+#include "../util/serialize.h"
 
 namespace geom {
 
 template <class T> struct Bounding {
 	T min = {};
 	T max = {};
+
+	template <class Archive>
+	void serialize(Archive &archive)
+	{
+		archive(CEREAL_NVP(min), CEREAL_NVP(max));
+	}
 };
 
 using Rectangle = Bounding<glm::vec2>;

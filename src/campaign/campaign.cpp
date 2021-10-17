@@ -79,6 +79,7 @@ void Campaign::init(const gfx::ShaderGroup *shaders)
 
 	meeple_controller.player = std::make_unique<Meeple>();
 
+	// TODO pass this
 	// load module
 	std::ifstream stream("modules/native/board.json");
 	if (stream.is_open()) {

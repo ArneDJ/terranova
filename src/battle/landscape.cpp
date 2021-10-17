@@ -21,6 +21,8 @@
 
 namespace carto {
 
+static bool larger_house(const LandscapeObject *a, const LandscapeObject *b);
+
 void Landscaper::clear()
 {
 	// clear house transforms
@@ -56,6 +58,7 @@ void Landscaper::spawn_houses(bool walled, uint8_t town_size)
 	for (auto &house : houses) {
 		pool.push_back(&houses[house.first]);
 	}
+	std::sort(pool.begin(), pool.end(), larger_house);
 
 	// no valid houses found early exit
 	if (pool.size() < 1) { return; }
@@ -72,32 +75,22 @@ void Landscaper::spawn_houses(bool walled, uint8_t town_size)
 
 			for (auto &house : pool) {
 				if ((front > house->bounds.x && back > house->bounds.x) && (left > house->bounds.z && right > house->bounds.z)) {
-					/*
-					glm::vec2 halfwidths = { 0.5f * house->bounds.x, 0.5f * house->bounds.z };
-					geom::Quadrilateral box = building_box(parcel.centroid, halfwidths, angle);
-					bool valid = true;
-					if (walled) {
-						for (auto &wallbox : wall_boxes) {
-							if (geom::quad_quad_intersection(box, wallbox)) {
-								valid = false;
-								break;
-							}
-						}
-					}
-					*/
-					//if (valid) {
 					LandscapeObjectTransform transform = {
 						parcel.centroid,
 						angle
 					};
 					house->transforms.push_back(transform);
-					//}
 
 					break;
 				}
 			}
 		}
 	}
+}
+
+static bool larger_house(const LandscapeObject *a, const LandscapeObject *b)
+{
+	return (a->bounds.x * a->bounds.z) > (b->bounds.x * b->bounds.z);
 }
 
 };

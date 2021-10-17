@@ -1,0 +1,20 @@
+{
+    "houses": [
+        {
+            "precipitation": {
+                "min": 0,
+                "max": 255
+            },
+            "temperature": {
+                "min": 100,
+                "max": 200
+            },
+            "models": [
+		"modules/native/media/models/buildings/houses/small.glb",
+            	"modules/native/media/models/buildings/houses/medium.glb",
+            	"modules/native/media/models/buildings/houses/medium_wide.glb",
+            	"modules/native/media/models/buildings/houses/large.glb"
+	    ]
+        }
+    ]
+}

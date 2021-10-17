@@ -33,6 +33,7 @@
 #include "../physics/bumper.h"
 
 #include "../debugger.h"
+#include "../module.h"
 #include "../media.h"
 
 #include "battle.h"
@@ -82,11 +83,29 @@ void Battle::init(const gfx::ShaderGroup *shaders)
 		{ SCENE_SIZE.min.x, SCENE_SIZE.min.z },
 		{ SCENE_SIZE.max.x, SCENE_SIZE.max.z }
 	};
+}
 
-	transform = std::make_unique<geom::Transform>();
-	// load building molds
-	auto house = MediaManager::load_model("modules/native/media/models/buildings/houses/medium.glb");
-	landscaper.add_house(1, house->bounds());
+void Battle::load_molds(const Module &module)
+{
+	house_molds.clear();
+
+	uint32_t id = 1; // TODO import ids from module
+
+	for (const auto &module_house : module.houses) {
+		for (const auto &model_path : module_house.models) {
+			HouseMold mold;
+			mold.id = id;
+			mold.model = MediaManager::load_model(model_path);
+			house_molds[id] = mold;
+
+			id++;
+		}
+	}
+
+	// add house info to landscape
+	for (const auto &mold : house_molds) {
+		landscaper.add_house(mold.second.id, mold.second.model->bounds());
+	}
 }
 
 void Battle::prepare(int seed)
@@ -99,23 +118,26 @@ void Battle::prepare(int seed)
 	
 	physics.add_object(terrain->height_field()->object());
 
-	auto house_model = MediaManager::load_model("modules/native/media/models/buildings/houses/medium.glb");
-	auto object = scene->find_object(house_model);
 	for (const auto &house : landscaper.houses) {
-		for (const auto &transform : house.second.transforms) {
-			glm::vec3 position = { transform.position.x, 0.f, transform.position.y };
-			position.y = vertical_offset(transform.position.x, transform.position.y);
-			glm::quat rotation = glm::angleAxis(transform.angle, glm::vec3(0.f, 1.f, 0.f));
-			auto transform_ent = std::make_unique<geom::Transform>();
-			transform_ent->position = position;
-			transform_ent->rotation = rotation;
+		auto search = house_molds.find(house.second.mold_id);
+		if (search != house_molds.end()) {
+			auto object = scene->find_object(search->second.model);
+			for (const auto &transform : house.second.transforms) {
+				glm::vec3 position = { transform.position.x, 0.f, transform.position.y };
+				position.y = vertical_offset(transform.position.x, transform.position.y);
+				glm::quat rotation = glm::angleAxis(transform.angle, glm::vec3(0.f, 1.f, 0.f));
+				auto transform_ent = std::make_unique<geom::Transform>();
+				transform_ent->position = position;
+				transform_ent->rotation = rotation;
 
-			object->add_transform(transform_ent.get());
+				object->add_transform(transform_ent.get());
 
-			building_transforms.push_back(std::move(transform_ent));
+				building_transforms.push_back(std::move(transform_ent));
+			}
 		}
 	}
 
+	auto transform = std::make_unique<geom::Transform>();
 	transform->position = glm::vec3(512.f, 64.f, 512.f);
 
 	auto dragon_model = MediaManager::load_model("modules/native/media/models/dragon.glb");
@@ -124,6 +146,8 @@ void Battle::prepare(int seed)
 
 	camera.position = glm::vec3(5.f, 5.f, 5.f);
 	camera.target(transform->position);
+
+	building_transforms.push_back(std::move(transform));
 	
 	player = std::make_unique<fysx::Bumper>(glm::vec3(512.f, 64.f, 512.f), 0.3f, 1.8f);
 	physics.add_body(player->body());
@@ -173,7 +197,6 @@ void Battle::update(float delta)
 
 	glm::vec3 position = player->standing_position();
 	camera.position = position - (5.f * camera.direction);
-	//camera.position = position;
 
 	camera.update_viewing();
 
@@ -193,6 +216,7 @@ void Battle::display()
 	debugger->display();
 }
 
+// FIXME needs to be checked for collision mask
 float Battle::vertical_offset(float x, float z)
 {
 	glm::vec3 origin = { x, 2.F * SCENE_SIZE.max.y, z };

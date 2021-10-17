@@ -20,6 +20,7 @@
 #include "extern/imgui/imgui_impl_opengl3.h"
 
 #include "extern/cereal/archives/binary.hpp"
+#include "extern/cereal/archives/json.hpp"
 
 #include "extern/freetypegl/freetype-gl.h"
 
@@ -160,6 +161,20 @@ void Engine::load_shaders()
 	shaders->label->link();
 }
 	
+void Engine::load_module()
+{
+	Module module;
+
+	// load houses
+	std::ifstream stream("modules/native/houses.json");
+	if (stream.is_open()) {
+		cereal::JSONInputArchive archive(stream);
+		archive(module.houses);
+	}
+
+	battle.load_molds(module);
+}
+	
 void Engine::init_imgui()
 {
 	// Setup Dear ImGui context
@@ -246,6 +261,7 @@ void Engine::run()
 	state = EngineState::TITLE;
 
 	load_shaders();
+	load_module();
 
 	campaign.init(shaders.get());
 	campaign.camera.set_projection(video_settings.fov, video_settings.canvas.x, video_settings.canvas.y, 0.1f, 900.f);
