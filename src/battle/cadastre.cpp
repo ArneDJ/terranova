@@ -134,7 +134,7 @@ static bool clockwise_polygon(std::list<glm::vec2> &polygon)
 	return (sum > 0.f);
 }
 
-void Cadastre::generate(long seedling, uint32_t tileref, geom::Rectangle bounds, size_t wall_radius)
+void Cadastre::generate(int seedling, uint32_t tile, geom::Rectangle bounds, size_t wall_radius)
 {
 	walls.clear();
 	highways.clear();
@@ -145,7 +145,7 @@ void Cadastre::generate(long seedling, uint32_t tileref, geom::Rectangle bounds,
 	seed = seedling;
 	area = bounds;
 
-	make_diagram(tileref);
+	make_diagram(tile);
 
 	mark_districts();
 	mark_junctions();
@@ -158,10 +158,10 @@ void Cadastre::generate(long seedling, uint32_t tileref, geom::Rectangle bounds,
 	divide_parcels(wall_radius);
 }
 
-void Cadastre::make_diagram(uint32_t tileref)
+void Cadastre::make_diagram(uint32_t tile)
 {
 	std::mt19937 gen(seed);
-	gen.discard(tileref * MAX_CELLS * 2); // discard values with offset based on tile index so each site will have a different layout based on the same seed
+	gen.discard(tile * MAX_CELLS * 2); // discard values with offset based on tile index so each site will have a different layout based on the same seed
 	std::uniform_real_distribution<float> dist_x(area.min.x+(area.max.x-CELL_PLACE_SCALE*area.max.x), CELL_PLACE_SCALE*area.max.x);
 	std::uniform_real_distribution<float> dist_y(area.min.y+(area.max.y-CELL_PLACE_SCALE*area.max.y), CELL_PLACE_SCALE*area.max.y);
 

@@ -47,6 +47,11 @@ uint32_t Town::county() const
 	return m_county;
 }
 
+glm::vec2 Town::map_position() const
+{
+	return glm::vec2(m_transform->position.x, m_transform->position.z);
+}
+
 const fysx::TriggerSphere* Town::trigger() const { return m_trigger.get(); }
 
 const geom::Transform* Town::transform() const

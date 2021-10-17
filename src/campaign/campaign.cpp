@@ -59,11 +59,13 @@ enum CampaignCollisionGroup {
 
 enum class CampaignEntity : uint8_t {
 	INVALID,
+	LAND_SURFACE,
+	WATER_SURFACE,
 	MEEPLE,
 	VILLAGE,
 	TOWN
 };
-	
+
 void Campaign::init(const gfx::ShaderGroup *shaders)
 {
 	debugger = std::make_unique<Debugger>(shaders->debug, shaders->debug, shaders->culling);
@@ -99,6 +101,7 @@ void Campaign::load(const std::string &filepath)
 		archive(meeple_controller.meeples);
 		archive(faction_controller);
 		archive(settlement_controller);
+		archive(player_data);
 	} else {
 		LOG_F(ERROR, "Game loading error: could not open save file %s", filepath.c_str());
 	}
@@ -118,6 +121,7 @@ void Campaign::save(const std::string &filepath)
 		archive(meeple_controller.meeples);
 		archive(faction_controller);
 		archive(settlement_controller);
+		archive(player_data);
 	} else {
 		LOG_F(ERROR, "Game saving error: could not open save file %s", filepath.c_str());
 	}
@@ -138,7 +142,9 @@ void Campaign::generate(int seed)
 	// spawn factions
 	spawn_factions(seed);
 
+	player_data.meeple_id = id_generator.generate();
 	meeple_controller.player = std::make_unique<Meeple>();
+	meeple_controller.player->set_id(player_data.meeple_id);
 	meeple_controller.player->teleport(glm::vec2(512.f));
 	meeple_controller.player->set_speed(10.f);
 }
@@ -160,8 +166,8 @@ void Campaign::prepare()
 	place_meeple(meeple_controller.player.get());
 
 	for (auto &meeple : meeple_controller.meeples) {
-		meeple->sync();
-		place_meeple(meeple.get());
+		meeple.second->sync();
+		place_meeple(meeple.second.get());
 	}
 
 	// place towns
@@ -224,31 +230,22 @@ void Campaign::update(float delta)
 		auto result = physics.cast_ray(camera.position, camera.position + (1000.f * ray), COLLISION_GROUP_HEIGHTMAP | COLLISION_GROUP_TOWN);
 		if (result.hit) {
 			if (result.object) {
-				auto type = CampaignEntity(result.object->getUserIndex2());
-				if (type == CampaignEntity::TOWN) {
-					Town *node = static_cast<Town*>(result.object->getUserPointer());
-					if (node) {
-					}
-				}
+				marker.teleport(result.point);
+				set_meeple_target(meeple_controller.player.get(), result.object->getUserIndex(), result.object->getUserIndex2());
+				// set initial path
+				glm::vec2 hitpoint = glm::vec2(result.point.x, result.point.z);
+				std::list<glm::vec2> nodes;
+				
+				board->find_path(meeple_controller.player->position(), hitpoint, nodes);
+				meeple_controller.player->set_path(nodes);
 			}
-			marker.teleport(result.point);
-			glm::vec2 hitpoint = glm::vec2(result.point.x, result.point.z);
-			std::list<glm::vec2> nodes;
-			
-			board->find_path(glm::vec2(meeple_controller.player->position()), hitpoint, nodes);
-			meeple_controller.player->set_path(nodes);
 		}
 	}
 	
-	meeple_controller.update(delta);
-
-	float offset = vertical_offset(meeple_controller.player->position());
-	meeple_controller.player->set_vertical_offset(offset);
-
 	if (util::InputManager::key_pressed(SDLK_b)) { 
 		const Tile *tile = board->atlas().tile_at(meeple_controller.player->position());
 		if (tile) {
-			uint32_t id = spawn_town(tile->index, 1);
+			uint32_t id = spawn_town(tile->index, player_data.faction_id);
 			if (id) {
 				Town *town = settlement_controller.towns[id].get();
 				place_town(town);
@@ -256,6 +253,13 @@ void Campaign::update(float delta)
 			}
 		}
 	}
+
+	meeple_controller.update(delta);
+
+	update_meeple_target(meeple_controller.player.get());
+
+	float offset = vertical_offset(meeple_controller.player->position());
+	meeple_controller.player->set_vertical_offset(offset);
 
 	debugger->update(camera);
 
@@ -324,6 +328,18 @@ void Campaign::spawn_factions(int seed)
 {
 	std::mt19937 gen(seed);
 	std::uniform_real_distribution<float> dis(0.2f, 1.f);
+
+	// first spawn player faction
+	{
+		std::unique_ptr<Faction> faction = std::make_unique<Faction>();
+		auto id = id_generator.generate();
+		faction->set_id(id);
+		glm::vec3 color = { dis(gen), dis(gen), dis(gen) };
+		faction->set_color(color);
+		faction_controller.factions[id] = std::move(faction);
+
+		player_data.faction_id = id;
+	}
 
 	for (int i = 0; i < 10; i++) {
 		std::unique_ptr<Faction> faction = std::make_unique<Faction>();
@@ -442,4 +458,40 @@ void Campaign::reset_camera()
 {
 	camera.position = meeple_controller.player->transform()->position + glm::vec3(0.f, 10.f, -10.f);
 	camera.target(meeple_controller.player->transform()->position);
+}
+	
+void Campaign::set_meeple_target(Meeple *meeple, uint32_t target_id, uint8_t target_type)
+{
+	meeple->target_type = 0;
+	meeple->target_id = 0;
+
+	CampaignEntity entity_type = CampaignEntity(target_type);
+	if (entity_type == CampaignEntity::TOWN) {
+		auto search = settlement_controller.towns.find(target_id);
+		if (search != settlement_controller.towns.end()) {
+			meeple->target_type = target_type;
+			meeple->target_id = target_id;
+		}
+	}
+}
+
+void Campaign::update_meeple_target(Meeple *meeple)
+{
+	CampaignEntity entity_type = CampaignEntity(meeple->target_type);
+	if (entity_type == CampaignEntity::TOWN) {
+		auto search = settlement_controller.towns.find(meeple->target_id);
+		if (search != settlement_controller.towns.end()) {
+			float distance = glm::distance(meeple->position(), search->second->map_position());
+			if (distance < 1.F) {
+				meeple->clear_target();
+				// add town event
+				if (meeple->id() == player_data.meeple_id) {
+					state = CampaignState::BATTLE_REQUEST;
+				}
+			}
+		} else {
+			// town not found clear target
+			meeple->clear_target();
+		}
+	}
 }

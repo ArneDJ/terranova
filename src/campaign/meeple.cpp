@@ -61,12 +61,17 @@ void PathFinder::update(float delta, float speed)
 
 void PathFinder::teleport(const glm::vec2 &position)
 {
-	m_nodes.clear();
-	m_state = PathState::FINISHED;
+	clear_path();
 	m_origin = position;
 	m_location = position;
 }
 
+void PathFinder::clear_path()
+{
+	m_nodes.clear();
+	m_state = PathState::FINISHED;
+}
+	
 glm::vec2 PathFinder::location() const { return m_location; }
 
 glm::vec2 PathFinder::destination() const { return m_destination; }
@@ -154,100 +159,33 @@ void Meeple::teleport(const glm::vec2 &position)
 	m_path_finder.teleport(position);
 }
 
+void Meeple::clear_path()
+{
+	m_path_finder.clear_path();
+}
+	
+void Meeple::clear_target()
+{
+	target_type = 0;
+	target_id = 0;
+
+	clear_path();
+}
+
 void Meeple::sync()
 {
 	m_path_finder.teleport(glm::vec2(m_transform->position.x, m_transform->position.z));
 }
 	
-MeepleController::MeepleController()
-{
-	current_chase = chases.begin();
-}
-
 void MeepleController::update(float delta)
 {
-	// visibility collision triggers
-	//puts("visibility collision triggers");
-	for (auto &meeple : meeples) {
-		if (meeple->state() == MeepleState::ROAMING) {
-			auto visibility = meeple->visibility();
-			auto ghost_object = visibility->ghost_object();
-			int count = ghost_object->getNumOverlappingObjects();
-			for (int i = 0; i < count; i++) {
-				btCollisionObject *obj = ghost_object->getOverlappingObject(i);
-				Meeple *target = static_cast<Meeple*>(obj->getUserPointer());
-				if (target) {
-					if (target != meeple.get()) {
-						float dist = glm::distance(meeple->position(), target->position());
-						if (dist < MEEPLE_VISIBILITY_RADIUS) {
-				
-							meeple->set_state(MeepleState::TRACKING);
-							add_chase(meeple.get(), target);
-							break;
-						}
-					}
-				}
-			}
-		}
-	}
-
-	// update chase time slice
-	chase_time_slice += delta;
-	if (chases.size() > 0 && chase_time_slice > 0.02f) {
-		chase_time_slice = 0.f;
-		std::advance(current_chase, 1);
-	}
-	if (current_chase == chases.end()) {
-		current_chase = chases.begin();
-	}
-
 	player->update(delta);
 	for (auto &meeple : meeples) {
-		meeple->update(delta);
+		meeple.second->update(delta);
 	}
-}
-	
-void MeepleController::add_chase(Meeple *chaser, Meeple *target)
-{
-	for (const auto &chase : chases) {
-		if (chase->chaser == chaser && chase->target == target) {
-			return;
-		}
-	}
-
-	auto chase = std::make_unique<MeepleChase>();
-	chase->chaser = chaser;
-	chase->target = target;
-	chase->finished = false;
-
-	chases.push_back(std::move(chase));
 }
 	
 void MeepleController::clear()
 {
-	chases.clear();
-	current_chase = chases.begin();
 	meeples.clear();
-}
-	
-void MeepleController::remove_meeple(Meeple *meeple)
-{
-	for (auto it = chases.begin(); it != chases.end(); ) {
-		auto &chase = *it;
-		if (chase->chaser == meeple || chase->target == meeple) {
-			if (it == current_chase) {
-				current_chase++;
-			}
-			it = chases.erase(it);
-		} else {
-			++it;
-		}
-	}
-
-	for (int i = 0; i < meeples.size(); i++) {
-		if (meeples[i].get() == meeple) {
-			meeples.erase(meeples.begin() + i);
-			break;
-		}
-	}
 }

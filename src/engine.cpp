@@ -193,7 +193,6 @@ void Engine::update_campaign_menu()
 	if (ImGui::Button("Save World")) { 
 		campaign.save(user_dir.saves + "test.save");
 	}
-	if (ImGui::Button("Visit Tile")) { state = EngineState::BATTLE; }
 	ImGui::Separator();
 	if (ImGui::Button("Exit to Title")) { state = EngineState::TITLE; }
 	if (ImGui::Button("Exit")) { state = EngineState::EXIT; }
@@ -230,8 +229,9 @@ void Engine::run_campaign()
 
 		frame_timer.finish();
 
-		if (state == EngineState::BATTLE) {
+		if (campaign.state == CampaignState::BATTLE_REQUEST) {
 			run_battle();
+			campaign.state = CampaignState::PAUSED;
 		}
 		if (util::InputManager::exit_request()) {
 			state = EngineState::EXIT;
@@ -310,6 +310,8 @@ void Engine::update_battle_menu()
 	
 void Engine::run_battle()
 {
+	state = EngineState::BATTLE; 
+
 	battle.prepare(1337);
 
 	while (state == EngineState::BATTLE) {

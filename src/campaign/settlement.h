@@ -12,6 +12,7 @@ public:
 	uint32_t faction() const;
 	uint32_t tile() const;
 	uint32_t county() const;
+	glm::vec2 map_position() const;
 public:
 	const geom::Transform* transform() const;
 	const fysx::TriggerSphere* trigger() const;

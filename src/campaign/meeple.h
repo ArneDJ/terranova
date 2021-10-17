@@ -11,6 +11,7 @@ public:
 	void set_nodes(const std::list<glm::vec2> &nondes);
 	void update(float delta, float speed);
 	void teleport(const glm::vec2 &position);
+	void clear_path();
 public:
 	glm::vec2 location() const;
 	glm::vec2 destination() const;
@@ -26,17 +27,12 @@ private:
 	PathState m_state = PathState::FINISHED;
 };
 
-enum class MeepleState {
-	IDLING,
-	ROAMING,
-	TRAVELING,
-	FLEEING,
-	TRACKING
-};
-
 // moves on the campaign map
 // either controlled by the player or the AI
 class Meeple {
+public:
+	uint32_t target_id = 0; // id of target entity
+	uint8_t target_type = 0;
 public:
 	Meeple();
 public:
@@ -47,7 +43,8 @@ public:
 	void set_id(uint32_t id);
 	void set_speed(float speed);
 	void set_path(const std::list<glm::vec2> &nodes);
-	void set_state(MeepleState state) { m_state = state; }
+	void clear_path();
+	void clear_target();
 	void set_vertical_offset(float offset);
 public:
 	void add_troops(uint32_t troop_type, int count);
@@ -57,17 +54,15 @@ public:
 	const fysx::TriggerSphere* trigger() const;
 	const fysx::TriggerSphere* visibility() const;
 	glm::vec2 position() const;
-	MeepleState state() const { return m_state; }
 public:
 	template <class Archive>
 	void serialize(Archive &archive)
 	{
-		archive(m_id, m_speed, m_transform->position, m_transform->rotation, m_transform->scale);
+		archive(m_id, m_speed, m_transform->position, m_transform->rotation, m_transform->scale, target_id, target_type);
 	}
 private:
 	uint32_t m_id = 0;
 	float m_speed = 10.f;
-	MeepleState m_state = MeepleState::ROAMING;
 	PathFinder m_path_finder;
 	std::unique_ptr<geom::Transform> m_transform;
 private:
@@ -75,25 +70,11 @@ private:
 	std::unique_ptr<fysx::TriggerSphere> m_visibility;
 };
 
-struct MeepleChase {
-	Meeple *chaser = nullptr;
-	Meeple *target = nullptr;
-	bool finished = false;
-};
-
 class MeepleController {
 public:
-	MeepleController();
-public:
 	std::unique_ptr<Meeple> player;
-	std::vector<std::unique_ptr<Meeple>> meeples;
+	std::unordered_map<uint32_t, std::unique_ptr<Meeple>> meeples;
 public:
-	std::list<std::unique_ptr<MeepleChase>> chases;
-	std::list<std::unique_ptr<MeepleChase>>::iterator current_chase;
-	float chase_time_slice = 0.f;
-public:
-	void add_chase(Meeple *chaser, Meeple *target);
 	void update(float delta);
 	void clear();
-	void remove_meeple(Meeple *meeple);
 };

@@ -6,8 +6,27 @@
 #include "settlement.h"
 #include "faction.h"
 
+enum class CampaignState {
+	RUNNING,
+	PAUSED,
+	BATTLE_REQUEST,
+	EXIT_REQUEST
+};
+
+struct CampaignPlayerData {
+	uint32_t faction_id = 0;
+	uint32_t meeple_id = 0;
+
+	template <class Archive>
+	void serialize(Archive &archive)
+	{
+		archive(faction_id, meeple_id);
+	}
+};
+
 class Campaign {
 public:
+	CampaignState state = CampaignState::PAUSED;
 	CampaignModule module;
 	std::string name = {};
 	util::IdGenerator id_generator;
@@ -20,6 +39,7 @@ public:
 	MeepleController meeple_controller;
 	SettlementController settlement_controller;
 	FactionController faction_controller;
+	CampaignPlayerData player_data = {};
 public:
 	bool display_debug = false;
 	bool wireframe_worldmap = false;
@@ -41,6 +61,8 @@ private:
 	void spawn_county(Town *town);
 	void place_town(Town *town);
 	void place_meeple(Meeple *meeple);
+	void set_meeple_target(Meeple *meeple, uint32_t target_id, uint8_t target_type);
+	void update_meeple_target(Meeple *meeple);
 private:
 	float vertical_offset(const glm::vec2 &position);
 };

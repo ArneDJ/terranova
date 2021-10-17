@@ -56,19 +56,18 @@ struct District {
 class Cadastre {
 public:
 	District *core;
-	long seed;
+	int seed;
 	std::vector<WallSegment> walls;
 	std::vector<geom::Segment> highways;
+	geom::Rectangle area;
 	// graph structures
 	std::vector<District> districts;
 	std::vector<Junction> junctions;
 	std::vector<Section> sections;
 public:
-	void generate(long seedling, uint32_t tileref, geom::Rectangle bounds, size_t wall_radius);
+	void generate(int seedling, uint32_t tile, geom::Rectangle bounds, size_t wall_radius);
 private:
-	geom::Rectangle area;
-private:
-	void make_diagram(uint32_t tileref);
+	void make_diagram(uint32_t tile);
 	void mark_districts(void);
 	void mark_junctions(void);
 	void outline_walls(size_t radius);
