@@ -95,6 +95,7 @@ void Campaign::load(const std::string &filepath)
 	if (stream.is_open()) {
 		cereal::BinaryInputArchive archive(stream);
 		archive(name);
+		archive(seed);
 		board->load(archive);
 		archive(id_generator);
 		archive(camera);
@@ -115,6 +116,7 @@ void Campaign::save(const std::string &filepath)
 	if (stream.is_open()) {
 		cereal::BinaryOutputArchive archive(stream);
 		archive(name);
+		archive(seed);
 		board->save(archive);
 		archive(id_generator);
 		archive(camera);
@@ -128,8 +130,10 @@ void Campaign::save(const std::string &filepath)
 	}
 }
 	
-void Campaign::generate(int seed)
+void Campaign::generate(int seedling)
 {
+	seed = seedling;
+
 	id_generator.reset();
 
 	board->generate(seed);
@@ -141,7 +145,7 @@ void Campaign::generate(int seed)
 	}
 
 	// spawn factions
-	spawn_factions(seed);
+	spawn_factions();
 
 	player_data.meeple_id = id_generator.generate();
 	meeple_controller.player = std::make_unique<Meeple>();
@@ -325,7 +329,7 @@ void Campaign::place_meeple(Meeple *meeple)
 	labeler->add_label(meeple->transform(), 0.2f, glm::vec3(0.f, 2.f, 0.f), "Army " + std::to_string(meeple->id()), color);
 }
 	
-void Campaign::spawn_factions(int seed)
+void Campaign::spawn_factions()
 {
 	std::mt19937 gen(seed);
 	std::uniform_real_distribution<float> dis(0.2f, 1.f);
@@ -487,6 +491,8 @@ void Campaign::update_meeple_target(Meeple *meeple)
 				meeple->clear_target();
 				// add town event
 				if (meeple->id() == player_data.meeple_id) {
+					battle_data.tile = search->second->tile();
+					battle_data.town_size = 2;
 					state = CampaignState::BATTLE_REQUEST;
 				}
 			}

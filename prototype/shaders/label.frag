@@ -18,5 +18,4 @@ void main()
 	if (sampled.a < 0.5) { discard; }
 
 	fcolor = vec4(color, 1.0) * sampled;
-	//fcolor = vec4(0.0, 0.0, 0.0, 1.0);
 } 

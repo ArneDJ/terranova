@@ -172,8 +172,6 @@ Board::Board(std::shared_ptr<gfx::Shader> tilemap)
 	
 void Board::generate(int seed)
 {
-	m_seed = seed;
-
 	AtlasParameters parameters = {};
 	m_atlas.generate(seed, BOUNDS, parameters);
 	

@@ -24,11 +24,19 @@ struct CampaignPlayerData {
 	}
 };
 
+struct CampaignBattleData {
+	uint32_t tile;
+	uint8_t town_size = 0;
+};
+
 class Campaign {
 public:
-	CampaignState state = CampaignState::PAUSED;
-	Module module; // TODO pass this
 	std::string name = {};
+	CampaignState state = CampaignState::PAUSED;
+	CampaignBattleData battle_data;
+	int seed;
+public:
+	Module module; // TODO pass this
 	util::IdGenerator id_generator;
 	util::Camera camera;
 	fysx::PhysicalSystem physics;
@@ -47,7 +55,7 @@ public:
 public:
 	void load(const std::string &filepath);
 	void save(const std::string &filepath);
-	void generate(int seed);
+	void generate(int seedling);
 	void prepare();
 	void clear();
 public:
@@ -56,7 +64,7 @@ public:
 	void display();
 	void reset_camera();
 private:
-	void spawn_factions(int seed);
+	void spawn_factions();
 	uint32_t spawn_town(uint32_t tile, uint32_t faction);
 	void spawn_county(Town *town);
 	void place_town(Town *town);

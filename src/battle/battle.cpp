@@ -15,6 +15,8 @@
 #include "../extern/loguru/loguru.hpp"
 
 #include "../extern/imgui/imgui.h"
+#include "../extern/imgui/imgui_impl_sdl.h"
+#include "../extern/imgui/imgui_impl_opengl3.h"
 
 #include "../util/input.h"
 #include "../util/camera.h"
@@ -108,13 +110,15 @@ void Battle::load_molds(const Module &module)
 	}
 }
 
-void Battle::prepare(int seed)
+void Battle::prepare(const BattleParameters &params)
 {
+	parameters = params;
+
 	landscaper.clear();
 
-	terrain->generate(seed);
+	terrain->generate(parameters.seed);
 
-	landscaper.generate(seed, 32, 2);
+	landscaper.generate(parameters.seed, parameters.tile, parameters.town_size);
 	
 	physics.add_object(terrain->height_field()->object());
 
@@ -225,4 +229,14 @@ float Battle::vertical_offset(float x, float z)
 	auto result = physics.cast_ray(origin, end);
 	
 	return result.point.y;
+}
+	
+void Battle::update_debug_menu()
+{
+	ImGui::Begin("Battle Info");
+	ImGui::SetWindowSize(ImVec2(300, 200));
+	ImGui::Text("seed: %d", parameters.seed);
+	ImGui::Text("tile: %d", parameters.tile);
+	ImGui::Text("town size: %d", parameters.town_size);
+	ImGui::End();
 }

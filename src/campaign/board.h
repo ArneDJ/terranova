@@ -67,19 +67,18 @@ public:
 	template <class Archive>
 	void save(Archive &archive) const
 	{
-		archive(m_seed, m_atlas, m_land_navigation);
+		archive(m_atlas, m_land_navigation);
 	}
 public:
 	template <class Archive>
 	void load(Archive &archive)
 	{
-		archive(m_seed, m_atlas, m_land_navigation);
+		archive(m_atlas, m_land_navigation);
 	}
 public:
 	void display(const util::Camera &camera);
 	void display_wireframe(const util::Camera &camera);
 private:
-	int m_seed;
 	Atlas m_atlas;
 	BoardModel m_model;
 	std::unique_ptr<fysx::HeightField> m_height_field;

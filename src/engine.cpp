@@ -321,14 +321,22 @@ void Engine::update_battle_menu()
 	if (ImGui::Button("Return to Campaign")) { state = EngineState::RUNNING_CAMPAIGN; }
 	ImGui::Separator();
 	if (ImGui::Button("Quit Game")) { state = EngineState::EXIT; }
+
 	ImGui::End();
+
+	battle.update_debug_menu();
 }
 	
 void Engine::run_battle()
 {
 	state = EngineState::BATTLE; 
 
-	battle.prepare(1337);
+	BattleParameters parameters;
+	parameters.seed = campaign.seed;
+	parameters.tile = campaign.battle_data.tile;
+	parameters.town_size = campaign.battle_data.town_size;
+
+	battle.prepare(parameters);
 
 	while (state == EngineState::BATTLE) {
 		frame_timer.begin();
