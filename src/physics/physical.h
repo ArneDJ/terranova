@@ -11,6 +11,14 @@ struct RayResult {
 	const btCollisionObject *object = nullptr; // the body if ray hit
 };
 
+class CollisionMesh {
+public:
+	std::unique_ptr<btTriangleMesh> mesh;
+	std::unique_ptr<btCollisionShape> shape;
+public:
+	CollisionMesh(const std::vector<glm::vec3> &positions, const std::vector<uint16_t> &indices);
+};
+
 class PhysicalSystem {
 public:
 	PhysicalSystem();

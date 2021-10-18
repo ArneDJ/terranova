@@ -44,6 +44,43 @@ const geom::AABB SCENE_SIZE = {
 	{ 0.F, 0.F, 0.F },
 	{ 1024.F, 64.F, 1024.F }
 };
+	
+HouseMold::HouseMold(uint32_t id, const gfx::Model *model)
+	: id(id), model(model)
+{
+	// make collision shape
+	std::vector<glm::vec3> positions;
+	std::vector<uint16_t> indices;
+	uint16_t offset = 0;
+	for (const auto &mesh : model->collision_meshes()) {
+		for (const auto &pos : mesh->positions) {
+			positions.push_back(pos);
+		}
+		for (const auto &index : mesh->indices) {
+			indices.push_back(index + offset);
+		}
+		offset = positions.size();
+	}
+
+	collision = std::make_unique<fysx::CollisionMesh>(positions, indices);
+}
+	
+BuildingEntity::BuildingEntity(const glm::vec3 &pos, const glm::quat &rot, btCollisionShape *shape)
+{
+	transform = std::make_unique<geom::Transform>();
+	transform->position = pos;
+	transform->rotation = rot;
+
+	btTransform tran;
+	tran.setIdentity();
+	tran.setOrigin(fysx::vec3_to_bt(pos));
+	tran.setRotation(fysx::quat_to_bt(rot));
+
+	btVector3 inertia(0, 0, 0);
+	motionstate = std::make_unique<btDefaultMotionState>(tran);
+	btRigidBody::btRigidBodyConstructionInfo rbInfo(0.f, motionstate.get(), shape, inertia);
+	body = std::make_unique<btRigidBody>(rbInfo);
+}
 
 // TODO remove
 glm::vec2 creature_control(const glm::vec3 &view, bool forward, bool backward, bool right, bool left)
@@ -95,10 +132,7 @@ void Battle::load_molds(const Module &module)
 
 	for (const auto &module_house : module.houses) {
 		for (const auto &model_path : module_house.models) {
-			HouseMold mold;
-			mold.id = id;
-			mold.model = MediaManager::load_model(model_path);
-			house_molds[id] = mold;
+			house_molds[id] = std::make_unique<HouseMold>(id, MediaManager::load_model(model_path));
 
 			id++;
 		}
@@ -106,7 +140,7 @@ void Battle::load_molds(const Module &module)
 
 	// add house info to landscape
 	for (const auto &mold : house_molds) {
-		landscaper.add_house(mold.second.id, mold.second.model->bounds());
+		landscaper.add_house(mold.second->id, mold.second->model->bounds());
 	}
 }
 
@@ -125,34 +159,31 @@ void Battle::prepare(const BattleParameters &params)
 	for (const auto &house : landscaper.houses) {
 		auto search = house_molds.find(house.second.mold_id);
 		if (search != house_molds.end()) {
-			auto object = scene->find_object(search->second.model);
+			auto object = scene->find_object(search->second->model);
 			for (const auto &transform : house.second.transforms) {
 				glm::vec3 position = { transform.position.x, 0.f, transform.position.y };
 				position.y = vertical_offset(transform.position.x, transform.position.y);
 				glm::quat rotation = glm::angleAxis(transform.angle, glm::vec3(0.f, 1.f, 0.f));
-				auto transform_ent = std::make_unique<geom::Transform>();
-				transform_ent->position = position;
-				transform_ent->rotation = rotation;
+				auto building = std::make_unique<BuildingEntity>(position, rotation, search->second->collision->shape.get());
 
-				object->add_transform(transform_ent.get());
+				object->add_transform(building->transform.get());
 
-				building_transforms.push_back(std::move(transform_ent));
+				building_entities.push_back(std::move(building));
 			}
 		}
+	}
+
+	// add collision
+	for (const auto &building : building_entities) {
+		physics.add_body(building->body.get());
 	}
 
 	auto transform = std::make_unique<geom::Transform>();
 	transform->position = glm::vec3(512.f, 64.f, 512.f);
 
-	auto dragon_model = MediaManager::load_model("modules/native/media/models/dragon.glb");
-	auto dragon_object = scene->find_object(dragon_model);
-	dragon_object->add_transform(transform.get());
-
 	camera.position = glm::vec3(5.f, 5.f, 5.f);
 	camera.target(transform->position);
 
-	building_transforms.push_back(std::move(transform));
-	
 	player = std::make_unique<fysx::Bumper>(glm::vec3(512.f, 64.f, 512.f), 0.3f, 1.8f);
 	physics.add_body(player->body());
 
@@ -169,7 +200,7 @@ void Battle::clear()
 	physics.clear_objects();
 
 	// clear entities
-	building_transforms.clear();
+	building_entities.clear();
 }
 
 void Battle::update(float delta)

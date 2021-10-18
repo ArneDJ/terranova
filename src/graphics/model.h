@@ -31,6 +31,7 @@ public:
 public:
 	void display() const;
 	const std::vector<std::unique_ptr<Mesh>>& meshes() const;
+	const std::vector<std::unique_ptr<CollisionMesh>>& collision_meshes() const;
 	const geom::AABB& bounds() const;
 private:
 	geom::AABB m_bounds = {};

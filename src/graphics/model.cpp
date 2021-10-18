@@ -82,6 +82,11 @@ const std::vector<std::unique_ptr<Mesh>>& Model::meshes() const
 	return m_meshes;
 }
 
+const std::vector<std::unique_ptr<CollisionMesh>>& Model::collision_meshes() const
+{
+	return m_collision_meshes;
+}
+
 const geom::AABB& Model::bounds() const
 {
 	return m_bounds;

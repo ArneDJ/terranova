@@ -3,10 +3,22 @@
 #include "landscape.h"
 #include "terrain.h"
 
-struct HouseMold {
+class HouseMold {
+public:
 	uint32_t id = 0;
 	const gfx::Model *model = nullptr;
-	//physx::TriangleCollisionShape collision;
+	std::unique_ptr<fysx::CollisionMesh> collision;
+public:
+	HouseMold(uint32_t id, const gfx::Model *model);
+};
+
+class BuildingEntity {
+public:
+	std::unique_ptr<geom::Transform> transform;
+	std::unique_ptr<btMotionState> motionstate;
+	std::unique_ptr<btRigidBody> body;
+public:
+	BuildingEntity(const glm::vec3 &pos, const glm::quat &rot, btCollisionShape *shape);
 };
 
 struct BattleParameters {
@@ -25,9 +37,10 @@ public:
 	fysx::PhysicalSystem physics;
 	std::unique_ptr<fysx::Bumper> player;
 	carto::Landscaper landscaper;
-	std::vector<std::unique_ptr<geom::Transform>> building_transforms;
+	//std::vector<std::unique_ptr<geom::Transform>> building_transforms;
+	std::vector<std::unique_ptr<BuildingEntity>> building_entities;
 public:
-	std::unordered_map<uint32_t, HouseMold> house_molds;
+	std::unordered_map<uint32_t, std::unique_ptr<HouseMold>> house_molds;
 public:
 	void init(const gfx::ShaderGroup *shaders);
 	void load_molds(const Module &module);

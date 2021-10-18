@@ -103,5 +103,22 @@ btDynamicsWorld* PhysicalSystem::world()
 {
 	return m_world.get();
 }
+	
+CollisionMesh::CollisionMesh(const std::vector<glm::vec3> &positions, const std::vector<uint16_t> &indices)
+{
+	mesh = std::make_unique<btTriangleMesh>();
+
+	for (int i = 0; i < indices.size(); i += 3) {
+		uint16_t index = indices[i];
+		btVector3 v0 = vec3_to_bt(positions[index]);
+		index = indices[i + 1];
+		btVector3 v1 = vec3_to_bt(positions[index]);
+		index = indices[i + 2];
+		btVector3 v2 = vec3_to_bt(positions[index]);
+		mesh->addTriangle(v0, v1, v2, false);
+	}
+
+	shape = std::make_unique<btBvhTriangleMeshShape>(mesh.get(), false);
+}
 
 };
