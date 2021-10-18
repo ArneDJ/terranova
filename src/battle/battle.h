@@ -6,6 +6,7 @@
 struct HouseMold {
 	uint32_t id = 0;
 	const gfx::Model *model = nullptr;
+	//physx::TriangleCollisionShape collision;
 };
 
 struct BattleParameters {

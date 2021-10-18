@@ -104,7 +104,11 @@ void Model::load(const cgltf_data *data)
 	for (int i = 0; i < data->meshes_count; i++) {
 		const cgltf_mesh *mesh = &data->meshes[i];
 		std::string mesh_name = mesh->name ? mesh->name : std::to_string(i);
-		load_visual_mesh(mesh);
+		if (mesh_name.find("collision_trimesh") != std::string::npos) {
+			load_collision_mesh(mesh);
+		} else {
+			load_visual_mesh(mesh);
+		}
 	}
 
 	// model bounding box
@@ -227,6 +231,48 @@ void Model::load_visual_mesh(const cgltf_mesh *mesh_data)
 	mesh->create(buffer_data, primitives);
 
 	m_meshes.push_back(std::move(mesh));
+}
+	
+void Model::load_collision_mesh(const cgltf_mesh *mesh_data)
+{
+	auto mesh = std::make_unique<CollisionMesh>();
+
+	mesh->name = mesh_data->name;
+
+	std::vector<uint8_t> index_buffer;
+	std::vector<uint8_t> position_buffer;
+  	uint32_t vertex_start = 0;
+  	uint32_t index_start = 0;
+	for (int i = 0; i < mesh_data->primitives_count; i++) {
+		const cgltf_primitive *primitive = &mesh_data->primitives[i];
+		if (primitive->indices) {
+			append_buffer(primitive->indices, index_buffer);
+			const void *data = &(index_buffer[index_start]);
+			const uint16_t *buf = static_cast<const uint16_t*>(data);
+			for (size_t index = 0; index < primitive->indices->count; index++) {
+				mesh->indices.push_back(buf[index]);
+			}
+
+			index_start = index_buffer.size();
+		}
+		for (int j = 0; j < primitive->attributes_count; j++) {
+  			const cgltf_attribute *attribute = &primitive->attributes[j];
+			if (attribute->type == cgltf_attribute_type_position) {
+				append_buffer(attribute->data, position_buffer);
+				size_t stride = cgltf_num_components(attribute->data->type);
+				const void *data = &(position_buffer[vertex_start]);
+				const float *buf = static_cast<const float*>(data);
+				for (size_t v = 0; v < attribute->data->count; v++) {
+					glm::vec3 position = glm::make_vec3(&buf[v * stride]);
+					mesh->positions.push_back(position);
+				}
+
+				vertex_start = position_buffer.size();
+			}
+		}
+	}
+
+	m_collision_meshes.push_back(std::move(mesh));
 }
 
 // according to glTF docs: 
