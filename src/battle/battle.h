@@ -2,24 +2,8 @@
 #include "cadastre.h"
 #include "landscape.h"
 #include "terrain.h"
-
-class HouseMold {
-public:
-	uint32_t id = 0;
-	const gfx::Model *model = nullptr;
-	std::unique_ptr<fysx::CollisionMesh> collision;
-public:
-	HouseMold(uint32_t id, const gfx::Model *model);
-};
-
-class BuildingEntity {
-public:
-	std::unique_ptr<geom::Transform> transform;
-	std::unique_ptr<btMotionState> motionstate;
-	std::unique_ptr<btRigidBody> body;
-public:
-	BuildingEntity(const glm::vec3 &pos, const glm::quat &rot, btCollisionShape *shape);
-};
+#include "mold.h"
+#include "building.h"
 
 struct BattleParameters {
 	int seed;
@@ -50,4 +34,6 @@ public:
 	void update_debug_menu();
 private:
 	float vertical_offset(float x, float z);
+private:
+	void add_houses();
 };

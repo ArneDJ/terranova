@@ -45,43 +45,6 @@ const geom::AABB SCENE_BOUNDS = {
 	{ 1024.F, 32.F, 1024.F }
 };
 	
-HouseMold::HouseMold(uint32_t id, const gfx::Model *model)
-	: id(id), model(model)
-{
-	// make collision shape
-	std::vector<glm::vec3> positions;
-	std::vector<uint16_t> indices;
-	uint16_t offset = 0;
-	for (const auto &mesh : model->collision_meshes()) {
-		for (const auto &pos : mesh->positions) {
-			positions.push_back(pos);
-		}
-		for (const auto &index : mesh->indices) {
-			indices.push_back(index + offset);
-		}
-		offset = positions.size();
-	}
-
-	collision = std::make_unique<fysx::CollisionMesh>(positions, indices);
-}
-	
-BuildingEntity::BuildingEntity(const glm::vec3 &pos, const glm::quat &rot, btCollisionShape *shape)
-{
-	transform = std::make_unique<geom::Transform>();
-	transform->position = pos;
-	transform->rotation = rot;
-
-	btTransform tran;
-	tran.setIdentity();
-	tran.setOrigin(fysx::vec3_to_bt(pos));
-	tran.setRotation(fysx::quat_to_bt(rot));
-
-	btVector3 inertia(0, 0, 0);
-	motionstate = std::make_unique<btDefaultMotionState>(tran);
-	btRigidBody::btRigidBodyConstructionInfo rbInfo(0.f, motionstate.get(), shape, inertia);
-	body = std::make_unique<btRigidBody>(rbInfo);
-}
-
 // TODO remove
 glm::vec2 creature_control(const glm::vec3 &view, bool forward, bool backward, bool right, bool left)
 {
@@ -139,8 +102,9 @@ void Battle::load_molds(const Module &module)
 	}
 
 	// add house info to landscape
-	for (const auto &mold : house_molds) {
-		landscaper.add_house(mold.second->id, mold.second->model->bounds());
+	for (const auto &bucket : house_molds) {
+		const auto &mold = bucket.second;
+		landscaper.add_house(mold->id, mold->model->bounds());
 	}
 }
 
@@ -156,27 +120,7 @@ void Battle::prepare(const BattleParameters &params)
 	
 	physics.add_object(terrain->height_field()->object());
 
-	for (const auto &house : landscaper.houses) {
-		auto search = house_molds.find(house.second.mold_id);
-		if (search != house_molds.end()) {
-			auto object = scene->find_object(search->second->model);
-			for (const auto &transform : house.second.transforms) {
-				glm::vec3 position = { transform.position.x, 0.f, transform.position.y };
-				position.y = vertical_offset(transform.position.x, transform.position.y);
-				glm::quat rotation = glm::angleAxis(transform.angle, glm::vec3(0.f, 1.f, 0.f));
-				auto building = std::make_unique<BuildingEntity>(position, rotation, search->second->collision->shape.get());
-
-				object->add_transform(building->transform.get());
-
-				building_entities.push_back(std::move(building));
-			}
-		}
-	}
-
-	// add collision
-	for (const auto &building : building_entities) {
-		physics.add_body(building->body.get());
-	}
+	add_houses();
 
 	auto transform = std::make_unique<geom::Transform>();
 	transform->position = glm::vec3(512.f, 64.f, 512.f);
@@ -251,7 +195,6 @@ void Battle::display()
 	debugger->display();
 }
 
-// FIXME needs to be checked for collision mask
 float Battle::vertical_offset(float x, float z)
 {
 	glm::vec3 origin = { x, 2.F * SCENE_BOUNDS.max.y, z };
@@ -270,4 +213,30 @@ void Battle::update_debug_menu()
 	ImGui::Text("tile: %d", parameters.tile);
 	ImGui::Text("town size: %d", parameters.town_size);
 	ImGui::End();
+}
+	
+void Battle::add_houses()
+{
+	for (const auto &house : landscaper.houses) {
+		auto search = house_molds.find(house.second.mold_id);
+		if (search != house_molds.end()) {
+			auto object = scene->find_object(search->second->model);
+			for (const auto &transform : house.second.transforms) {
+				glm::vec3 position = { transform.position.x, 0.f, transform.position.y };
+				position.y = vertical_offset(transform.position.x, transform.position.y);
+				glm::quat rotation = glm::angleAxis(transform.angle, glm::vec3(0.f, 1.f, 0.f));
+				auto building = std::make_unique<BuildingEntity>(position, rotation, search->second->collision->shape.get());
+
+				object->add_transform(building->transform.get());
+
+				building_entities.push_back(std::move(building));
+			}
+		}
+	}
+
+	// add collision
+	for (const auto &building : building_entities) {
+		physics.add_body(building->body.get());
+	}
+
 }
