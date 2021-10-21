@@ -10,6 +10,8 @@
 
 #include "../extern/fastnoise/FastNoise.h"
 
+#include "../extern/poisson/PoissonGenerator.h"
+
 #include "../geometry/geometry.h"
 #include "../geometry/voronoi.h"
 #include "../geometry/transform.h"
@@ -29,12 +31,15 @@ void Atlas::generate(int seed, const geom::Rectangle &bounds, const AtlasParamet
 
 	// generate the graph
 	std::mt19937 gen(seed);
-	std::uniform_real_distribution<float> dis_x(bounds.min.x, bounds.max.x);
-	std::uniform_real_distribution<float> dis_y(bounds.min.y, bounds.max.y);
 	
+	glm::vec2 scale = bounds.max - bounds.min;
 	std::vector<glm::vec2> points;
-	for (int i = 0; i < 8000; i++) {
-		glm::vec2 point = { dis_x(gen), dis_y(gen) };
+
+	PoissonGenerator::DefaultPRNG PRNG(seed);
+	const auto positions = PoissonGenerator::generatePoissonPoints(8000, PRNG, false);
+	for (const auto &position : positions) {
+		glm::vec2 point = { scale.x * position.x, scale.y * position.y };
+		point += bounds.min;
 		points.push_back(point);
 	}
 

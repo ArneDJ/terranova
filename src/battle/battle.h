@@ -37,7 +37,6 @@ public:
 	fysx::PhysicalSystem physics;
 	std::unique_ptr<fysx::Bumper> player;
 	carto::Landscaper landscaper;
-	//std::vector<std::unique_ptr<geom::Transform>> building_transforms;
 	std::vector<std::unique_ptr<BuildingEntity>> building_entities;
 public:
 	std::unordered_map<uint32_t, std::unique_ptr<HouseMold>> house_molds;

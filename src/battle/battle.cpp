@@ -40,9 +40,9 @@
 
 #include "battle.h"
 
-const geom::AABB SCENE_SIZE = {
+const geom::AABB SCENE_BOUNDS = {
 	{ 0.F, 0.F, 0.F },
-	{ 1024.F, 64.F, 1024.F }
+	{ 1024.F, 32.F, 1024.F }
 };
 	
 HouseMold::HouseMold(uint32_t id, const gfx::Model *model)
@@ -116,11 +116,11 @@ void Battle::init(const gfx::ShaderGroup *shaders)
 	scene = std::make_unique<gfx::SceneGroup>(shaders->debug, shaders->culling);
 	scene->set_scene_type(gfx::SceneType::DYNAMIC);
 
-	terrain = std::make_unique<Terrain>(shaders->terrain);
+	terrain = std::make_unique<Terrain>(shaders->terrain, SCENE_BOUNDS);
 
 	landscaper.bounds = {
-		{ SCENE_SIZE.min.x, SCENE_SIZE.min.z },
-		{ SCENE_SIZE.max.x, SCENE_SIZE.max.z }
+		{ SCENE_BOUNDS.min.x, SCENE_BOUNDS.min.z },
+		{ SCENE_BOUNDS.max.x, SCENE_BOUNDS.max.z }
 	};
 }
 
@@ -187,7 +187,7 @@ void Battle::prepare(const BattleParameters &params)
 	player = std::make_unique<fysx::Bumper>(glm::vec3(512.f, 64.f, 512.f), 0.3f, 1.8f);
 	physics.add_body(player->body());
 
-	debugger->add_capsule(player->capsule_height(), player->capsule_radius(), player->transform());
+	debugger->add_capsule(player->capsule_radius(), player->capsule_height(), player->transform());
 }
 
 void Battle::clear()
@@ -254,7 +254,7 @@ void Battle::display()
 // FIXME needs to be checked for collision mask
 float Battle::vertical_offset(float x, float z)
 {
-	glm::vec3 origin = { x, 2.F * SCENE_SIZE.max.y, z };
+	glm::vec3 origin = { x, 2.F * SCENE_BOUNDS.max.y, z };
 	glm::vec3 end = { x, 0.F, z };
 
 	auto result = physics.cast_ray(origin, end);

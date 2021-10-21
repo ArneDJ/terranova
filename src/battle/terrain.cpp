@@ -27,11 +27,13 @@
 
 #include "terrain.h"
 
-Terrain::Terrain(std::shared_ptr<gfx::Shader> shader)
+Terrain::Terrain(std::shared_ptr<gfx::Shader> shader, const geom::AABB &bounds)
 	: m_shader(shader)
 {
-	geom::Rectangle bounds = { { 0.F, 0.F }, { m_scale.x, m_scale.z } };
-	m_mesh.create(32, bounds);
+	m_scale = bounds.max - bounds.min;
+
+	geom::Rectangle rectangle = { { bounds.min.x, bounds.min.z }, { bounds.max.x, bounds.max.z } };
+	m_mesh.create(32, rectangle);
 
 	m_heightmap.resize(512, 512, util::COLORSPACE_GRAYSCALE);
 
