@@ -165,6 +165,7 @@ void Campaign::prepare()
 	// add physical objects
 	int group = COLLISION_GROUP_HEIGHTMAP;
 	int mask = COLLISION_GROUP_RAY;
+	board->height_field()->object()->setUserIndex2(int(CampaignEntity::LAND_SURFACE));
 	physics.add_object(board->height_field()->object(), group, mask);
 
 	meeple_controller.player->sync();
@@ -214,49 +215,22 @@ void Campaign::clear()
 
 void Campaign::update(float delta)
 {
+	update_cheat_menu();
+
 	physics.update_collision_only();
 
-	// update camera
-	float modifier = 10.f * delta;
-	float speed = 10.f * modifier;
-	if (util::InputManager::key_down(SDL_BUTTON_LEFT)) {
-		glm::vec2 offset = modifier * 0.05f * util::InputManager::rel_mouse_coords();
-		camera.add_offset(offset);
-	}
-	if (util::InputManager::key_down(SDLK_w)) { camera.move_forward(speed); }
-	if (util::InputManager::key_down(SDLK_s)) { camera.move_backward(speed); }
-	if (util::InputManager::key_down(SDLK_d)) { camera.move_right(speed); }
-	if (util::InputManager::key_down(SDLK_a)) { camera.move_left(speed); }
+	update_camera(delta);
 
-	camera.update_viewing();
-
-	if (util::InputManager::key_pressed(SDL_BUTTON_RIGHT)) {
-		glm::vec3 ray = camera.ndc_to_ray(util::InputManager::abs_mouse_coords());
-		auto result = physics.cast_ray(camera.position, camera.position + (1000.f * ray), COLLISION_GROUP_HEIGHTMAP | COLLISION_GROUP_TOWN);
-		if (result.hit) {
-			if (result.object) {
-				marker.teleport(result.point);
-				set_meeple_target(meeple_controller.player.get(), result.object->getUserIndex(), result.object->getUserIndex2());
-				// set initial path
-				glm::vec2 hitpoint = glm::vec2(result.point.x, result.point.z);
-				std::list<glm::vec2> nodes;
-				
-				board->find_path(meeple_controller.player->position(), hitpoint, nodes);
-				meeple_controller.player->set_path(nodes);
-			}
+	if (player_mode == PlayerMode::ARMY_MOVEMENT) {
+		if (util::InputManager::key_pressed(SDL_BUTTON_RIGHT)) {
+			glm::vec3 ray = camera.ndc_to_ray(util::InputManager::abs_mouse_coords());
+			set_player_movement(ray);
 		}
 	}
 	
-	if (util::InputManager::key_pressed(SDLK_b)) { 
-		const Tile *tile = board->atlas().tile_at(meeple_controller.player->position());
-		if (tile) {
-			uint32_t id = spawn_town(tile->index, player_data.faction_id);
-			if (id) {
-				Town *town = settlement_controller.towns[id].get();
-				place_town(town);
-				spawn_county(town);
-			}
-		}
+	if (player_mode == PlayerMode::TOWN_PLACEMENT) {
+		glm::vec3 ray = camera.ndc_to_ray(util::InputManager::abs_mouse_coords());
+		set_player_construction(ray);
 	}
 
 	meeple_controller.update(delta);
@@ -357,19 +331,23 @@ void Campaign::spawn_factions()
 }
 	
 // returns the id of the town if it could be added on an unoccupied tile
-uint32_t Campaign::spawn_town(uint32_t tile, uint32_t faction)
+uint32_t Campaign::spawn_town(const Tile *tile, uint32_t faction)
 {
-	auto search = faction_controller.tile_owners.find(tile);
+	if (tile->relief != ReliefType::LOWLAND && tile->relief != ReliefType::HILLS) {
+		return 0;
+	}
+
+	auto search = faction_controller.tile_owners.find(tile->index);
 	if (search == faction_controller.tile_owners.end() || search->second == 0) {
 		std::unique_ptr<Town> town = std::make_unique<Town>();
 		auto id = id_generator.generate();
 		town->set_id(id);
 		town->set_faction(faction);
-		town->set_tile(tile);
+		town->set_tile(tile->index);
 
 		settlement_controller.towns[id] = std::move(town);
 
-		faction_controller.tile_owners[tile] = faction;
+		faction_controller.tile_owners[tile->index] = faction;
 
 		return id;
 	}
@@ -477,6 +455,8 @@ void Campaign::set_meeple_target(Meeple *meeple, uint32_t target_id, uint8_t tar
 			meeple->target_type = target_type;
 			meeple->target_id = target_id;
 		}
+	} else if (entity_type == CampaignEntity::LAND_SURFACE) {
+		meeple->target_type = target_type;
 	}
 }
 
@@ -499,6 +479,76 @@ void Campaign::update_meeple_target(Meeple *meeple)
 		} else {
 			// town not found clear target
 			meeple->clear_target();
+		}
+	}
+}
+	
+void Campaign::update_cheat_menu()
+{
+	ImGui::Begin("Cheat Menu");
+	ImGui::SetWindowSize(ImVec2(300, 200));
+	if (ImGui::Button("Add Town")) {
+		if (player_mode != PlayerMode::TOWN_PLACEMENT) {
+			player_mode = PlayerMode::TOWN_PLACEMENT;
+		} else {
+			player_mode = PlayerMode::ARMY_MOVEMENT;
+		}
+	}
+	ImGui::End();
+}
+	
+void Campaign::update_camera(float delta)
+{
+	float modifier = 10.f * delta;
+	float speed = 10.f * modifier;
+	if (util::InputManager::key_down(SDL_BUTTON_LEFT)) {
+		glm::vec2 offset = modifier * 0.05f * util::InputManager::rel_mouse_coords();
+		camera.add_offset(offset);
+	}
+	if (util::InputManager::key_down(SDLK_w)) { camera.move_forward(speed); }
+	if (util::InputManager::key_down(SDLK_s)) { camera.move_backward(speed); }
+	if (util::InputManager::key_down(SDLK_d)) { camera.move_right(speed); }
+	if (util::InputManager::key_down(SDLK_a)) { camera.move_left(speed); }
+
+	camera.update_viewing();
+}
+	
+void Campaign::set_player_movement(const glm::vec3 &ray)
+{
+	auto result = physics.cast_ray(camera.position, camera.position + (1000.f * ray), COLLISION_GROUP_HEIGHTMAP | COLLISION_GROUP_TOWN);
+	if (result.hit) {
+		if (result.object) {
+			set_meeple_target(meeple_controller.player.get(), result.object->getUserIndex(), result.object->getUserIndex2());
+			// set initial path
+			glm::vec2 hitpoint = glm::vec2(result.point.x, result.point.z);
+			std::list<glm::vec2> nodes;
+			
+			board->find_path(meeple_controller.player->position(), hitpoint, nodes);
+			meeple_controller.player->set_path(nodes);
+		}
+		if (meeple_controller.player->target_type == uint8_t(CampaignEntity::LAND_SURFACE)) {
+			marker.teleport(result.point);
+		}
+	}
+}
+	
+void Campaign::set_player_construction(const glm::vec3 &ray)
+{
+	auto result = physics.cast_ray(camera.position, camera.position + (1000.f * ray), COLLISION_GROUP_HEIGHTMAP);
+	const Tile *tile = board->atlas().tile_at(glm::vec2(result.point.x, result.point.z));
+	if (tile) {
+		glm::vec2 center = board->tile_center(tile->index);
+		float offset = vertical_offset(center);
+		marker.teleport(glm::vec3(center.x, offset, center.y));
+		if (util::InputManager::key_pressed(SDL_BUTTON_LEFT)) {
+			uint32_t id = spawn_town(tile, player_data.faction_id);
+			if (id) {
+				Town *town = settlement_controller.towns[id].get();
+				place_town(town);
+				spawn_county(town);
+				// change mode
+				player_mode = PlayerMode::ARMY_MOVEMENT;
+			}
 		}
 	}
 }

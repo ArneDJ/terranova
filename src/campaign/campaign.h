@@ -13,6 +13,11 @@ enum class CampaignState {
 	EXIT_REQUEST
 };
 
+enum class PlayerMode {
+	ARMY_MOVEMENT,
+	TOWN_PLACEMENT
+};
+
 struct CampaignPlayerData {
 	uint32_t faction_id = 0;
 	uint32_t meeple_id = 0;
@@ -47,7 +52,9 @@ public:
 	MeepleController meeple_controller;
 	SettlementController settlement_controller;
 	FactionController faction_controller;
+public:
 	CampaignPlayerData player_data = {};
+	PlayerMode player_mode = PlayerMode::ARMY_MOVEMENT;
 public:
 	bool display_debug = false;
 	bool wireframe_worldmap = false;
@@ -64,13 +71,18 @@ public:
 	void display();
 	void reset_camera();
 private:
+	void update_cheat_menu();
+	void update_camera(float delta);
+private:
 	void spawn_factions();
-	uint32_t spawn_town(uint32_t tile, uint32_t faction);
+	uint32_t spawn_town(const Tile *tile, uint32_t faction);
 	void spawn_county(Town *town);
 	void place_town(Town *town);
 	void place_meeple(Meeple *meeple);
 	void set_meeple_target(Meeple *meeple, uint32_t target_id, uint8_t target_type);
 	void update_meeple_target(Meeple *meeple);
+	void set_player_movement(const glm::vec3 &ray);
+	void set_player_construction(const glm::vec3 &ray);
 private:
 	float vertical_offset(const glm::vec2 &position);
 };
