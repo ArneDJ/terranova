@@ -102,6 +102,10 @@ void Atlas::generate(int seed, const geom::Rectangle &bounds, const AtlasParamet
 			tile.relief = ReliefType::SEABED;
 		}
 	}
+
+	// relief floodfill
+	floodfill_relief(64, ReliefType::SEABED, ReliefType::LOWLAND);
+	floodfill_relief(4, ReliefType::MOUNTAINS, ReliefType::HILLS);
 }
 	
 void Atlas::clear()
@@ -156,6 +160,47 @@ glm::vec2 Atlas::tile_center(uint32_t index) const
 	return m_graph.cells[index].center;
 }
 		
+void Atlas::floodfill_relief(unsigned min_size, ReliefType target, ReliefType replacement)
+{
+	const auto &cells = m_graph.cells;
+
+	std::unordered_map<uint32_t, bool> visited;
+
+	for (auto &root : m_tiles) {
+		std::vector<Tile*> marked;
+		if (visited[root.index] == false && root.relief == target) {
+			// breadth first search
+			visited[root.index] = true;
+			std::queue<uint32_t> queue;
+			queue.push(root.index);
+			
+			while (!queue.empty()) {
+				uint32_t node = queue.front();
+				queue.pop();
+
+				marked.push_back(&m_tiles[node]);
+
+				for (const auto &cell : cells[node].neighbors) {
+					Tile *neighbor = &m_tiles[cell->index];
+					if (visited[neighbor->index] == false) {
+						visited[neighbor->index] = true;
+						if (neighbor->relief == target) {
+							queue.push(neighbor->index);
+						}
+					}
+				}
+			}
+		}
+
+		// now that the size is known replace with target
+		if (marked.size() > 0 && marked.size() < min_size) {
+			for (Tile *tile : marked) {
+				tile->relief = replacement;
+			}
+		}
+	}
+}
+
 bool walkable_tile(const Tile *tile)
 {
 	return (tile->relief == ReliefType::LOWLAND || tile->relief == ReliefType::HILLS);

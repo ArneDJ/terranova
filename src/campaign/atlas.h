@@ -89,6 +89,7 @@ private:
 	util::Image<uint8_t> m_heightmap;
 private:
 	void clear();
+	void floodfill_relief(unsigned min_size, ReliefType target, ReliefType replacement);
 };
 
 bool walkable_tile(const Tile *tile);
