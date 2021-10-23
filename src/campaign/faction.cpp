@@ -70,5 +70,7 @@ void FactionController::find_town_targets(const Atlas &atlas, int radius)
 		}
 	}
 
-	std::random_shuffle(town_targets.begin(), town_targets.end());
+	for (int i = 0; i < 5; i++) {
+		std::random_shuffle(town_targets.begin(), town_targets.end());
+	}
 }

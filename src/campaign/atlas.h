@@ -6,15 +6,13 @@ enum class ReliefType : uint8_t {
 	MOUNTAINS
 };
 
-/*
 enum TileFlags {
-	TILE_FLAGS_NONE = 0,
-	TILE_FLAGS_FRONTIER = 1 << 0,
-	TILE_FLAGS_RIVER = 1 << 1,
-	TILE_FLAGS_COAST = 1 << 2,
-	TILE_FLAGS_ISLAND = 1 << 3
+	TILE_FLAG_NONE = 0,
+	TILE_FLAG_FRONTIER = 1 << 0,
+	TILE_FLAG_RIVER = 1 << 1,
+	TILE_FLAG_COAST = 1 << 2,
+	TILE_FLAG_ISLAND = 1 << 3
 };
-*/
 
 struct Border {
 	uint32_t index;
@@ -29,6 +27,7 @@ struct Corner {
 struct Tile {
 	uint32_t index;
 	uint8_t height = 0;
+	uint32_t flags = 0;
 	ReliefType relief = ReliefType::SEABED;
 };
 
@@ -47,7 +46,7 @@ void serialize(Archive &archive, Corner &corner)
 template <class Archive>
 void serialize(Archive &archive, Tile &tile)
 {
-	archive(tile.index, tile.height, tile.relief);
+	archive(tile.index, tile.height, tile.relief, tile.flags);
 }
 
 struct AtlasParameters {
@@ -89,8 +88,9 @@ private:
 	util::Image<uint8_t> m_heightmap;
 private:
 	void clear();
-	void floodfill_relief(unsigned min_size, ReliefType target, ReliefType replacement);
+	void floodfill_relief(unsigned max_size, ReliefType target, ReliefType replacement);
 	void remove_echoriads();
+	void mark_islands(unsigned max_size);
 };
 
 bool walkable_tile(const Tile *tile);

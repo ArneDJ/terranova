@@ -329,7 +329,7 @@ void Campaign::spawn_factions()
 		player_data.faction_id = id;
 	}
 
-	for (int i = 0; i < 16; i++) {
+	for (int i = 0; i < 24; i++) {
 		std::unique_ptr<Faction> faction = std::make_unique<Faction>();
 		auto id = id_generator.generate();
 		faction->set_id(id);
@@ -338,14 +338,18 @@ void Campaign::spawn_factions()
 		faction_controller.factions[id] = std::move(faction);
 	}
 
+	const auto &atlas = board->atlas();	
+	const auto &tiles = atlas.tiles();	
+
 	// spawn their capitals
 	std::queue<uint32_t> targets;
 	for (const auto &target : faction_controller.town_targets) {
-		targets.push(target);
+		// disregard island spawns
+		const auto &tile = tiles[target];
+		if (!(tile.flags & TILE_FLAG_ISLAND)) {
+			targets.push(target);
+		}
 	}
-
-	const auto &atlas = board->atlas();	
-	const auto &tiles = atlas.tiles();	
 
 	for (const auto &pair : faction_controller.factions) {
 		if (targets.empty()) {

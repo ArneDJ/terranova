@@ -108,6 +108,8 @@ void Atlas::generate(int seed, const geom::Rectangle &bounds, const AtlasParamet
 	floodfill_relief(4, ReliefType::MOUNTAINS, ReliefType::HILLS);
 
 	remove_echoriads();
+
+	mark_islands(64);
 }
 	
 void Atlas::clear()
@@ -162,7 +164,7 @@ glm::vec2 Atlas::tile_center(uint32_t index) const
 	return m_graph.cells[index].center;
 }
 		
-void Atlas::floodfill_relief(unsigned min_size, ReliefType target, ReliefType replacement)
+void Atlas::floodfill_relief(unsigned max_size, ReliefType target, ReliefType replacement)
 {
 	const auto &cells = m_graph.cells;
 
@@ -195,7 +197,7 @@ void Atlas::floodfill_relief(unsigned min_size, ReliefType target, ReliefType re
 		}
 
 		// now that the size is known replace with target
-		if (marked.size() > 0 && marked.size() < min_size) {
+		if (marked.size() > 0 && marked.size() < max_size) {
 			for (Tile *tile : marked) {
 				tile->relief = replacement;
 			}
@@ -211,8 +213,8 @@ void Atlas::remove_echoriads()
 	
 	for (auto &root : m_tiles) {
 		std::vector<Tile*> marked;
-		bool found_water = false;
 		if (visited[root.index] == false && walkable_tile(&root) == true) {
+			bool found_water = false;
 			visited[root.index] = true;
 			std::queue<Tile*> queue;
 			queue.push(&root);
@@ -241,6 +243,49 @@ void Atlas::remove_echoriads()
 			if (found_water == false) {
 				for (Tile *tile : marked) {
 					tile->relief = ReliefType::MOUNTAINS;
+				}
+			}
+		}
+	}
+}
+	
+void Atlas::mark_islands(unsigned max_size)
+{
+	const auto &cells = m_graph.cells;
+
+	std::unordered_map<uint32_t, bool> visited;
+	
+	for (auto &root : m_tiles) {
+		std::vector<Tile*> marked;
+		if (visited[root.index] == false && walkable_tile(&root) == true) {
+			bool found_water = false;
+			visited[root.index] = true;
+			std::queue<Tile*> queue;
+			queue.push(&root);
+			
+			while (!queue.empty()) {
+				Tile *tile = queue.front();
+				queue.pop();
+
+				marked.push_back(tile);
+				
+				for (const auto &cell : cells[tile->index].neighbors) {
+					Tile *neighbor = &m_tiles[cell->index];
+					if (neighbor->relief == ReliefType::SEABED) {
+						found_water = true;
+					}
+					if (visited[neighbor->index] == false) {
+						visited[neighbor->index] = true;
+						if (walkable_tile(neighbor)) {
+							queue.push(neighbor);
+						}
+					}
+				}
+			}
+
+			if (found_water == true && marked.size() < max_size) {
+				for (Tile *tile : marked) {
+					tile->flags |= TILE_FLAG_ISLAND;
 				}
 			}
 		}
