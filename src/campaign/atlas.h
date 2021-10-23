@@ -90,6 +90,7 @@ private:
 private:
 	void clear();
 	void floodfill_relief(unsigned min_size, ReliefType target, ReliefType replacement);
+	void remove_echoriads();
 };
 
 bool walkable_tile(const Tile *tile);

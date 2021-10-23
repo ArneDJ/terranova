@@ -106,6 +106,8 @@ void Atlas::generate(int seed, const geom::Rectangle &bounds, const AtlasParamet
 	// relief floodfill
 	floodfill_relief(64, ReliefType::SEABED, ReliefType::LOWLAND);
 	floodfill_relief(4, ReliefType::MOUNTAINS, ReliefType::HILLS);
+
+	remove_echoriads();
 }
 	
 void Atlas::clear()
@@ -196,6 +198,50 @@ void Atlas::floodfill_relief(unsigned min_size, ReliefType target, ReliefType re
 		if (marked.size() > 0 && marked.size() < min_size) {
 			for (Tile *tile : marked) {
 				tile->relief = replacement;
+			}
+		}
+	}
+}
+	
+void Atlas::remove_echoriads()
+{
+	const auto &cells = m_graph.cells;
+
+	std::unordered_map<uint32_t, bool> visited;
+	
+	for (auto &root : m_tiles) {
+		std::vector<Tile*> marked;
+		bool found_water = false;
+		if (visited[root.index] == false && walkable_tile(&root) == true) {
+			visited[root.index] = true;
+			std::queue<Tile*> queue;
+			queue.push(&root);
+			
+			while (!queue.empty()) {
+				Tile *tile = queue.front();
+				queue.pop();
+
+				marked.push_back(tile);
+				
+				for (const auto &cell : cells[tile->index].neighbors) {
+					Tile *neighbor = &m_tiles[cell->index];
+					if (neighbor->relief == ReliefType::SEABED) {
+						found_water = true;
+						break;
+					}
+					if (visited[neighbor->index] == false) {
+						visited[neighbor->index] = true;
+						if (walkable_tile(neighbor)) {
+							queue.push(neighbor);
+						}
+					}
+				}
+			}
+
+			if (found_water == false) {
+				for (Tile *tile : marked) {
+					tile->relief = ReliefType::MOUNTAINS;
+				}
 			}
 		}
 	}
