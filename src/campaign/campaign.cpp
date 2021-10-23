@@ -77,8 +77,6 @@ void Campaign::init(const gfx::ShaderGroup *shaders)
 	
 	board = std::make_unique<Board>(shaders->tilemap);
 
-	meeple_controller.player = std::make_unique<Meeple>();
-
 	// TODO pass this
 	// load module
 	std::ifstream stream("modules/native/board.json");
@@ -99,7 +97,6 @@ void Campaign::load(const std::string &filepath)
 		board->load(archive);
 		archive(id_generator);
 		archive(camera);
-		archive(meeple_controller.player);
 		archive(meeple_controller.meeples);
 		archive(faction_controller);
 		archive(settlement_controller);
@@ -120,7 +117,6 @@ void Campaign::save(const std::string &filepath)
 		board->save(archive);
 		archive(id_generator);
 		archive(camera);
-		archive(meeple_controller.player);
 		archive(meeple_controller.meeples);
 		archive(faction_controller);
 		archive(settlement_controller);
@@ -144,14 +140,30 @@ void Campaign::generate(int seedling)
 		faction_controller.tile_owners[tile.index] = 0;
 	}
 
-	// spawn factions
+	faction_controller.find_town_targets(atlas, 4 + 1);
+
 	spawn_factions();
 
 	player_data.meeple_id = id_generator.generate();
-	meeple_controller.player = std::make_unique<Meeple>();
+	meeple_controller.meeples[player_data.meeple_id] = std::make_unique<Meeple>();
+	meeple_controller.player = meeple_controller.meeples[player_data.meeple_id].get();
 	meeple_controller.player->set_id(player_data.meeple_id);
-	meeple_controller.player->teleport(glm::vec2(512.f));
-	meeple_controller.player->set_speed(10.f);
+	meeple_controller.player->set_speed(5.f);
+
+	meeple_controller.player->faction_id = player_data.faction_id;
+
+	// position meeples at faction capitals
+	for (auto &pair : meeple_controller.meeples) {
+		auto &meeple = pair.second;
+		auto faction_search = faction_controller.factions.find(meeple->faction_id);
+		if (faction_search != faction_controller.factions.end()) {
+			auto town_search = settlement_controller.towns.find(faction_search->second->capital_id);
+			if (town_search != settlement_controller.towns.end()) {
+				glm::vec2 center = board->tile_center(town_search->second->tile());
+				meeple->teleport(center);
+			}
+		}
+	}
 }
 	
 void Campaign::prepare()
@@ -168,9 +180,7 @@ void Campaign::prepare()
 	board->height_field()->object()->setUserIndex2(int(CampaignEntity::LAND_SURFACE));
 	physics.add_object(board->height_field()->object(), group, mask);
 
-	meeple_controller.player->sync();
-	place_meeple(meeple_controller.player.get());
-
+	meeple_controller.player = meeple_controller.meeples[player_data.meeple_id].get();
 	for (auto &meeple : meeple_controller.meeples) {
 		meeple.second->sync();
 		place_meeple(meeple.second.get());
@@ -206,7 +216,6 @@ void Campaign::clear()
 
 	// clear entities
 	meeple_controller.clear();
-	meeple_controller.player = std::make_unique<Meeple>();
 
 	faction_controller.clear();
 
@@ -235,7 +244,7 @@ void Campaign::update(float delta)
 
 	meeple_controller.update(delta);
 
-	update_meeple_target(meeple_controller.player.get());
+	update_meeple_target(meeple_controller.player);
 
 	float offset = vertical_offset(meeple_controller.player->position());
 	meeple_controller.player->set_vertical_offset(offset);
@@ -320,13 +329,41 @@ void Campaign::spawn_factions()
 		player_data.faction_id = id;
 	}
 
-	for (int i = 0; i < 10; i++) {
+	for (int i = 0; i < 16; i++) {
 		std::unique_ptr<Faction> faction = std::make_unique<Faction>();
 		auto id = id_generator.generate();
 		faction->set_id(id);
 		glm::vec3 color = { dis(gen), dis(gen), dis(gen) };
 		faction->set_color(color);
 		faction_controller.factions[id] = std::move(faction);
+	}
+
+	// spawn their capitals
+	std::queue<uint32_t> targets;
+	for (const auto &target : faction_controller.town_targets) {
+		targets.push(target);
+	}
+
+	const auto &atlas = board->atlas();	
+	const auto &tiles = atlas.tiles();	
+
+	for (const auto &pair : faction_controller.factions) {
+		if (targets.empty()) {
+			LOG_F(ERROR, "No more locations to spawn faction capital");
+			break;
+		}
+		// assign a random tile as capital start
+		uint32_t target = targets.front();
+		targets.pop();
+		auto &faction = pair.second;
+		// place the town and assign it as faction capital
+		uint32_t id = spawn_town(&tiles[target], faction->id());
+		if (id) {
+			faction->capital_id = id;
+			Town *town = settlement_controller.towns[id].get();
+			place_town(town);
+			spawn_county(town);
+		}
 	}
 }
 	
@@ -500,7 +537,7 @@ void Campaign::update_cheat_menu()
 void Campaign::update_camera(float delta)
 {
 	float modifier = 10.f * delta;
-	float speed = 10.f * modifier;
+	float speed = 5.f * modifier;
 	if (util::InputManager::key_down(SDL_BUTTON_LEFT)) {
 		glm::vec2 offset = modifier * 0.05f * util::InputManager::rel_mouse_coords();
 		camera.add_offset(offset);
@@ -518,7 +555,7 @@ void Campaign::set_player_movement(const glm::vec3 &ray)
 	auto result = physics.cast_ray(camera.position, camera.position + (1000.f * ray), COLLISION_GROUP_HEIGHTMAP | COLLISION_GROUP_TOWN);
 	if (result.hit) {
 		if (result.object) {
-			set_meeple_target(meeple_controller.player.get(), result.object->getUserIndex(), result.object->getUserIndex2());
+			set_meeple_target(meeple_controller.player, result.object->getUserIndex(), result.object->getUserIndex2());
 			// set initial path
 			glm::vec2 hitpoint = glm::vec2(result.point.x, result.point.z);
 			std::list<glm::vec2> nodes;

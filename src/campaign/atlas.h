@@ -6,6 +6,16 @@ enum class ReliefType : uint8_t {
 	MOUNTAINS
 };
 
+/*
+enum TileFlags {
+	TILE_FLAGS_NONE = 0,
+	TILE_FLAGS_FRONTIER = 1 << 0,
+	TILE_FLAGS_RIVER = 1 << 1,
+	TILE_FLAGS_COAST = 1 << 2,
+	TILE_FLAGS_ISLAND = 1 << 3
+};
+*/
+
 struct Border {
 	uint32_t index;
 	bool frontier = true;
@@ -80,3 +90,5 @@ private:
 private:
 	void clear();
 };
+
+bool walkable_tile(const Tile *tile);

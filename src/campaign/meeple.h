@@ -33,6 +33,7 @@ class Meeple {
 public:
 	uint32_t target_id = 0; // id of target entity
 	uint8_t target_type = 0;
+	uint32_t faction_id = 0;
 public:
 	Meeple();
 public:
@@ -58,7 +59,7 @@ public:
 	template <class Archive>
 	void serialize(Archive &archive)
 	{
-		archive(m_id, m_speed, m_transform->position, m_transform->rotation, m_transform->scale, target_id, target_type);
+		archive(m_id, m_speed, m_transform->position, m_transform->rotation, m_transform->scale, target_id, target_type, faction_id);
 	}
 private:
 	uint32_t m_id = 0;
@@ -72,7 +73,7 @@ private:
 
 class MeepleController {
 public:
-	std::unique_ptr<Meeple> player;
+	Meeple *player = nullptr;
 	std::unordered_map<uint32_t, std::unique_ptr<Meeple>> meeples;
 public:
 	void update(float delta);

@@ -155,3 +155,8 @@ glm::vec2 Atlas::tile_center(uint32_t index) const
 {
 	return m_graph.cells[index].center;
 }
+		
+bool walkable_tile(const Tile *tile)
+{
+	return (tile->relief == ReliefType::LOWLAND || tile->relief == ReliefType::HILLS);
+}
