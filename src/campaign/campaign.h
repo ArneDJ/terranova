@@ -83,6 +83,7 @@ private:
 	void update_meeple_target(Meeple *meeple);
 	void set_player_movement(const glm::vec3 &ray);
 	void set_player_construction(const glm::vec3 &ray);
+	void transfer_town(Town *town, uint32_t faction);
 private:
 	float vertical_offset(const glm::vec2 &position);
 };

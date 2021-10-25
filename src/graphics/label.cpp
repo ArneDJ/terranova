@@ -249,5 +249,14 @@ void Labeler::display(const util::Camera &camera) const
 
 	glEnable(GL_DEPTH_TEST);
 }
+	
+void Labeler::change_text_color(const geom::Transform *transform, const glm::vec3 &color)
+{
+	for (auto &entity : m_entities) {
+		if (entity->transform == transform) {
+			entity->color = color;
+		}
+	}
+}
 
 }

@@ -512,6 +512,7 @@ void Campaign::update_meeple_target(Meeple *meeple)
 				meeple->clear_target();
 				// add town event
 				if (meeple->id() == player_data.meeple_id) {
+					transfer_town(search->second.get(), meeple->faction_id);
 					battle_data.tile = search->second->tile();
 					battle_data.town_size = 2;
 					state = CampaignState::BATTLE_REQUEST;
@@ -592,4 +593,21 @@ void Campaign::set_player_construction(const glm::vec3 &ray)
 			}
 		}
 	}
+}
+
+void Campaign::transfer_town(Town *town, uint32_t faction)
+{
+	auto &county = settlement_controller.counties[town->county()];
+	county->set_faction(faction);
+
+	// change county tiles faction
+	glm::vec3 color = faction_controller.factions[faction]->color();
+	for (const auto &tile : county->tiles()) {
+		faction_controller.tile_owners[tile] = faction;
+		board->add_paint_job(tile, color);
+	}
+
+	// transfer capital
+	town->set_faction(faction);
+	labeler->change_text_color(town->transform(), color);
 }
