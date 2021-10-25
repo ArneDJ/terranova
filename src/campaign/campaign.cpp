@@ -180,12 +180,6 @@ void Campaign::prepare()
 	board->height_field()->object()->setUserIndex2(int(CampaignEntity::LAND_SURFACE));
 	physics.add_object(board->height_field()->object(), group, mask);
 
-	meeple_controller.player = meeple_controller.meeples[player_data.meeple_id].get();
-	for (auto &meeple : meeple_controller.meeples) {
-		meeple.second->sync();
-		place_meeple(meeple.second.get());
-	}
-
 	// place towns
 	for (auto &town : settlement_controller.towns) {
 		place_town(town.second.get());
@@ -200,6 +194,12 @@ void Campaign::prepare()
 	}
 
 	board->update();
+
+	meeple_controller.player = meeple_controller.meeples[player_data.meeple_id].get();
+	for (auto &meeple : meeple_controller.meeples) {
+		meeple.second->sync();
+		place_meeple(meeple.second.get());
+	}
 }
 
 void Campaign::clear()
@@ -365,7 +365,6 @@ void Campaign::spawn_factions()
 		if (id) {
 			faction->capital_id = id;
 			Town *town = settlement_controller.towns[id].get();
-			place_town(town);
 			spawn_county(town);
 		}
 	}
@@ -512,7 +511,6 @@ void Campaign::update_meeple_target(Meeple *meeple)
 				meeple->clear_target();
 				// add town event
 				if (meeple->id() == player_data.meeple_id) {
-					transfer_town(search->second.get(), meeple->faction_id);
 					battle_data.tile = search->second->tile();
 					battle_data.town_size = 2;
 					state = CampaignState::BATTLE_REQUEST;
@@ -551,6 +549,12 @@ void Campaign::update_camera(float delta)
 	if (util::InputManager::key_down(SDLK_s)) { camera.move_backward(speed); }
 	if (util::InputManager::key_down(SDLK_d)) { camera.move_right(speed); }
 	if (util::InputManager::key_down(SDLK_a)) { camera.move_left(speed); }
+
+	// collide with map
+	float offset = vertical_offset(glm::vec2(camera.position.x, camera.position.z)) + 5.f;
+	if (camera.position.y < offset) {
+		camera.position.y = offset;
+	}
 
 	camera.update_viewing();
 }
