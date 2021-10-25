@@ -165,14 +165,25 @@ void Engine::load_module()
 {
 	Module module;
 
-	// load houses
-	std::ifstream stream("modules/native/houses.json");
-	if (stream.is_open()) {
-		cereal::JSONInputArchive archive(stream);
-		archive(module.houses);
+	{
+		std::ifstream stream("modules/native/houses.json");
+		if (stream.is_open()) {
+			cereal::JSONInputArchive archive(stream);
+			archive(module.houses);
+		}
+	
+		battle.load_molds(module);
 	}
 
-	battle.load_molds(module);
+	{
+		std::ifstream stream("modules/native/board.json");
+		if (stream.is_open()) {
+			cereal::JSONInputArchive archive(stream);
+			archive(module.board_module);
+		}
+
+		campaign.load_blueprints(module);
+	}
 }
 	
 void Engine::init_imgui()

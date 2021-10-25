@@ -76,14 +76,14 @@ void Campaign::init(const gfx::ShaderGroup *shaders)
 	scene->set_scene_type(gfx::SceneType::DYNAMIC);
 	
 	board = std::make_unique<Board>(shaders->tilemap);
+}
+	
+void Campaign::load_blueprints(const Module &module)
+{
+	marker.set_model(MediaManager::load_model(module.board_module.marker));
 
-	// TODO pass this
-	// load module
-	std::ifstream stream("modules/native/board.json");
-	if (stream.is_open()) {
-		cereal::JSONInputArchive archive(stream);
-		archive(module.board_module);
-	}
+	army_blueprint.model = MediaManager::load_model(module.board_module.meeple);
+	town_blueprint.model = MediaManager::load_model(module.board_module.town);
 }
 	
 void Campaign::load(const std::string &filepath)
@@ -170,8 +170,7 @@ void Campaign::prepare()
 {
 	board->reload();
 
-	auto cone_model = MediaManager::load_model(module.board_module.marker);
-	auto cone_object = scene->find_object(cone_model);
+	auto cone_object = scene->find_object(marker.model());
 	cone_object->add_transform(marker.transform());
 
 	// add physical objects
@@ -298,8 +297,7 @@ void Campaign::place_meeple(Meeple *meeple)
 	auto visibility = meeple->visibility();
 	physics.add_object(visibility->ghost_object(), COLLISION_GROUP_VISIBILITY, COLLISION_GROUP_INTERACTION);
 
-	auto duck_model = MediaManager::load_model(module.board_module.meeple);
-	auto duck_object = scene->find_object(duck_model);
+	auto duck_object = scene->find_object(army_blueprint.model);
 	duck_object->add_transform(meeple->transform());
 
 	// debug trigger volumes
@@ -458,8 +456,7 @@ void Campaign::place_town(Town *town)
 
 	town->set_position(glm::vec3(center.x, offset, center.y));
 
-	auto cylinder_model = MediaManager::load_model(module.board_module.town);
-	auto cylinder_object = scene->find_object(cylinder_model);
+	auto cylinder_object = scene->find_object(town_blueprint.model);
 	cylinder_object->add_transform(town->transform());
 
 	const int mask = COLLISION_GROUP_INTERACTION | COLLISION_GROUP_VISIBILITY | COLLISION_GROUP_RAY;

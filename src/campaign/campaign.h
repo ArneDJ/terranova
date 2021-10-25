@@ -34,6 +34,10 @@ struct CampaignBattleData {
 	uint8_t town_size = 0;
 };
 
+struct Blueprint {
+	const gfx::Model *model = nullptr;
+};
+
 class Campaign {
 public:
 	std::string name = {};
@@ -41,7 +45,9 @@ public:
 	CampaignBattleData battle_data;
 	int seed;
 public:
-	Module module; // TODO pass this
+	Blueprint army_blueprint;
+	Blueprint town_blueprint;
+public:
 	util::IdGenerator id_generator;
 	util::Camera camera;
 	fysx::PhysicalSystem physics;
@@ -67,6 +73,7 @@ public:
 	void clear();
 public:
 	void init(const gfx::ShaderGroup *shaders);
+	void load_blueprints(const Module &module);
 	void update(float delta);
 	void display();
 	void reset_camera();
