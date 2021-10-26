@@ -11,14 +11,14 @@ struct BattleParameters {
 	uint8_t town_size = 0;
 };
 
-class Player {
+class Creature {
 public:
-	btConvexShape *capsule;
-	btPairCachingGhostObject *ghost_object;
-	btKinematicCharacterController *char_con;
+	std::unique_ptr<btConvexShape> capsule;
+	std::unique_ptr<btPairCachingGhostObject> ghost_object;
+	std::unique_ptr<btKinematicCharacterController> char_con;
 	std::unique_ptr<geom::Transform> transform;
 public:
-	Player();
+	Creature();
 	void update(const glm::vec3 &direction, bool jump_request);
 	void update_transform();
 };
@@ -31,8 +31,7 @@ public:
 	std::unique_ptr<Terrain> terrain;
 	std::unique_ptr<Debugger> debugger;
 	fysx::PhysicalSystem physics;
-	//std::unique_ptr<fysx::Bumper> player;
-	std::unique_ptr<Player> player;
+	std::unique_ptr<Creature> player;
 	carto::Landscaper landscaper;
 	std::vector<std::unique_ptr<BuildingEntity>> building_entities;
 public:
