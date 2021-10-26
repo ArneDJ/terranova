@@ -40,6 +40,8 @@ Terrain::Terrain(std::shared_ptr<gfx::Shader> shader, const geom::AABB &bounds)
 	m_texture.create(m_heightmap);
 	
 	m_height_field = std::make_unique<fysx::HeightField>(m_heightmap, m_scale);
+
+	add_material("DISPLACEMENT", &m_texture);
 }
 	
 void Terrain::generate(int seed) 
@@ -73,7 +75,7 @@ void Terrain::display(const util::Camera &camera) const
 	m_shader->uniform_mat4("CAMERA_VP", camera.VP);
 	m_shader->uniform_vec3("MAP_SCALE", m_scale);
 
-	m_texture.bind(GL_TEXTURE0);
+	bind_textures();
 
 	m_mesh.draw();
 }
@@ -83,3 +85,17 @@ fysx::HeightField* Terrain::height_field()
 	return m_height_field.get();
 }
 	
+void Terrain::add_material(const std::string &name, const gfx::Texture *texture)
+{
+	m_materials[name] = texture;
+}
+	
+void Terrain::bind_textures() const
+{
+	int location = 0;
+	for (const auto &bucket : m_materials) {
+		m_shader->uniform_int(bucket.first.c_str(), location);
+		bucket.second->bind(GL_TEXTURE0 + location);
+		location++;
+    	}
+}

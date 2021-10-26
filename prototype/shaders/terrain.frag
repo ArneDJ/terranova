@@ -8,7 +8,10 @@ in TESSEVAL {
 
 out vec4 fcolor;
 
+uniform sampler2D TILES;
+
 void main(void)
 {
-	fcolor = vec4(1.0, 1.0, 1.0,  1.0);
+	fcolor = texture(TILES, 100.0 * fragment.texcoord);
+	//fcolor = vec4(1.0, 1.0, 1.0,  1.0);
 }

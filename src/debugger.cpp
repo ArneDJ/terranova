@@ -13,9 +13,11 @@
 #include <glm/gtc/type_ptr.hpp>
 #include "util/camera.h"
 #include "util/navigation.h"
+#include "util/image.h"
 #include "geometry/transform.h"
 #include "graphics/shader.h"
 #include "graphics/mesh.h"
+#include "graphics/texture.h"
 #include "graphics/model.h"
 #include "graphics/scene.h"
 

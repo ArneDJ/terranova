@@ -124,6 +124,7 @@ void Battle::init(const gfx::ShaderGroup *shaders)
 	scene->set_scene_type(gfx::SceneType::DYNAMIC);
 
 	terrain = std::make_unique<Terrain>(shaders->terrain, SCENE_BOUNDS);
+	terrain->add_material("TILES", MediaManager::load_texture("modules/native/media/textures/terrain/tiles.dds"));
 
 	landscaper.bounds = {
 		{ SCENE_BOUNDS.min.x, SCENE_BOUNDS.min.z },
@@ -228,9 +229,9 @@ void Battle::display()
 	scene->cull_frustum();
 	scene->display();
 
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	terrain->display(camera);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	
 	debugger->display();
 }
