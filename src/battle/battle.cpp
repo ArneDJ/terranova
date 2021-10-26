@@ -72,6 +72,51 @@ glm::vec2 creature_control(const glm::vec3 &view, bool forward, bool backward, b
 	return direction;
 }
 
+Player::Player()
+{
+	btTransform startTransform;
+	startTransform.setIdentity ();
+	startTransform.setOrigin(btVector3(512, 64, 512));
+
+	capsule = new btCapsuleShapeZ(0.5, 1);
+
+	ghost_object = new btPairCachingGhostObject();
+	ghost_object->setWorldTransform(startTransform);
+	ghost_object->setCollisionShape(capsule);
+	ghost_object->setCollisionFlags(btCollisionObject::CF_CHARACTER_OBJECT);
+
+	char_con = new btKinematicCharacterController(ghost_object, capsule, 0.05f);
+	char_con->setGravity(btVector3(0.f, -9.81f, 0.f));
+	char_con->setMaxJumpHeight(1.5);
+	char_con->setMaxPenetrationDepth(0.2f);
+	char_con->setMaxSlope(btRadians(60.0));
+	char_con->setUp(btVector3(0, 1, 0));
+
+	transform = std::make_unique<geom::Transform>();
+}
+	
+void Player::update(const glm::vec3 &direction, bool jump_request)
+{
+	if (jump_request && char_con->onGround()) {
+		char_con->jump(btVector3(0,6,0));
+	}
+
+	if (direction != glm::vec3(0,0,0)) {
+		char_con->setWalkDirection(btVector3(direction.x , direction.y , direction.z).normalized()/10);
+	} else {
+		char_con->setWalkDirection(btVector3(0 , 0 , 0));
+	}
+}
+	
+void Player::update_transform()
+{
+	btTransform t = char_con->getGhostObject()->getWorldTransform();
+	//btVector3 pos = t.getOrigin();
+
+	transform->position = fysx::bt_to_vec3(t.getOrigin());
+	//transform->rotation = fysx::bt_to_quat(t.getRotation());
+}
+
 void Battle::init(const gfx::ShaderGroup *shaders)
 {
 	debugger = std::make_unique<Debugger>(shaders->debug, shaders->debug, shaders->culling);
@@ -85,6 +130,8 @@ void Battle::init(const gfx::ShaderGroup *shaders)
 		{ SCENE_BOUNDS.min.x, SCENE_BOUNDS.min.z },
 		{ SCENE_BOUNDS.max.x, SCENE_BOUNDS.max.z }
 	};
+	
+	player = std::make_unique<Player>();
 }
 
 void Battle::load_molds(const Module &module)
@@ -128,10 +175,12 @@ void Battle::prepare(const BattleParameters &params)
 	camera.position = glm::vec3(5.f, 5.f, 5.f);
 	camera.target(transform->position);
 
-	player = std::make_unique<fysx::Bumper>(glm::vec3(512.f, 64.f, 512.f), 0.3f, 1.8f);
-	physics.add_body(player->body());
+	//player = std::make_unique<fysx::Bumper>(glm::vec3(512.f, 64.f, 512.f), 0.3f, 1.8f);
+	//physics.add_body(player->body());
 
-	debugger->add_capsule(player->capsule_radius(), player->capsule_height(), player->transform());
+	//debugger->add_capsule(player->capsule_radius(), player->capsule_height(), player->transform());
+	physics.add_object(player->ghost_object, btBroadphaseProxy::CharacterFilter, btBroadphaseProxy::AllFilter);
+	debugger->add_capsule(0.5f, 1.f, player->transform.get());
 }
 
 void Battle::clear()
@@ -164,18 +213,31 @@ void Battle::update(float delta)
 	*/
 	glm::vec2 direction = creature_control(camera.direction, util::InputManager::key_down(SDLK_w), util::InputManager::key_down(SDLK_s), util::InputManager::key_down(SDLK_d), util::InputManager::key_down(SDLK_a));
 
+	/*
 	player->set_velocity(10.f*direction.x, 10.f*direction.y);
 
 	if (util::InputManager::key_down(SDLK_SPACE)) {
 		player->jump();
 	}
+	*/
+	player->char_con->preStep(physics.world());
+
+	player->update(glm::vec3(direction.x, 0.f, direction.y), util::InputManager::key_down(SDLK_SPACE));
+
+	player->char_con->playerStep(physics.world(), delta);
 
 	physics.update(delta);
 		
+	player->update_transform();
+	/*
 	player->update(physics.world());
 
 	glm::vec3 position = player->standing_position();
 	camera.position = position - (5.f * camera.direction);
+	*/
+	camera.position = player->transform->position;
+	//camera.position.y += 1.f;
+	camera.position -= (5.f * camera.direction);
 
 	camera.update_viewing();
 
