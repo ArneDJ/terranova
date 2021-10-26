@@ -42,9 +42,9 @@ uint32_t Town::tile() const
 	return m_tile;
 }
 
-uint32_t Town::county() const
+uint32_t Town::fiefdom() const
 {
-	return m_county;
+	return m_fiefdom;
 }
 
 glm::vec2 Town::map_position() const
@@ -75,9 +75,9 @@ void Town::set_tile(uint32_t tile)
 	m_tile = tile;
 }
 
-void Town::set_county(uint32_t county)
+void Town::set_fiefdom(uint32_t fiefdom)
 {
-	m_county = county;
+	m_fiefdom = fiefdom;
 }
 
 void Town::set_position(const glm::vec3 &position)
@@ -86,42 +86,42 @@ void Town::set_position(const glm::vec3 &position)
 	m_trigger->set_position(position);
 }
 
-uint32_t County::id() const
+uint32_t Fiefdom::id() const
 {
 	return m_id;
 }
 
-uint32_t County::faction() const
+uint32_t Fiefdom::faction() const
 {
 	return m_faction;
 }
 
-uint32_t County::town() const
+uint32_t Fiefdom::town() const
 {
 	return m_town;
 }
 
-const std::vector<uint32_t>& County::tiles() const
+const std::vector<uint32_t>& Fiefdom::tiles() const
 {
 	return m_tiles;
 }
 
-void County::set_id(uint32_t id)
+void Fiefdom::set_id(uint32_t id)
 {
 	m_id = id;
 }
 
-void County::set_faction(uint32_t faction)
+void Fiefdom::set_faction(uint32_t faction)
 {
 	m_faction = faction;
 }
 
-void County::set_town(uint32_t town)
+void Fiefdom::set_town(uint32_t town)
 {
 	m_town = town;
 }
 
-void County::add_tile(uint32_t tile)
+void Fiefdom::add_tile(uint32_t tile)
 {
 	m_tiles.push_back(tile);
 }

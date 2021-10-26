@@ -80,10 +80,11 @@ public:
 private:
 	void update_cheat_menu();
 	void update_camera(float delta);
+	void visit_current_tile();
 private:
 	void spawn_factions();
 	uint32_t spawn_town(const Tile *tile, uint32_t faction);
-	void spawn_county(Town *town);
+	void spawn_fiefdom(Town *town);
 	void place_town(Town *town);
 	void place_meeple(Meeple *meeple);
 	void set_meeple_target(Meeple *meeple, uint32_t target_id, uint8_t target_type);

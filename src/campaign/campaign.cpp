@@ -184,10 +184,10 @@ void Campaign::prepare()
 		place_town(town.second.get());
 	}
 
-	// paint county tiles
-	for (const auto &county : settlement_controller.counties) {
-		glm::vec3 color = faction_controller.factions[county.second->faction()]->color();
-		for (const auto &tile : county.second->tiles()) {
+	// paint fiefdom tiles
+	for (const auto &fiefdom : settlement_controller.fiefdoms) {
+		glm::vec3 color = faction_controller.factions[fiefdom.second->faction()]->color();
+		for (const auto &tile : fiefdom.second->tiles()) {
 			board->add_paint_job(tile, color);
 		}
 	}
@@ -363,7 +363,7 @@ void Campaign::spawn_factions()
 		if (id) {
 			faction->capital_id = id;
 			Town *town = settlement_controller.towns[id].get();
-			spawn_county(town);
+			spawn_fiefdom(town);
 		}
 	}
 }
@@ -393,7 +393,7 @@ uint32_t Campaign::spawn_town(const Tile *tile, uint32_t faction)
 	return 0;
 }
 
-void Campaign::spawn_county(Town *town)
+void Campaign::spawn_fiefdom(Town *town)
 {
 	int radius = 4;
 
@@ -401,12 +401,12 @@ void Campaign::spawn_county(Town *town)
 
 	const auto id = id_generator.generate();
 
-	std::unique_ptr<County> county = std::make_unique<County>();
-	county->set_id(id);
-	county->set_faction(faction);
-	county->set_town(town->id());
+	std::unique_ptr<Fiefdom> fiefdom = std::make_unique<Fiefdom>();
+	fiefdom->set_id(id);
+	fiefdom->set_faction(faction);
+	fiefdom->set_town(town->id());
 
-	town->set_county(id);
+	town->set_fiefdom(id);
 
 	// breadth first search
 	const auto &atlas = board->atlas();	
@@ -423,7 +423,7 @@ void Campaign::spawn_county(Town *town)
 	while (!nodes.empty()) {
 		auto node = nodes.front();
 		nodes.pop();
-		county->add_tile(node);
+		fiefdom->add_tile(node);
 		uint32_t layer = depth[node] + 1;
 		if (layer < radius) {
 			const auto &cell = cells[node];
@@ -441,11 +441,11 @@ void Campaign::spawn_county(Town *town)
 
 	// add tile paint jobs
 	glm::vec3 color = faction_controller.factions[faction]->color();
-	for (const auto &tile : county->tiles()) {
+	for (const auto &tile : fiefdom->tiles()) {
 		board->add_paint_job(tile, color);
 	}
 
-	settlement_controller.counties[id] = std::move(county);
+	settlement_controller.fiefdoms[id] = std::move(fiefdom);
 }
 
 // place the town entity on the campaign map
@@ -531,6 +531,9 @@ void Campaign::update_cheat_menu()
 			player_mode = PlayerMode::ARMY_MOVEMENT;
 		}
 	}
+	if (ImGui::Button("Visit Tile")) {
+		visit_current_tile();
+	}
 	ImGui::End();
 }
 	
@@ -588,7 +591,7 @@ void Campaign::set_player_construction(const glm::vec3 &ray)
 			if (id) {
 				Town *town = settlement_controller.towns[id].get();
 				place_town(town);
-				spawn_county(town);
+				spawn_fiefdom(town);
 				// change mode
 				player_mode = PlayerMode::ARMY_MOVEMENT;
 			}
@@ -598,12 +601,12 @@ void Campaign::set_player_construction(const glm::vec3 &ray)
 
 void Campaign::transfer_town(Town *town, uint32_t faction)
 {
-	auto &county = settlement_controller.counties[town->county()];
-	county->set_faction(faction);
+	auto &fiefdom = settlement_controller.fiefdoms[town->fiefdom()];
+	fiefdom->set_faction(faction);
 
-	// change county tiles faction
+	// change fiefdom tiles faction
 	glm::vec3 color = faction_controller.factions[faction]->color();
-	for (const auto &tile : county->tiles()) {
+	for (const auto &tile : fiefdom->tiles()) {
 		faction_controller.tile_owners[tile] = faction;
 		board->add_paint_job(tile, color);
 	}
@@ -611,4 +614,16 @@ void Campaign::transfer_town(Town *town, uint32_t faction)
 	// transfer capital
 	town->set_faction(faction);
 	labeler->change_text_color(town->transform(), color);
+}
+	
+// only used in cheat mode
+void Campaign::visit_current_tile()
+{
+	const auto &tile = board->tile_at(meeple_controller.player->position());
+
+	if (tile) {
+		battle_data.tile = tile->index;
+		battle_data.town_size = 0;
+		state = CampaignState::BATTLE_REQUEST;
+	}
 }
