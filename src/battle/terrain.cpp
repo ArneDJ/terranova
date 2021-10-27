@@ -27,6 +27,8 @@
 
 #include "terrain.h"
 
+static const int IMAGE_RES = 1024;
+
 Terrain::Terrain(std::shared_ptr<gfx::Shader> shader, const geom::AABB &bounds)
 	: m_shader(shader)
 {
@@ -35,13 +37,16 @@ Terrain::Terrain(std::shared_ptr<gfx::Shader> shader, const geom::AABB &bounds)
 	geom::Rectangle rectangle = { { bounds.min.x, bounds.min.z }, { bounds.max.x, bounds.max.z } };
 	m_mesh.create(32, rectangle);
 
-	m_heightmap.resize(512, 512, util::COLORSPACE_GRAYSCALE);
+	m_heightmap.resize(IMAGE_RES, IMAGE_RES, util::COLORSPACE_GRAYSCALE);
+	m_normalmap.resize(IMAGE_RES, IMAGE_RES, util::COLORSPACE_RGB);
 
 	m_texture.create(m_heightmap);
+	m_normal_texture.create(m_normalmap);
 	
 	m_height_field = std::make_unique<fysx::HeightField>(m_heightmap, m_scale);
 
 	add_material("DISPLACEMENT", &m_texture);
+	add_material("NORMALMAP", &m_normal_texture);
 }
 	
 void Terrain::generate(int seed) 
@@ -50,23 +55,28 @@ void Terrain::generate(int seed)
 	fastnoise.SetSeed(seed);
 	fastnoise.SetNoiseType(FastNoise::SimplexFractal);
 	fastnoise.SetFractalType(FastNoise::FBM);
-	fastnoise.SetFrequency(0.005f);
+	fastnoise.SetFrequency(0.0015f);
 	fastnoise.SetFractalOctaves(6);
-	fastnoise.SetFractalLacunarity(2.5f);
+	fastnoise.SetFractalLacunarity(2.f);
 	fastnoise.SetPerturbFrequency(0.001f);
 	fastnoise.SetGradientPerturbAmp(20.f);
 
+	#pragma omp parallel for
 	for (int i = 0; i < m_heightmap.width(); i++) {
 		for (int j = 0; j < m_heightmap.height(); j++) {
 			float x = i; float y = j;
 			fastnoise.GradientPerturbFractal(x, y);
 			float height = 0.5f * (fastnoise.GetNoise(x, y) + 1.f);
-			m_heightmap.plot(i, j, util::CHANNEL_RED, 255 * height);
+			m_heightmap.plot(i, j, util::CHANNEL_RED, height);
 		}
 	}
 
+	create_normalmap();
+
 	// store heightmap in texture
 	m_texture.reload(m_heightmap);
+
+	m_normal_texture.reload(m_normalmap);
 }
 	
 void Terrain::display(const util::Camera &camera) const
@@ -98,4 +108,19 @@ void Terrain::bind_textures() const
 		bucket.second->bind(GL_TEXTURE0 + location);
 		location++;
     	}
+}
+	
+void Terrain::create_normalmap()
+{
+	float strength = 32.f;
+
+	#pragma omp parallel for
+	for (int x = 0; x < m_heightmap.width(); x++) {
+		for (int y = 0; y < m_heightmap.height(); y++) {
+			const glm::vec3 normal = util::filter_normal(x, y, util::CHANNEL_RED, strength, m_heightmap);
+			m_normalmap.plot(x, y, util::CHANNEL_RED, normal.x);
+			m_normalmap.plot(x, y, util::CHANNEL_GREEN, normal.y);
+			m_normalmap.plot(x, y, util::CHANNEL_BLUE, normal.z);
+		}
+	}
 }

@@ -41,7 +41,7 @@
 
 const geom::AABB SCENE_BOUNDS = {
 	{ 0.F, 0.F, 0.F },
-	{ 1024.F, 32.F, 1024.F }
+	{ 1024.F, 64.F, 1024.F }
 };
 	
 // TODO remove
@@ -159,7 +159,11 @@ void Battle::prepare(const BattleParameters &params)
 
 	landscaper.clear();
 
-	terrain->generate(parameters.seed);
+	// local seed is based on campaign seed plus local tile index
+	std::mt19937 gen(parameters.seed);
+	gen.discard(parameters.tile);
+	std::uniform_int_distribution<int> distrib;
+	terrain->generate(distrib(gen));
 
 	landscaper.generate(parameters.seed, parameters.tile, parameters.town_size);
 	

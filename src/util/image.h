@@ -77,4 +77,46 @@ private:
 	std::vector<T> m_raster;
 };
 
+inline glm::vec3 filter_normal(int x, int y, uint8_t channel, float strength, const Image<uint8_t> &image)
+{
+	float T = image.sample(x, y + 1, channel) / 255.f;
+	float TR = image.sample(x + 1, y + 1, channel) / 255.f;
+	float TL = image.sample(x - 1, y + 1, channel) / 255.f;
+	float B = image.sample(x, y - 1, channel) / 255.f;
+	float BR = image.sample(x + 1, y - 1, channel) / 255.f;
+	float BL = image.sample(x - 1, y - 1, channel) / 255.f;
+	float R = image.sample(x + 1, y, channel) / 255.f;
+	float L = image.sample(x - 1, y, channel) / 255.f;
+
+	// sobel filter
+	const float X = (TR + 2.f * R + BR) - (TL + 2.f * L + BL);
+	const float Z = (BL + 2.f * B + BR) - (TL + 2.f * T + TR);
+	const float Y = 1.f / strength;
+
+	glm::vec3 normal(-X, Y, Z);
+
+	return glm::normalize(normal);
+}
+
+inline glm::vec3 filter_normal(int x, int y, uint8_t channel, float strength, const Image<float> &image)
+{
+	float T = image.sample(x, y + 1, channel);
+	float TR = image.sample(x + 1, y + 1, channel);
+	float TL = image.sample(x - 1, y + 1, channel);
+	float B = image.sample(x, y - 1, channel);
+	float BR = image.sample(x + 1, y - 1, channel);
+	float BL = image.sample(x - 1, y - 1, channel);
+	float R = image.sample(x + 1, y, channel);
+	float L = image.sample(x - 1, y, channel);
+
+	// sobel filter
+	const float X = (TR + 2.f * R + BR) - (TL + 2.f * L + BL);
+	const float Z = (BL + 2.f * B + BR) - (TL + 2.f * T + TR);
+	const float Y = 1.f / strength;
+
+	glm::vec3 normal(-X, Y, Z);
+
+	return glm::normalize(normal);
+}
+
 };

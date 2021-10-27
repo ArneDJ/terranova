@@ -7,6 +7,8 @@ public:
 public:
 	void create(const util::Image<uint8_t> &image);
 	void reload(const util::Image<uint8_t> &image);
+	void create(const util::Image<float> &image);
+	void reload(const util::Image<float> &image);
 	void load_dds(const uint8_t *blob, const size_t size);
 public:
 	void bind(GLenum unit) const;
