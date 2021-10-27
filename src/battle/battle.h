@@ -17,10 +17,16 @@ public:
 	std::unique_ptr<btPairCachingGhostObject> ghost_object;
 	std::unique_ptr<btKinematicCharacterController> char_con;
 	std::unique_ptr<geom::Transform> transform;
+public: // animation stuff
+	const gfx::Model *model = nullptr;
+	gfx::BufferDataPair<glm::mat4> joint_matrices;
+	util::CharacterAnimation character_animation;
 public:
 	Creature();
+	void set_animation(const ozz::animation::Skeleton &skeleton, const ozz::animation::Animation &animation);
 	void update(const glm::vec3 &direction, bool jump_request);
 	void update_transform();
+	void update_animation(const ozz::animation::Skeleton &skeleton, const ozz::animation::Animation &animation, float delta);
 };
 
 class Battle {

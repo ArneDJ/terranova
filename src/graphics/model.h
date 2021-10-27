@@ -32,18 +32,21 @@ public:
 	void display() const;
 	const std::vector<std::unique_ptr<Mesh>>& meshes() const;
 	const std::vector<std::unique_ptr<CollisionMesh>>& collision_meshes() const;
+	const std::vector<std::unique_ptr<Skin>>& skins() const;
 	const geom::AABB& bounds() const;
 private:
 	geom::AABB m_bounds = {};
 	std::vector<std::unique_ptr<Node>> m_nodes;
 	std::vector<std::unique_ptr<Mesh>> m_meshes;
 	std::vector<std::unique_ptr<CollisionMesh>> m_collision_meshes;
+	std::vector<std::unique_ptr<Skin>> m_skins;
 private:
 	void load(const cgltf_data *data);
 	void load_nodes(const cgltf_data *data);
 	void load_visual_mesh(const cgltf_mesh *mesh_data);
 	void load_collision_mesh(const cgltf_mesh *mesh_data);
 	//void load_collision_hull(const cgltf_mesh *mesh_data);
+	void load_skin(const cgltf_skin *skin_data);
 private:
 	void calculate_bounds();
 };

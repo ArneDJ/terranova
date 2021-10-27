@@ -95,6 +95,18 @@ Creature::Creature()
 	transform = std::make_unique<geom::Transform>();
 }
 	
+void Creature::set_animation(const ozz::animation::Skeleton &skeleton, const ozz::animation::Animation &animation)
+{
+	character_animation.locals.resize(skeleton.num_soa_joints());
+	character_animation.models.resize(skeleton.num_joints());
+	character_animation.cache.Resize(animation.num_tracks());
+
+	printf("skeleton joints %d\n", skeleton.num_joints());
+	for (const auto &skin : model->skins()) {
+		printf("inverse binds %d\n", skin->inverse_binds.size());
+	}
+}
+	
 void Creature::update(const glm::vec3 &direction, bool jump_request)
 {
 	if (jump_request && char_con->onGround()) {
@@ -115,6 +127,13 @@ void Creature::update_transform()
 
 	transform->position = fysx::bt_to_vec3(t.getOrigin());
 	//transform->rotation = fysx::bt_to_quat(t.getRotation());
+}
+	
+void Creature::update_animation(const ozz::animation::Skeleton &skeleton, const ozz::animation::Animation &animation, float delta)
+{
+	if (update_character_animation(&character_animation, animation, skeleton, delta)) {
+		//printf("%d\n", character_animation.models.size());
+	}
 }
 
 void Battle::init(const gfx::ShaderGroup *shaders)
@@ -210,6 +229,8 @@ void Battle::prepare(const BattleParameters &params)
 	camera.target(glm::vec3(0.f));
 
 	player = std::make_unique<Creature>();
+	player->model = MediaManager::load_model("modules/native/media/models/human.glb");
+	player->set_animation(skeleton, animation);
 	physics.add_object(player->ghost_object.get(), btBroadphaseProxy::CharacterFilter, btBroadphaseProxy::AllFilter);
 	debugger->add_capsule(0.5f, 1.f, player->transform.get());
 }
@@ -249,6 +270,8 @@ void Battle::update(float delta)
 	player->update(glm::vec3(direction.x, 0.f, direction.y), util::InputManager::key_down(SDLK_SPACE));
 
 	player->char_con->playerStep(physics.world(), delta);
+
+	player->update_animation(skeleton, animation, delta);
 
 	physics.update(delta);
 		

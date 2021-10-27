@@ -52,4 +52,11 @@ struct CharacterAnimation {
 
 bool update_character_animation(CharacterAnimation *character, const ozz::animation::Animation &animation, const ozz::animation::Skeleton &skeleton, float dt);
 
+/*
+class AnimationSet {
+private:
+	std::unordered_map<uint8_t, Animation*> animation_binds; // left action, right animation
+};
+ */
+
 };

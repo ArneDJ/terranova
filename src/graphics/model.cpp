@@ -87,6 +87,11 @@ const std::vector<std::unique_ptr<CollisionMesh>>& Model::collision_meshes() con
 	return m_collision_meshes;
 }
 
+const std::vector<std::unique_ptr<Skin>>& Model::skins() const
+{
+	return m_skins;
+}
+
 const geom::AABB& Model::bounds() const
 {
 	return m_bounds;
@@ -114,6 +119,11 @@ void Model::load(const cgltf_data *data)
 		} else {
 			load_visual_mesh(mesh);
 		}
+	}
+
+	// load skin data
+	for (int i = 0; i < data->skins_count; i++) {
+		load_skin(&data->skins[i]);
 	}
 
 	// model bounding box
@@ -278,6 +288,32 @@ void Model::load_collision_mesh(const cgltf_mesh *mesh_data)
 	}
 
 	m_collision_meshes.push_back(std::move(mesh));
+}
+	
+void Model::load_skin(const cgltf_skin *skin_data)
+{
+	auto skin = std::make_unique<Skin>();
+
+	skin->name = skin_data->name ? skin_data->name : "unnamed";
+
+	// import the inverse bind matrices of each skeleton joint
+	const cgltf_accessor *accessor = skin_data->inverse_bind_matrices;
+	size_t ncomponents = cgltf_num_components(accessor->type);
+	float *buf = new float[accessor->count * ncomponents];
+	cgltf_accessor_unpack_floats(accessor, buf, ncomponents * accessor->count);
+
+	for (size_t i = 0, offset = 0; i < accessor->count; i++, offset += ncomponents) {
+		if (ncomponents == 16) {
+			skin->inverse_binds.push_back(glm::make_mat4(buf + offset));
+		} else {
+			// invalid matrix size replace with identity matrix
+			skin->inverse_binds.push_back(glm::mat4(1.f));
+		}
+	}
+
+	delete buf;
+
+	m_skins.push_back(std::move(skin));
 }
 
 // according to glTF docs: 
