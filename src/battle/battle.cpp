@@ -23,6 +23,7 @@
 #include "../util/timer.h"
 #include "../util/navigation.h"
 #include "../util/image.h"
+#include "../util/animation.h"
 #include "../geometry/geometry.h"
 #include "../geometry/transform.h"
 #include "../graphics/shader.h"
@@ -151,6 +152,40 @@ void Battle::load_molds(const Module &module)
 		const auto &mold = bucket.second;
 		landscaper.add_house(mold->id, mold->model->bounds());
 	}
+
+	// load skeletons and animations
+	// TODO import from module
+	{
+		std::string filepath = "modules/native/media/skeletons/human.ozz";
+		ozz::io::File file(filepath.c_str(), "rb");
+
+		// Checks file status, which can be closed if filepath.c_str() is invalid.
+		if (!file.opened()) {
+			LOG_F(ERROR, "cannot open skeleton file %s", filepath);
+		}
+
+		ozz::io::IArchive archive(&file);
+
+		if (!archive.TestTag<ozz::animation::Skeleton>()) {
+			LOG_F(ERROR, "archive doesn't contain the expected object type");
+		}
+
+		archive >> skeleton;
+	}
+	{
+		std::string filepath = "modules/native/media/animations/human/idle.ozz";
+		ozz::io::File file(filepath.c_str(), "rb");
+		if (!file.opened()) {
+			LOG_F(ERROR, "cannot open animation file %s", filepath);
+		}
+		ozz::io::IArchive archive(&file);
+		if (!archive.TestTag<ozz::animation::Animation>()) {
+			LOG_F(ERROR, "failed to load animation instance file");
+		}
+
+		// Once the tag is validated, reading cannot fail.
+		archive >> animation;
+	}
 }
 
 void Battle::prepare(const BattleParameters &params)
@@ -172,6 +207,7 @@ void Battle::prepare(const BattleParameters &params)
 	add_houses();
 
 	camera.position = glm::vec3(5.f, 5.f, 5.f);
+	camera.target(glm::vec3(0.f));
 
 	player = std::make_unique<Creature>();
 	physics.add_object(player->ghost_object.get(), btBroadphaseProxy::CharacterFilter, btBroadphaseProxy::AllFilter);
@@ -283,5 +319,4 @@ void Battle::add_houses()
 	for (const auto &building : building_entities) {
 		physics.add_body(building->body.get());
 	}
-
 }

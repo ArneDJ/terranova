@@ -36,6 +36,8 @@ public:
 	std::vector<std::unique_ptr<BuildingEntity>> building_entities;
 public:
 	std::unordered_map<uint32_t, std::unique_ptr<HouseMold>> house_molds;
+	ozz::animation::Skeleton skeleton;
+	ozz::animation::Animation animation;
 public:
 	void init(const gfx::ShaderGroup *shaders);
 	void load_molds(const Module &module);
