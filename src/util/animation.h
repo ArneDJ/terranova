@@ -59,4 +59,15 @@ private:
 };
  */
 
+inline glm::mat4 ozz_to_mat4(const ozz::math::Float4x4 &matrix)
+{
+	glm::mat4 out;
+	ozz::math::StorePtrU(matrix.cols[0], glm::value_ptr(out));
+	ozz::math::StorePtrU(matrix.cols[1], glm::value_ptr(out) + 4);
+	ozz::math::StorePtrU(matrix.cols[2], glm::value_ptr(out) + 8);
+	ozz::math::StorePtrU(matrix.cols[3], glm::value_ptr(out) + 12);
+
+	return out;
+}
+
 };

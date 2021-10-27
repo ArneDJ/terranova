@@ -93,6 +93,8 @@ Creature::Creature()
 	char_con->setUp(btVector3(0, 1, 0));
 
 	transform = std::make_unique<geom::Transform>();
+	
+	joint_matrices.buffer.set_target(GL_SHADER_STORAGE_BUFFER);
 }
 	
 void Creature::set_animation(const ozz::animation::Skeleton &skeleton, const ozz::animation::Animation &animation)
@@ -105,6 +107,9 @@ void Creature::set_animation(const ozz::animation::Skeleton &skeleton, const ozz
 	for (const auto &skin : model->skins()) {
 		printf("inverse binds %d\n", skin->inverse_binds.size());
 	}
+	
+	joint_matrices.data.resize(skeleton.num_joints());
+	joint_matrices.update_present();
 }
 	
 void Creature::update(const glm::vec3 &direction, bool jump_request)
@@ -126,13 +131,22 @@ void Creature::update_transform()
 	//btVector3 pos = t.getOrigin();
 
 	transform->position = fysx::bt_to_vec3(t.getOrigin());
+	transform->position.y -= 1.f;
 	//transform->rotation = fysx::bt_to_quat(t.getRotation());
+	transform->scale = glm::vec3(0.01f);
 }
 	
 void Creature::update_animation(const ozz::animation::Skeleton &skeleton, const ozz::animation::Animation &animation, float delta)
 {
 	if (update_character_animation(&character_animation, animation, skeleton, delta)) {
 		//printf("%d\n", character_animation.models.size());
+		//glm::mat4 root_transform = transform->to_matrix(); 
+		for (const auto &skin : model->skins()) {
+			for (int i = 0; i < character_animation.models.size(); i++) {
+				joint_matrices.data[i] = util::ozz_to_mat4(character_animation.models[i]) * skin->inverse_binds[i];
+			}
+		}
+		joint_matrices.update_present();
 	}
 }
 
@@ -150,6 +164,8 @@ void Battle::init(const gfx::ShaderGroup *shaders)
 		{ SCENE_BOUNDS.min.x, SCENE_BOUNDS.min.z },
 		{ SCENE_BOUNDS.max.x, SCENE_BOUNDS.max.z }
 	};
+	
+	creature_shader = shaders->creature;
 }
 
 void Battle::load_molds(const Module &module)
@@ -192,7 +208,7 @@ void Battle::load_molds(const Module &module)
 		archive >> skeleton;
 	}
 	{
-		std::string filepath = "modules/native/media/animations/human/idle.ozz";
+		std::string filepath = "modules/native/media/animations/human/run.ozz";
 		ozz::io::File file(filepath.c_str(), "rb");
 		if (!file.opened()) {
 			LOG_F(ERROR, "cannot open animation file %s", filepath);
@@ -291,6 +307,12 @@ void Battle::display()
 	scene->update(camera);
 	scene->cull_frustum();
 	scene->display();
+
+	creature_shader->use();
+	creature_shader->uniform_mat4("CAMERA_VP", camera.VP);
+	creature_shader->uniform_mat4("MODEL", player->transform->to_matrix());
+	player->joint_matrices.buffer.bind_base(0);
+	player->model->display();
 
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	terrain->display(camera);

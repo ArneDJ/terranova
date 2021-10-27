@@ -40,6 +40,7 @@ public:
 	std::unique_ptr<Creature> player;
 	carto::Landscaper landscaper;
 	std::vector<std::unique_ptr<BuildingEntity>> building_entities;
+	std::shared_ptr<gfx::Shader> creature_shader;
 public:
 	std::unordered_map<uint32_t, std::unique_ptr<HouseMold>> house_molds;
 	ozz::animation::Skeleton skeleton;
