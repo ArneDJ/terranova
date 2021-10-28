@@ -14,12 +14,12 @@
 
 namespace util {
 
-void PlaybackController::update(const ozz::animation::Animation &animation, float dt)
+void PlaybackController::update(const ozz::animation::Animation *animation, float dt)
 {
 	float new_time = time_ratio;
 
 	if (m_playing) {
-		new_time = time_ratio + dt * m_playback_speed / animation.duration();
+		new_time = time_ratio + dt * m_playback_speed / animation->duration();
 	}
 
 	// Must be called even if time doesn't change, in order to update previous
@@ -49,14 +49,14 @@ void PlaybackController::reset()
 	m_playing = true;
 }
 
-bool update_character_animation(CharacterAnimation *character, const ozz::animation::Animation &animation, const ozz::animation::Skeleton &skeleton, float dt)
+bool update_character_animation(CharacterAnimation *character, const ozz::animation::Animation *animation, const ozz::animation::Skeleton *skeleton, float dt)
 {
 	// Samples animation.
 	character->controller.update(animation, dt);
 
 	// Setup sampling job.
 	ozz::animation::SamplingJob sampling_job;
-	sampling_job.animation = &animation;
+	sampling_job.animation = animation;
 	sampling_job.cache = &character->cache;
 	sampling_job.ratio = character->controller.time_ratio;
 	sampling_job.output = ozz::make_span(character->locals);
@@ -66,7 +66,7 @@ bool update_character_animation(CharacterAnimation *character, const ozz::animat
 
 	// Converts from local space to model space matrices.
 	ozz::animation::LocalToModelJob ltm_job;
-	ltm_job.skeleton = &skeleton;
+	ltm_job.skeleton = skeleton;
 	ltm_job.input = ozz::make_span(character->locals);
 	ltm_job.output = ozz::make_span(character->models);
 

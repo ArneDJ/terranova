@@ -23,10 +23,11 @@ public: // animation stuff
 	util::CharacterAnimation character_animation;
 public:
 	Creature();
-	void set_animation(const ozz::animation::Skeleton &skeleton, const ozz::animation::Animation &animation);
+	void teleport(const glm::vec3 &position);
+	void set_animation(const ozz::animation::Skeleton *skeleton, const ozz::animation::Animation *animation);
 	void update(const glm::vec3 &direction, bool jump_request);
 	void update_transform();
-	void update_animation(const ozz::animation::Skeleton &skeleton, const ozz::animation::Animation &animation, float delta);
+	void update_animation(const ozz::animation::Skeleton *skeleton, const ozz::animation::Animation *animation, float delta);
 };
 
 class Battle {
@@ -40,11 +41,12 @@ public:
 	std::unique_ptr<Creature> player;
 	carto::Landscaper landscaper;
 	std::vector<std::unique_ptr<BuildingEntity>> building_entities;
+	std::vector<std::unique_ptr<Creature>> creature_entities;
 	std::shared_ptr<gfx::Shader> creature_shader;
 public:
 	std::unordered_map<uint32_t, std::unique_ptr<HouseMold>> house_molds;
-	ozz::animation::Skeleton skeleton;
-	ozz::animation::Animation animation;
+	const ozz::animation::Skeleton *skeleton;
+	const ozz::animation::Animation *animation;
 public:
 	void init(const gfx::ShaderGroup *shaders);
 	void load_molds(const Module &module);

@@ -24,7 +24,7 @@ public:
 	// Updates animation time if in "play" state, according to playback speed and
 	// given frame time _dt.
 	// Returns true if animation has looped during update
-	void update(const ozz::animation::Animation& _animation, float _dt);
+	void update(const ozz::animation::Animation *animation, float _dt);
 	// Resets all parameters to their default value.
 	void reset();
 	// Do controller Gui.
@@ -50,7 +50,7 @@ struct CharacterAnimation {
  	ozz::vector<ozz::math::Float4x4> models; // Buffer of model space matrices. These are computed by the local-to-model // job after the blending stage.
 };
 
-bool update_character_animation(CharacterAnimation *character, const ozz::animation::Animation &animation, const ozz::animation::Skeleton &skeleton, float dt);
+bool update_character_animation(CharacterAnimation *character, const ozz::animation::Animation *animation, const ozz::animation::Skeleton *skeleton, float dt);
 
 /*
 class AnimationSet {

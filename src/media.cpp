@@ -16,6 +16,7 @@
 #include "extern/loguru/loguru.hpp"
 
 #include "util/image.h"
+#include "util/animation.h"
 #include "geometry/transform.h"
 #include "graphics/mesh.h"
 #include "graphics/texture.h"
@@ -25,6 +26,8 @@
 
 std::map<uint64_t, std::unique_ptr<gfx::Model>> MediaManager::m_models;
 std::map<uint64_t, std::unique_ptr<gfx::Texture>> MediaManager::m_textures;
+std::map<uint64_t, std::unique_ptr<ozz::animation::Skeleton>> MediaManager::m_skeletons;
+std::map<uint64_t, std::unique_ptr<ozz::animation::Animation>> MediaManager::m_animations;
 
 const gfx::Model* MediaManager::load_model(const std::string &filepath)
 {
@@ -76,4 +79,75 @@ const gfx::Texture* MediaManager::load_texture(const std::string &filepath)
 	}
 
 	return search->second.get();
+}
+	
+const ozz::animation::Skeleton* MediaManager::load_skeleton(const std::string &filepath)
+{
+	uint64_t key = std::hash<std::string>()(filepath);
+
+	auto search = m_skeletons.find(key);
+	// skeleton not found in map
+	// load new one
+	if (search == m_skeletons.end()) {
+		auto skeleton = std::make_unique<ozz::animation::Skeleton>();
+
+		ozz::io::File file(filepath.c_str(), "rb");
+
+		// Checks file status, which can be closed if filepath.c_str() is invalid.
+		if (!file.opened()) {
+			LOG_F(ERROR, "cannot open skeleton file %s", filepath);
+		}
+
+		ozz::io::IArchive archive(&file);
+
+		if (!archive.TestTag<ozz::animation::Skeleton>()) {
+			LOG_F(ERROR, "archive doesn't contain the expected object type");
+		}
+
+		archive >> *skeleton;
+
+		m_skeletons[key] = std::move(skeleton);
+		
+		return m_skeletons[key].get();
+	}
+
+	return search->second.get();
+}
+	
+const ozz::animation::Animation* MediaManager::load_animation(const std::string &filepath)
+{
+	uint64_t key = std::hash<std::string>()(filepath);
+
+	auto search = m_animations.find(key);
+	// animation not found in map
+	// load new one
+	if (search == m_animations.end()) {
+		auto animation = std::make_unique<ozz::animation::Animation>();
+		
+		ozz::io::File file(filepath.c_str(), "rb");
+		if (!file.opened()) {
+			LOG_F(ERROR, "cannot open animation file %s", filepath);
+		}
+		ozz::io::IArchive archive(&file);
+		if (!archive.TestTag<ozz::animation::Animation>()) {
+			LOG_F(ERROR, "failed to load animation instance file");
+		}
+
+		// Once the tag is validated, reading cannot fail.
+		archive >> *animation;
+
+		m_animations[key] = std::move(animation);
+		
+		return m_animations[key].get();
+	}
+
+	return search->second.get();
+}
+	
+void MediaManager::clear()
+{
+	m_textures.clear();
+	m_models.clear();
+	m_skeletons.clear();
+	m_animations.clear();
 }

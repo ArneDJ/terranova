@@ -97,18 +97,13 @@ Creature::Creature()
 	joint_matrices.buffer.set_target(GL_SHADER_STORAGE_BUFFER);
 }
 	
-void Creature::set_animation(const ozz::animation::Skeleton &skeleton, const ozz::animation::Animation &animation)
+void Creature::set_animation(const ozz::animation::Skeleton *skeleton, const ozz::animation::Animation *animation)
 {
-	character_animation.locals.resize(skeleton.num_soa_joints());
-	character_animation.models.resize(skeleton.num_joints());
-	character_animation.cache.Resize(animation.num_tracks());
+	character_animation.locals.resize(skeleton->num_soa_joints());
+	character_animation.models.resize(skeleton->num_joints());
+	character_animation.cache.Resize(animation->num_tracks());
 
-	printf("skeleton joints %d\n", skeleton.num_joints());
-	for (const auto &skin : model->skins()) {
-		printf("inverse binds %d\n", skin->inverse_binds.size());
-	}
-	
-	joint_matrices.data.resize(skeleton.num_joints());
+	joint_matrices.data.resize(skeleton->num_joints());
 	joint_matrices.update_present();
 }
 	
@@ -125,6 +120,15 @@ void Creature::update(const glm::vec3 &direction, bool jump_request)
 	}
 }
 	
+void Creature::teleport(const glm::vec3 &position)
+{
+	btTransform t;
+	t.setIdentity ();
+	t.setOrigin(fysx::vec3_to_bt(position));
+
+	ghost_object->setWorldTransform(t);
+}
+	
 void Creature::update_transform()
 {
 	btTransform t = char_con->getGhostObject()->getWorldTransform();
@@ -136,14 +140,15 @@ void Creature::update_transform()
 	transform->scale = glm::vec3(0.01f);
 }
 	
-void Creature::update_animation(const ozz::animation::Skeleton &skeleton, const ozz::animation::Animation &animation, float delta)
+void Creature::update_animation(const ozz::animation::Skeleton *skeleton, const ozz::animation::Animation *animation, float delta)
 {
 	if (update_character_animation(&character_animation, animation, skeleton, delta)) {
-		//printf("%d\n", character_animation.models.size());
-		//glm::mat4 root_transform = transform->to_matrix(); 
 		for (const auto &skin : model->skins()) {
-			for (int i = 0; i < character_animation.models.size(); i++) {
-				joint_matrices.data[i] = util::ozz_to_mat4(character_animation.models[i]) * skin->inverse_binds[i];
+			if (skin->inverse_binds.size() == character_animation.models.size()) {
+				for (int i = 0; i < character_animation.models.size(); i++) {
+					joint_matrices.data[i] = util::ozz_to_mat4(character_animation.models[i]) * skin->inverse_binds[i];
+				}
+				break; // only animate first skin
 			}
 		}
 		joint_matrices.update_present();
@@ -190,37 +195,8 @@ void Battle::load_molds(const Module &module)
 
 	// load skeletons and animations
 	// TODO import from module
-	{
-		std::string filepath = "modules/native/media/skeletons/human.ozz";
-		ozz::io::File file(filepath.c_str(), "rb");
-
-		// Checks file status, which can be closed if filepath.c_str() is invalid.
-		if (!file.opened()) {
-			LOG_F(ERROR, "cannot open skeleton file %s", filepath);
-		}
-
-		ozz::io::IArchive archive(&file);
-
-		if (!archive.TestTag<ozz::animation::Skeleton>()) {
-			LOG_F(ERROR, "archive doesn't contain the expected object type");
-		}
-
-		archive >> skeleton;
-	}
-	{
-		std::string filepath = "modules/native/media/animations/human/run.ozz";
-		ozz::io::File file(filepath.c_str(), "rb");
-		if (!file.opened()) {
-			LOG_F(ERROR, "cannot open animation file %s", filepath);
-		}
-		ozz::io::IArchive archive(&file);
-		if (!archive.TestTag<ozz::animation::Animation>()) {
-			LOG_F(ERROR, "failed to load animation instance file");
-		}
-
-		// Once the tag is validated, reading cannot fail.
-		archive >> animation;
-	}
+	skeleton = MediaManager::load_skeleton("modules/native/media/skeletons/human.ozz");
+	animation = MediaManager::load_animation("modules/native/media/animations/human/run.ozz");
 }
 
 void Battle::prepare(const BattleParameters &params)
@@ -262,6 +238,8 @@ void Battle::clear()
 
 	// clear entities
 	building_entities.clear();
+
+	creature_entities.clear();
 }
 
 void Battle::update(float delta)

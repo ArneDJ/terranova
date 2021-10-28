@@ -29,6 +29,7 @@
 #include "../util/timer.h"
 #include "../util/navigation.h"
 #include "../util/image.h"
+#include "../util/animation.h"
 #include "../geometry/geometry.h"
 #include "../geometry/transform.h"
 #include "../geometry/voronoi.h"

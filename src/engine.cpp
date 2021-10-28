@@ -93,6 +93,8 @@ Engine::Engine()
 
 Engine::~Engine()
 {
+	MediaManager::clear();
+
 	// in reverse order of initialization
 	SDL_GL_DeleteContext(glcontext);
 	// Close and destroy the window
