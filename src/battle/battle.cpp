@@ -33,6 +33,7 @@
 #include "../graphics/scene.h"
 #include "../physics/physical.h"
 #include "../physics/heightfield.h"
+#include "../physics/bumper.h"
 
 #include "../debugger.h"
 #include "../module.h"
@@ -70,89 +71,6 @@ glm::vec2 creature_direction(const glm::vec3 &view, bool forward, bool backward,
 	}
 
 	return direction;
-}
-
-Creature::Creature()
-{
-	btTransform startTransform;
-	startTransform.setIdentity ();
-	startTransform.setOrigin(btVector3(512, 64, 512));
-
-	capsule = std::make_unique<btCapsuleShapeZ>(0.5, 1);
-
-	ghost_object = std::make_unique<btPairCachingGhostObject>();
-	ghost_object->setWorldTransform(startTransform);
-	ghost_object->setCollisionShape(capsule.get());
-	ghost_object->setCollisionFlags(btCollisionObject::CF_CHARACTER_OBJECT);
-
-	char_con = std::make_unique<btKinematicCharacterController>(ghost_object.get(), capsule.get(), 0.05f);
-	char_con->setGravity(btVector3(0.f, -9.81f, 0.f));
-	char_con->setMaxJumpHeight(1.5);
-	char_con->setMaxPenetrationDepth(0.2f);
-	char_con->setMaxSlope(btRadians(60.0));
-	char_con->setUp(btVector3(0, 1, 0));
-
-	transform = std::make_unique<geom::Transform>();
-	
-	joint_matrices.buffer.set_target(GL_SHADER_STORAGE_BUFFER);
-}
-	
-void Creature::set_animation(const ozz::animation::Skeleton *skeleton, const ozz::animation::Animation *animation)
-{
-	character_animation.locals.resize(skeleton->num_soa_joints());
-	character_animation.models.resize(skeleton->num_joints());
-	character_animation.cache.Resize(animation->num_tracks());
-
-	joint_matrices.data.resize(skeleton->num_joints());
-	joint_matrices.update_present();
-}
-	
-void Creature::update(const glm::vec3 &direction, bool jump_request)
-{
-	if (jump_request && char_con->onGround()) {
-		char_con->jump(btVector3(0,6,0));
-	}
-
-	if (direction != glm::vec3(0,0,0)) {
-		char_con->setWalkDirection(btVector3(direction.x , direction.y , direction.z).normalized()/10);
-	} else {
-		char_con->setWalkDirection(btVector3(0 , 0 , 0));
-	}
-}
-	
-void Creature::teleport(const glm::vec3 &position)
-{
-	btTransform t;
-	t.setIdentity ();
-	t.setOrigin(fysx::vec3_to_bt(position));
-
-	ghost_object->setWorldTransform(t);
-}
-	
-void Creature::update_transform()
-{
-	btTransform t = char_con->getGhostObject()->getWorldTransform();
-	//btVector3 pos = t.getOrigin();
-
-	transform->position = fysx::bt_to_vec3(t.getOrigin());
-	transform->position.y -= 1.f;
-	//transform->rotation = fysx::bt_to_quat(t.getRotation());
-	transform->scale = glm::vec3(0.01f);
-}
-	
-void Creature::update_animation(const ozz::animation::Skeleton *skeleton, const ozz::animation::Animation *animation, float delta)
-{
-	if (update_character_animation(&character_animation, animation, skeleton, delta)) {
-		for (const auto &skin : model->skins()) {
-			if (skin->inverse_binds.size() == character_animation.models.size()) {
-				for (int i = 0; i < character_animation.models.size(); i++) {
-					joint_matrices.data[i] = util::ozz_to_mat4(character_animation.models[i]) * skin->inverse_binds[i];
-				}
-				break; // only animate first skin
-			}
-		}
-		joint_matrices.update_present();
-	}
 }
 
 void Battle::init(const gfx::ShaderGroup *shaders)
@@ -221,10 +139,22 @@ void Battle::prepare(const BattleParameters &params)
 	camera.target(glm::vec3(0.f));
 
 	player = std::make_unique<Creature>();
+	player->teleport(glm::vec3(512.f, 64.f, 512.f));
 	player->model = MediaManager::load_model("modules/native/media/models/human.glb");
 	player->set_animation(skeleton, animation);
-	physics.add_object(player->ghost_object.get(), btBroadphaseProxy::CharacterFilter, btBroadphaseProxy::AllFilter);
-	debugger->add_capsule(0.5f, 1.f, player->transform.get());
+	physics.add_object(player->bumper->ghost_object.get(), btBroadphaseProxy::CharacterFilter, btBroadphaseProxy::AllFilter);
+	debugger->add_capsule(0.5f, 1.f, player->bumper->transform.get());
+
+	for (int i = 0; i < 40; i++) {
+		for (int j = 0; j < 50; j++) {
+			glm::vec3 position = { 512.f + (i+i), 64.f, 512.f + (j+j) };
+			auto creature = std::make_unique<Creature>();
+			creature->teleport(position);
+			physics.add_object(creature->bumper->ghost_object.get(), btBroadphaseProxy::CharacterFilter, btBroadphaseProxy::AllFilter);
+			debugger->add_capsule(0.5f, 1.f, creature->bumper->transform.get());
+			creature_entities.push_back(std::move(creature));
+		}
+	}
 }
 
 void Battle::clear()
@@ -259,17 +189,22 @@ void Battle::update(float delta)
 	*/
 	glm::vec2 direction = creature_direction(camera.direction, util::InputManager::key_down(SDLK_w), util::InputManager::key_down(SDLK_s), util::InputManager::key_down(SDLK_d), util::InputManager::key_down(SDLK_a));
 
-	player->char_con->preStep(physics.world());
-
 	player->update(glm::vec3(direction.x, 0.f, direction.y), util::InputManager::key_down(SDLK_SPACE));
+	player->bumper->update(physics.world(), delta);
 
-	player->char_con->playerStep(physics.world(), delta);
-
-	player->update_animation(skeleton, animation, delta);
+	auto world = physics.world();
+	for (auto &creature : creature_entities) {
+		creature->update(glm::vec3(direction.x, 0.f, direction.y), util::InputManager::key_down(SDLK_SPACE));
+		creature->bumper->update(world, delta);
+	}
 
 	physics.update(delta);
 		
 	player->update_transform();
+
+	for (auto &creature : creature_entities) {
+		creature->update_transform();
+	}
 
 	camera.position = player->transform->position;
 	//camera.position.y += 1.f;
@@ -286,11 +221,13 @@ void Battle::display()
 	scene->cull_frustum();
 	scene->display();
 
+	/*
 	creature_shader->use();
 	creature_shader->uniform_mat4("CAMERA_VP", camera.VP);
 	creature_shader->uniform_mat4("MODEL", player->transform->to_matrix());
 	player->joint_matrices.buffer.bind_base(0);
 	player->model->display();
+	*/
 
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	terrain->display(camera);

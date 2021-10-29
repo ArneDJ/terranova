@@ -2,7 +2,6 @@
 #include "../extern/bullet/btBulletDynamicsCommon.h"
 #include "../extern/bullet/BulletCollision/CollisionShapes/btHeightfieldTerrainShape.h"
 #include "../extern/bullet/BulletCollision/CollisionDispatch/btGhostObject.h"
-#include"../extern/bullet/BulletDynamics/Character/btKinematicCharacterController.h"
 
 namespace fysx {
 
