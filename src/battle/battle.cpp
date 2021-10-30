@@ -47,27 +47,27 @@ const geom::AABB SCENE_BOUNDS = {
 };
 	
 // TODO remove
-glm::vec2 creature_direction(const glm::vec3 &view, bool forward, bool backward, bool right, bool left)
+glm::vec3 creature_direction(const glm::vec3 &view, bool forward, bool backward, bool right, bool left)
 {
-	glm::vec2 direction = {0.f, 0.f};
-	glm::vec2 dir = glm::normalize(glm::vec2(view.x, view.z));
+	glm::vec3 direction = { 0.f, 0.f , 0.f };
+	glm::vec3 dir = glm::normalize(view);
 	if (forward) {
-		direction.x += dir.x;
-		direction.y += dir.y;
+		//direction.x += dir.x;
+		//direction.y += dir.y;
+		direction = dir;
 	}
 	if (backward) {
-		direction.x -= dir.x;
-		direction.y -= dir.y;
+		direction = -dir;
 	}
 	if (right) {
 		glm::vec3 tmp(glm::normalize(glm::cross(view, glm::vec3(0.f, 1.f, 0.f))));
-		direction.x += tmp.x;
-		direction.y += tmp.z;
+		direction.x = tmp.x;
+		direction.z = tmp.z;
 	}
 	if (left) {
 		glm::vec3 tmp(glm::normalize(glm::cross(view, glm::vec3(0.f, 1.f, 0.f))));
-		direction.x -= tmp.x;
-		direction.y -= tmp.z;
+		direction.x = -tmp.x;
+		direction.z = -tmp.z;
 	}
 
 	return direction;
@@ -139,14 +139,14 @@ void Battle::prepare(const BattleParameters &params)
 	camera.target(glm::vec3(0.f));
 
 	player = std::make_unique<Creature>();
-	player->teleport(glm::vec3(512.f, 64.f, 512.f));
+	player->teleport(glm::vec3(500.f, 64.f, 512.f));
 	player->model = MediaManager::load_model("modules/native/media/models/human.glb");
 	player->set_animation(skeleton, animation);
 	physics.add_object(player->bumper->ghost_object.get(), btBroadphaseProxy::CharacterFilter, btBroadphaseProxy::AllFilter);
 	debugger->add_capsule(0.5f, 1.f, player->bumper->transform.get());
 
-	for (int i = 0; i < 40; i++) {
-		for (int j = 0; j < 50; j++) {
+	for (int i = 0; i < 10; i++) {
+		for (int j = 0; j < 0; j++) {
 			glm::vec3 position = { 512.f + (i+i), 64.f, 512.f + (j+j) };
 			auto creature = std::make_unique<Creature>();
 			creature->teleport(position);
@@ -187,9 +187,9 @@ void Battle::update(float delta)
 	if (util::InputManager::key_down(SDLK_d)) { camera.move_right(speed); }
 	if (util::InputManager::key_down(SDLK_a)) { camera.move_left(speed); }
 	*/
-	glm::vec2 direction = creature_direction(camera.direction, util::InputManager::key_down(SDLK_w), util::InputManager::key_down(SDLK_s), util::InputManager::key_down(SDLK_d), util::InputManager::key_down(SDLK_a));
+	glm::vec3 direction = creature_direction(camera.direction, util::InputManager::key_down(SDLK_w), util::InputManager::key_down(SDLK_s), util::InputManager::key_down(SDLK_d), util::InputManager::key_down(SDLK_a));
 
-	player->update(glm::vec3(direction.x, 0.f, direction.y), util::InputManager::key_down(SDLK_SPACE));
+	player->update(direction, util::InputManager::key_down(SDLK_SPACE));
 	player->bumper->update(physics.world(), delta);
 
 	auto world = physics.world();

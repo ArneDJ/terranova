@@ -30,18 +30,53 @@ protected:
 	btCollisionObject *me;
 };
 
+class btKinematicClosestNotMeConvexResultCallback : public btCollisionWorld::ClosestConvexResultCallback
+{
+public:
+	btKinematicClosestNotMeConvexResultCallback(btCollisionObject* me, const btVector3& up, btScalar minSlopeDot)
+		: btCollisionWorld::ClosestConvexResultCallback(btVector3(0.0, 0.0, 0.0), btVector3(0.0, 0.0, 0.0)), m_me(me), m_up(up), m_minSlopeDot(minSlopeDot)
+	{
+	}
+
+	virtual btScalar addSingleResult(btCollisionWorld::LocalConvexResult& convexResult, bool normalInWorldSpace)
+	{
+		if (convexResult.m_hitCollisionObject == m_me)
+			return btScalar(1.0);
+
+		if (!convexResult.m_hitCollisionObject->hasContactResponse())
+			return btScalar(1.0);
+
+		btVector3 hitNormalWorld;
+		if (normalInWorldSpace)
+		{
+			hitNormalWorld = convexResult.m_hitNormalLocal;
+		} else {
+			///need to transform normal into worldspace
+			hitNormalWorld = convexResult.m_hitCollisionObject->getWorldTransform().getBasis() * convexResult.m_hitNormalLocal;
+		}
+
+		btScalar dotUp = m_up.dot(hitNormalWorld);
+		if (dotUp < m_minSlopeDot)
+		{
+			return btScalar(1.0);
+		}
+
+		return ClosestConvexResultCallback::addSingleResult(convexResult, normalInWorldSpace);
+	}
+
+protected:
+	btCollisionObject* m_me;
+	const btVector3 m_up;
+	btScalar m_minSlopeDot;
+};
+
 Bumper::Bumper(const glm::vec3 &origin, float radius, float length)
 {
-	probe_ground = length;
-	probe_air = 0.55f * length;
-
 	float height = length - (2.f * radius);
 	if (height < 0.f) {
 		height = 0.f;
 	}
 	
-	offset = (0.5f * length) + 0.05f;
-
 	shape = std::make_unique<btCapsuleShape>(radius, height);
 
 	btTransform t;
@@ -59,35 +94,41 @@ Bumper::Bumper(const glm::vec3 &origin, float radius, float length)
 	
 void Bumper::update(const btDynamicsWorld *world, float delta)
 {
-	glm::vec3 pos = bt_to_vec3(ghost_object->getWorldTransform().getOrigin());
-	ghost_object->getWorldTransform().getOrigin().setX(pos.x + (speed * delta * walk_direction.x));
-	ghost_object->getWorldTransform().getOrigin().setZ(pos.z + (speed * delta * walk_direction.z));
-
-	ClosestNotMe ray_callback(ghost_object.get());
-
-	// to avoid "snapping" the probe scales if the bumper is on the ground or in the air
-	float probe_scale = grounded ? probe_ground : probe_air;
-	world->rayTest(ghost_object->getWorldTransform().getOrigin(), ghost_object->getWorldTransform().getOrigin() - btVector3(0.0f, probe_scale, 0.0f), ray_callback);
-	if (ray_callback.hasHit()) {
-		grounded = true;
-		float fraction = ray_callback.m_closestHitFraction;
-		glm::vec3 current_pos = bt_to_vec3(ghost_object->getWorldTransform().getOrigin());
-		float hit_pos = current_pos.y - fraction * probe_scale;
-
-		glm::vec3 hitnormal = bt_to_vec3(ray_callback.m_hitNormalWorld);
-
-		ghost_object->getWorldTransform().getOrigin().setX(current_pos.x);
-		ghost_object->getWorldTransform().getOrigin().setY(hit_pos + offset);
-		ghost_object->getWorldTransform().getOrigin().setZ(current_pos.z);
-	} else {
-		grounded = false;
+	if (glm::length(walk_direction) == 0.f) {
+		return;
 	}
 
-	if (grounded == false) {
-		float vertical_velocity = -9.81f * delta;
-		float y = ghost_object->getWorldTransform().getOrigin().getY();
-		ghost_object->getWorldTransform().getOrigin().setY(y + vertical_velocity);
+	glm::vec3 velocity = delta * speed * walk_direction;
+	glm::vec3 current_position = bt_to_vec3(ghost_object->getWorldTransform().getOrigin());
+	glm::vec3 next_position = current_position + velocity;
+
+	glm::vec3 sweep_direction = current_position - next_position;
+
+	btTransform start = ghost_object->getWorldTransform();
+	btTransform end = start;
+	end.setOrigin(vec3_to_bt(next_position));
+
+	btKinematicClosestNotMeConvexResultCallback callback(ghost_object.get(), vec3_to_bt(sweep_direction), btScalar(0.0));
+	callback.m_collisionFilterGroup = ghost_object->getBroadphaseHandle()->m_collisionFilterGroup;
+	callback.m_collisionFilterMask = ghost_object->getBroadphaseHandle()->m_collisionFilterMask;
+
+	ghost_object->convexSweepTest(shape.get(), start, end, callback, world->getDispatchInfo().m_allowedCcdPenetration);
+
+	if (callback.hasHit() && ghost_object->hasContactResponse()) {
+		glm::vec3 hit_normal = bt_to_vec3(callback.m_hitNormalWorld);
+		float fraction = callback.m_closestHitFraction;
+		//printf("%f, %f, %f\n", hit_normal.x, hit_normal.y, hit_normal.z);
+		//printf("%f\n", fraction);
+		glm::vec3 velocity_normalized = glm::normalize(velocity);
+		glm::vec3 undesired_motion = hit_normal * glm::dot(velocity_normalized, hit_normal);
+		glm::vec3 desired_motion = velocity_normalized - undesired_motion;
+		velocity = desired_motion * glm::length(velocity);
+		// Remove penetration (penetration epsilon added to handle infinitely small penetration):
+		//float depth = (1.f - fraction) * glm::length(next_position - current_position);
+		//current_position += (hit_normal * (depth + 0.001f));
 	}
+
+	teleport(current_position + velocity);
 }
 	
 void Bumper::sync_transform()
