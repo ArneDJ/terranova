@@ -28,7 +28,7 @@
 
 Creature::Creature()
 {
-	bumper = std::make_unique<fysx::Bumper>(glm::vec3(0.f), 0.25f, 2.f);
+	bumper = std::make_unique<fysx::Bumper>(glm::vec3(0.f), 0.5f, 2.f);
 
 	transform = std::make_unique<geom::Transform>();
 	
@@ -52,7 +52,7 @@ void Creature::update(const glm::vec3 &direction, bool jump_request)
 		char_con->jump(btVector3(0,6,0));
 	}
 	*/
-	if (direction != glm::vec3(0,0,0)) {
+	if (direction != glm::vec3(0, 0, 0)) {
 		bumper->walk_direction = glm::normalize(direction);
 	} else {
 		bumper->walk_direction = glm::vec3(0.f);

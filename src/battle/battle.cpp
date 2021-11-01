@@ -43,30 +43,34 @@
 
 const geom::AABB SCENE_BOUNDS = {
 	{ 0.F, 0.F, 0.F },
-	{ 1024.F, 64.F, 1024.F }
+	{ 1024.F, 255.F, 1024.F }
 };
 	
 // TODO remove
 glm::vec3 creature_direction(const glm::vec3 &view, bool forward, bool backward, bool right, bool left)
 {
-	glm::vec3 direction = { 0.f, 0.f , 0.f };
+	glm::vec3 direction = { 0.f, 0.f, 0.f };
 	glm::vec3 dir = glm::normalize(view);
 	if (forward) {
 		//direction.x += dir.x;
-		//direction.y += dir.y;
+		//direction.y += dir.z;
 		direction = dir;
 	}
 	if (backward) {
+		//direction.x -= dir.x;
+		//direction.y -= dir.z;
 		direction = -dir;
 	}
 	if (right) {
 		glm::vec3 tmp(glm::normalize(glm::cross(view, glm::vec3(0.f, 1.f, 0.f))));
 		direction.x = tmp.x;
+		direction.y = 0.f;
 		direction.z = tmp.z;
 	}
 	if (left) {
 		glm::vec3 tmp(glm::normalize(glm::cross(view, glm::vec3(0.f, 1.f, 0.f))));
 		direction.x = -tmp.x;
+		direction.y = 0.f;
 		direction.z = -tmp.z;
 	}
 
@@ -139,15 +143,18 @@ void Battle::prepare(const BattleParameters &params)
 	camera.target(glm::vec3(0.f));
 
 	player = std::make_unique<Creature>();
-	player->teleport(glm::vec3(500.f, 64.f, 512.f));
+	glm::vec3 location = { 500.f, 255.f, 512.f };
+	location.y = vertical_offset(location.x, location.z) + 1.f;
+	player->teleport(location);
 	player->model = MediaManager::load_model("modules/native/media/models/human.glb");
 	player->set_animation(skeleton, animation);
 	physics.add_object(player->bumper->ghost_object.get(), btBroadphaseProxy::CharacterFilter, btBroadphaseProxy::AllFilter);
 	debugger->add_capsule(0.5f, 1.f, player->bumper->transform.get());
 
-	for (int i = 0; i < 10; i++) {
-		for (int j = 0; j < 0; j++) {
+	for (int i = 0; i < 16; i++) {
+		for (int j = 0; j < 16; j++) {
 			glm::vec3 position = { 512.f + (i+i), 64.f, 512.f + (j+j) };
+			position.y = vertical_offset(position.x, position.z) + 1.f;
 			auto creature = std::make_unique<Creature>();
 			creature->teleport(position);
 			physics.add_object(creature->bumper->ghost_object.get(), btBroadphaseProxy::CharacterFilter, btBroadphaseProxy::AllFilter);
@@ -194,7 +201,7 @@ void Battle::update(float delta)
 
 	auto world = physics.world();
 	for (auto &creature : creature_entities) {
-		creature->update(glm::vec3(direction.x, 0.f, direction.y), util::InputManager::key_down(SDLK_SPACE));
+		creature->update(direction, util::InputManager::key_down(SDLK_SPACE));
 		creature->bumper->update(world, delta);
 	}
 
