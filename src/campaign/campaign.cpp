@@ -572,10 +572,15 @@ void Campaign::set_player_movement(const glm::vec3 &ray)
 			
 			board->find_path(meeple_controller.player->position(), hitpoint, nodes);
 			meeple_controller.player->set_path(nodes);
+			
+			// update marker
+			board->set_marker(hitpoint);
 		}
+		/*
 		if (meeple_controller.player->target_type == uint8_t(CampaignEntity::LAND_SURFACE)) {
 			marker.teleport(result.point);
 		}
+		*/
 	}
 }
 	

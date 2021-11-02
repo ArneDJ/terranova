@@ -31,12 +31,17 @@ public:
 	void color_tile(uint32_t tile, const glm::vec3 &color);
 	void update_mesh();
 public:
+	void set_marker(const glm::vec2 &position);
+public:
 	void display(const util::Camera &camera) const;
 private:
 	std::shared_ptr<gfx::Shader> m_shader;
 	glm::vec3 m_scale = { 1.f, 1.f, 1.f };
 	BoardMesh m_mesh;
 	gfx::Texture m_texture;
+private:
+	glm::vec2 m_marker_position = {};
+	float m_marker_radius = 5.f;
 };
 
 struct PaintJob {
@@ -55,6 +60,7 @@ public:
 	void reload();
 	void update();
 	void add_paint_job(uint32_t tile, const glm::vec3 &color);
+	void set_marker(const glm::vec2 &position);
 public:
 	fysx::HeightField* height_field();
 	const util::Navigation& navigation() const;

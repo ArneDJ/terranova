@@ -158,10 +158,18 @@ void BoardModel::display(const util::Camera &camera) const
 	m_shader->use();
 	m_shader->uniform_mat4("CAMERA_VP", camera.VP);
 	m_shader->uniform_vec3("MAP_SCALE", m_scale);
+	// marker
+	m_shader->uniform_vec2("MARKER_POS", m_marker_position);
+	m_shader->uniform_float("MARKER_RADIUS", m_marker_radius);
 	
 	m_texture.bind(GL_TEXTURE0);
 
 	m_mesh.draw();
+}
+	
+void BoardModel::set_marker(const glm::vec2 &position)
+{
+	m_marker_position = position;
 }
 	
 Board::Board(std::shared_ptr<gfx::Shader> tilemap)
@@ -184,12 +192,6 @@ void Board::reload()
 	m_model.set_scale(SCALE);
 }
 	
-/*
-void Board::color_tile(uint32_t tile, const glm::vec3 &color)
-{
-	m_model.color_tile(tile, color);
-}
-*/
 void Board::add_paint_job(uint32_t tile, const glm::vec3 &color)
 {
 	PaintJob job = { tile, color };
@@ -285,3 +287,9 @@ void Board::build_navigation()
 
 	m_land_navigation.build(vertices, indices);
 }
+
+void Board::set_marker(const glm::vec2 &position)
+{
+	m_model.set_marker(position);
+}
+	
