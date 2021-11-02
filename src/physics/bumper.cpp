@@ -73,6 +73,15 @@ protected:
 	btScalar m_minSlopeDot;
 };
 
+glm::vec3 hit_to_velocity(const glm::vec3 &velocity, const glm::vec3 &normal)
+{
+	glm::vec3 velocity_normalized = glm::normalize(velocity);
+	glm::vec3 undesired_motion = normal * glm::dot(velocity_normalized, normal);
+	glm::vec3 desired_motion = velocity_normalized - undesired_motion;
+
+	return desired_motion * glm::length(velocity);
+}
+
 Bumper::Bumper(const glm::vec3 &origin, float radius, float length)
 {
 	float height = length - (2.f * radius);
@@ -97,8 +106,8 @@ Bumper::Bumper(const glm::vec3 &origin, float radius, float length)
 	
 void Bumper::update(btDynamicsWorld *world, float delta)
 {
-	if (glm::length(walk_direction) == 0.f) {
-		return;
+	if (walk_direction == glm::vec3(0.f)) {
+		//return;
 	}
 
 	// teleport body to desired location
@@ -110,14 +119,22 @@ void Bumper::update(btDynamicsWorld *world, float delta)
 	glm::vec3 velocity = delta * speed * walk_direction;
 
 	glm::vec3 altered_velocity = collide_and_slide(world, velocity);
-	for (int i = 0; i < 3; i++) {
+	for (int i = 0; i < 2; i++) {
 		altered_velocity = collide_and_slide(world, altered_velocity);
 	}
-	//collide_and_move(world, delta, speed * delta, velocity);
+
+	glm::vec3 impulse = local_push(world, delta, speed * delta, velocity);
+
 	glm::vec3 displacement = collide_and_block(world, altered_velocity);
 	
 	glm::vec3 current_position = bt_to_vec3(ghost_object->getWorldTransform().getOrigin());
+
+	// lerp
+	displacement = glm::mix(displacement, displacement + impulse, 0.1f);
+
 	teleport(current_position + displacement);
+
+	//stick_to_floor(world);
 }
 	
 void Bumper::sync_transform()
@@ -136,7 +153,7 @@ void Bumper::teleport(const glm::vec3 &position)
 	ghost_object->setWorldTransform(t);
 }
 	
-glm::vec3 Bumper::collide_and_slide(btDynamicsWorld *world, const glm::vec3 &velocity)
+glm::vec3 Bumper::collide_and_slide(const btDynamicsWorld *world, const glm::vec3 &velocity)
 {
 	glm::vec3 current_position = bt_to_vec3(ghost_object->getWorldTransform().getOrigin());
 	glm::vec3 next_position = current_position + velocity;
@@ -176,7 +193,7 @@ glm::vec3 Bumper::collide_and_slide(btDynamicsWorld *world, const glm::vec3 &vel
 	return updated_velocity;
 }
 	
-void Bumper::collide_and_move(btDynamicsWorld *world, float delta, float speed, const glm::vec3 &velocity)
+glm::vec3 Bumper::local_push(btDynamicsWorld *world, float delta, float speed, const glm::vec3 &velocity)
 {
 	// TODO check what this does
 	//btVector3 minAabb, maxAabb;
@@ -220,13 +237,16 @@ void Bumper::collide_and_move(btDynamicsWorld *world, float delta, float speed, 
 	}
 
 
+	/*
 	if (displacement != glm::vec3(0.f)) {
 		current_position = glm::mix(current_position, current_position + displacement, 0.5f * glm::length(glm::normalize(displacement)));
 		teleport(current_position);
 	}
+	*/
+	return displacement;
 }
 
-glm::vec3 Bumper::collide_and_block(btDynamicsWorld *world, const glm::vec3 &velocity)
+glm::vec3 Bumper::collide_and_block(const btDynamicsWorld *world, const glm::vec3 &velocity)
 {
 	glm::vec3 displacement = velocity;
 
@@ -248,6 +268,15 @@ glm::vec3 Bumper::collide_and_block(btDynamicsWorld *world, const glm::vec3 &vel
 	glm::vec3 dir = glm::normalize(velocity);
 	float distance = glm::length(velocity);
 
+	/*
+	glm::vec3 hit_normal = bt_to_vec3(callback.m_hitNormalWorld);
+	//printf("%f\n", fraction);
+	glm::vec3 velocity_normalized = glm::normalize(velocity);
+	glm::vec3 undesired_motion = hit_normal * glm::dot(velocity_normalized, hit_normal);
+	glm::vec3 desired_motion = velocity_normalized - undesired_motion;
+	updated_velocity = desired_motion * glm::length(velocity);
+	*/
+
 	if (callback.hasHit() && ghost_object->hasContactResponse()) {
 		glm::vec3 hit_normal = bt_to_vec3(callback.m_hitNormalWorld);
 		float fraction = callback.m_closestHitFraction;
@@ -257,11 +286,31 @@ glm::vec3 Bumper::collide_and_block(btDynamicsWorld *world, const glm::vec3 &vel
 		//printf("depth %f\n", depth);
 		if (distance > depth) {
 			displacement = depth * dir;
-			//displacement = fraction
 		}
 	}
 
 	return displacement;
+}
+	
+void Bumper::stick_to_floor(const btDynamicsWorld *world)
+{
+	ClosestNotMe ray_callback(ghost_object.get());
+
+	world->rayTest(ghost_object->getWorldTransform().getOrigin(), ghost_object->getWorldTransform().getOrigin() - btVector3(0.0f, 2.f, 0.0f), ray_callback);
+
+	if (ray_callback.hasHit()) {
+		grounded = true;
+		float fraction = ray_callback.m_closestHitFraction;
+		glm::vec3 current_pos = bt_to_vec3(ghost_object->getWorldTransform().getOrigin());
+		float hit_pos = current_pos.y - fraction * 2.f;
+
+		current_pos.y = hit_pos + 1.f;
+	
+		teleport(current_pos);
+
+	} else {
+		grounded = false;
+	}
 }
 
 };

@@ -47,7 +47,7 @@ const geom::AABB SCENE_BOUNDS = {
 };
 	
 // TODO remove
-glm::vec3 creature_direction(const glm::vec3 &view, bool forward, bool backward, bool right, bool left)
+glm::vec3 creature_fly_direction(const glm::vec3 &view, bool forward, bool backward, bool right, bool left)
 {
 	glm::vec3 direction = { 0.f, 0.f, 0.f };
 	glm::vec3 dir = glm::normalize(view);
@@ -72,6 +72,32 @@ glm::vec3 creature_direction(const glm::vec3 &view, bool forward, bool backward,
 		direction.x = -tmp.x;
 		direction.y = 0.f;
 		direction.z = -tmp.z;
+	}
+
+	return direction;
+}
+
+glm::vec2 creature_direction(const glm::vec3 &view, bool forward, bool backward, bool right, bool left)
+{
+	glm::vec2 direction = { 0.f, 0.f };
+	glm::vec3 dir = glm::normalize(view);
+	if (forward) {
+		direction.x += dir.x;
+		direction.y += dir.z;
+	}
+	if (backward) {
+		direction.x -= dir.x;
+		direction.y -= dir.z;
+	}
+	if (right) {
+		glm::vec3 tmp(glm::normalize(glm::cross(view, glm::vec3(0.f, 1.f, 0.f))));
+		direction.x = tmp.x;
+		direction.y = tmp.z;
+	}
+	if (left) {
+		glm::vec3 tmp(glm::normalize(glm::cross(view, glm::vec3(0.f, 1.f, 0.f))));
+		direction.x = -tmp.x;
+		direction.y = -tmp.z;
 	}
 
 	return direction;
@@ -152,7 +178,7 @@ void Battle::prepare(const BattleParameters &params)
 	debugger->add_capsule(0.5f, 1.f, player->bumper->transform.get());
 
 	for (int i = 0; i < 16; i++) {
-		for (int j = 0; j < 0; j++) {
+		for (int j = 0; j < 16; j++) {
 			glm::vec3 position = { 512.f + (i+i), 64.f, 512.f + (j+j) };
 			position.y = vertical_offset(position.x, position.z) + 1.f;
 			auto creature = std::make_unique<Creature>();
@@ -194,7 +220,7 @@ void Battle::update(float delta)
 	if (util::InputManager::key_down(SDLK_d)) { camera.move_right(speed); }
 	if (util::InputManager::key_down(SDLK_a)) { camera.move_left(speed); }
 	*/
-	glm::vec3 direction = creature_direction(camera.direction, util::InputManager::key_down(SDLK_w), util::InputManager::key_down(SDLK_s), util::InputManager::key_down(SDLK_d), util::InputManager::key_down(SDLK_a));
+	glm::vec3 direction = creature_fly_direction(camera.direction, util::InputManager::key_down(SDLK_w), util::InputManager::key_down(SDLK_s), util::InputManager::key_down(SDLK_d), util::InputManager::key_down(SDLK_a));
 
 	player->update(direction, util::InputManager::key_down(SDLK_SPACE));
 	player->bumper->update(physics.world(), delta);
