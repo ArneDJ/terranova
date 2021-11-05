@@ -41,7 +41,7 @@ private:
 	gfx::Texture m_texture;
 private:
 	glm::vec2 m_marker_position = {};
-	float m_marker_radius = 5.f;
+	float m_marker_radius = 3.f;
 };
 
 struct PaintJob {

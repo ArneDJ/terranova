@@ -44,6 +44,11 @@ struct Quadrilateral {
 	glm::vec2 a, b, c, d;
 };
 
+struct Plane {
+	glm::vec3 normal = {}; // Plane normal. Points x on the plane satisfy Dot(n,x) = d
+	float dist = 0.f; // d = dot(n,p) for a given point p on the plane
+};
+
 template<typename T>
 inline T max(const T &a, const T &b, const T &c)
 {

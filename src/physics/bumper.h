@@ -16,11 +16,13 @@ public:
 public:
 	void update(btDynamicsWorld *world, float delta);
 	void teleport(const glm::vec3 &position);
+	void apply_velocity(const glm::vec3 &velocity);
 	void sync_transform();
-	glm::vec3 collide_and_slide(const btDynamicsWorld *world, const glm::vec3 &velocity);
-	glm::vec3 local_push(btDynamicsWorld *world, float delta, float speed, const glm::vec3 &velocity);
+	glm::vec3 collide_and_slide(const btDynamicsWorld *world, const glm::vec3 &velocity, float delta);
+	glm::vec3 local_push(btDynamicsWorld *world, float delta, float speed);
 	glm::vec3 collide_and_block(const btDynamicsWorld *world, const glm::vec3 &velocity);
 	void stick_to_floor(const btDynamicsWorld *world);
+	void try_move(const btDynamicsWorld *world, const glm::vec3 &velocity, float delta);
 };
 
 };
