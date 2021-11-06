@@ -105,6 +105,25 @@ int clip_velocity(const glm::vec3 &in, const glm::vec3 &normal, glm::vec3 &out, 
 	return blocked;
 }
 
+glm::vec3 clip_vel(const glm::vec3 &in, const glm::vec3 &normal)
+{
+	glm::vec3 out = { 0.f, 0.f, 0.f };
+
+	float overbounce = 1.f;
+
+	float backoff = glm::dot(in, normal) * overbounce;
+
+	for (int i = 0; i < 3; i++) {
+		float change = normal[i] * backoff;
+		out[i] = in[i] - change;
+		if (out[i] > -STOP_EPSILON && out[i] < STOP_EPSILON) {
+			out[i] = 0;
+		}
+	}
+
+	return out;
+}
+
 glm::vec3 hit_to_velocity(const glm::vec3 &velocity, const glm::vec3 &normal)
 {
 	glm::vec3 velocity_normalized = glm::normalize(velocity);
@@ -138,30 +157,18 @@ Bumper::Bumper(const glm::vec3 &origin, float radius, float length)
 	
 void Bumper::update(btDynamicsWorld *world, float delta)
 {
+	// if collide and slide was done correctly this shouldn't be necessary
+	//glm::vec3 impulse = local_push(world, delta, speed);
+	//apply_velocity(10.f * impulse);
+
 	glm::vec3 velocity = speed * walk_direction;
 
 	//try_move(world, velocity, delta);
 	velocity = collide_and_slide(world, walk_direction, speed * delta);
 
 	teleport(velocity);
-	//apply_velocity(velocity);
-		/*
-	glm::vec3 impulse = local_push(world, delta, speed);
-
-
-	//printf("%f, %f, %f\n", impulse.x, impulse.y, impulse.z);
-
-	//impulse = collide_and_slide(world, impulse);
-	//impulse = collide_and_block(world, impulse);
-
-	glm::vec3 slide_velocity = collide_and_slide(world, velocity);
-
-	//glm::vec3 blocked_velocity = collide_and_block(world, slide_velocity);
-
-	//velocity = glm::mix(blocked_velocity, blocked_velocity + impulse, 0.5f);
-	
-	apply_velocity(slide_velocity);
-	*/
+	//glm::vec3 velocity = speed * walk_direction;
+	//slide_move(world, velocity, delta);
 }
 	
 void Bumper::sync_transform()
@@ -202,8 +209,11 @@ glm::vec3 Bumper::collide_and_slide(const btDynamicsWorld *world, const glm::vec
 			final_position = end;
 			break;
 		} else {
-			glm::vec3 endpos = position + 0.0001f * (trace.endpos - position);
-			//glm::vec3 endpos = trace.endpos;
+			// TODO calculate correctly so it doesn't cause penetration
+			//glm::vec3 endpos = position + 0.0001f * (trace.endpos - position);
+			glm::vec3 motion_dir = glm::normalize(new_velocity);
+			glm::vec3 moved = motion_dir * (trace.fraction * glm::length(new_velocity) - 0.01f);
+			glm::vec3 endpos = position + 0.5f * moved;
 
 			position = endpos;
 			final_position = endpos;
@@ -211,13 +221,19 @@ glm::vec3 Bumper::collide_and_slide(const btDynamicsWorld *world, const glm::vec
 			glm::vec3 direction = glm::normalize(new_velocity);
 			float d = glm::dot(direction, trace.normal);
 			glm::vec3 nv = direction - (d * trace.normal);
+		
+			//printf("original v: %f, %f, %f\n", new_velocity.x, new_velocity.y, new_velocity.z);
+			//printf("hit normal: %f, %f, %f\n", trace.normal.x, trace.normal.y, trace.normal.z);
+			//printf("new v: %f, %f, %f\n", nv.x, nv.y, nv.z);
+			//printf("--\n");
 
 			//glm::vec3 new_position = origin + delta * glm::length(velocity) * nv;
-			glm::vec3 new_position = endpos + time_left * nv;
+			//glm::vec3 new_position = endpos + time_left * nv;
 
-			new_velocity = new_position - endpos;
-
-			end = new_position;
+			//new_velocity = new_position - endpos;
+			new_velocity = time_left * nv;
+			//position = origin;
+			end = position + new_velocity;
 
 
 			time_left -= trace.fraction * delta;
@@ -422,11 +438,9 @@ Trace trace_movement(btPairCachingGhostObject *object, const btConvexShape *shap
 {
 	Trace trace = {};
 	trace.fraction = 1.f;
-	trace.endpos = destination;
+	trace.endpos = origin;
 
-	glm::vec3 current_position = bt_to_vec3(object->getWorldTransform().getOrigin());
-
-	glm::vec3 sweep_direction = current_position - destination;
+	glm::vec3 sweep_direction = origin - destination;
 
 	btTransform start = object->getWorldTransform();
 	btTransform end = start;
@@ -438,17 +452,160 @@ Trace trace_movement(btPairCachingGhostObject *object, const btConvexShape *shap
 
 	object->convexSweepTest(shape, start, end, callback, world->getDispatchInfo().m_allowedCcdPenetration);
 
-	glm::vec3 direction = destination - current_position;
-	float distance = glm::length(direction);
+	glm::vec3 direction = destination - origin;
 
 	if (callback.hasHit() && object->hasContactResponse()) {
+		glm::vec3 hitpoint = bt_to_vec3(callback.m_hitPointWorld);
 		trace.fraction = callback.m_closestHitFraction;
 		trace.normal = bt_to_vec3(callback.m_hitNormalWorld);
-		// TODO this is incorrect
-		trace.endpos = current_position + (0.5f * trace.fraction * direction);
+		// TODO this is incorrect!!!!!!!
+		trace.endpos = origin + (trace.fraction * direction);
+
+		//printf("fraction: %f\n", trace.fraction);
+		//printf("hitpoint: %f, %f, %f\n", hitpoint.x, hitpoint.y, hitpoint.z);
+		//printf("endpos: %f, %f, %f\n", trace.endpos.x, trace.endpos.y, trace.endpos.z);
+		//printf("hit endpos dist: %f\n", glm::distance(hitpoint, trace.endpos));
+		//printf("\n");
 	}
 
 	return trace;
+}
+	
+void Bumper::slide_move(const btDynamicsWorld *world, const glm::vec3 &displacement, float delta)
+{
+	glm::vec3 m_position = bt_to_vec3(ghost_object->getWorldTransform().getOrigin());
+
+	glm::vec3 planes[MAX_CLIP_PLANES];
+	int numplanes = 0;
+	float timeleft = delta;
+
+	// no motion early exit
+	if (glm::length(displacement) < 1e-6f) {
+		return;
+	}
+
+	glm::vec3 motion = displacement;
+
+	// don't go against velocity
+	planes[numplanes] = displacement;
+	numplanes++;
+
+	int numbump = 4;
+	for (int bumpcount = 0; bumpcount < numbump; bumpcount++) {
+		if (glm::length(motion) < 1e-6f) {
+			return;
+		}
+
+		// compute position
+		glm::vec3 start = m_position;
+		glm::vec3 end = start + timeleft * motion;
+
+		btVector3 _start = vec3_to_bt(start);
+		btVector3 _end = vec3_to_bt(end);
+
+		btTransform from = btTransform(btQuaternion(0, 0, 0, 1), _start);
+		btTransform to = btTransform(btQuaternion(0, 0, 0, 1), _end);
+
+		BumperConvexCallback callback(ghost_object.get(), _start - _end, btScalar(0.0));
+		callback.m_collisionFilterGroup = ghost_object->getBroadphaseHandle()->m_collisionFilterGroup;
+		callback.m_collisionFilterMask = ghost_object->getBroadphaseHandle()->m_collisionFilterMask;
+
+		world->convexSweepTest(shape.get(), from, to, callback);
+
+
+		// no hit, move along
+		if (!callback.hasHit()) {
+			m_position = end;
+			break;;
+		}
+
+		callback.m_hitNormalWorld.normalize();
+
+		// move to the closest point before collision
+		glm::vec3 motion_dir = glm::normalize(motion);
+		glm::vec3 moved = motion_dir * (callback.m_closestHitFraction * glm::length(motion) - 0.001f);
+
+		m_position = start + moved;
+		motion -= moved;
+
+		// TODO Push the object
+
+		glm::vec3 hit_normal = bt_to_vec3(callback.m_hitNormalWorld);
+
+		// fix non axial planar
+		int i = numplanes;
+		for (i = 0; i < numplanes; i++) {
+			if (glm::dot(hit_normal, planes[i]) > 0.99f) {
+				motion += hit_normal * delta;
+				break;
+			}
+		}
+
+		if (i < numplanes) { continue; }
+
+		// store the normal
+		planes[numplanes] = hit_normal;
+		numplanes++;
+
+		// modify vel so it's parallel to all planes
+		glm::vec3 clip_motion = motion;
+
+		for (i = 0; i < numplanes; i++) {
+			float into = glm::dot(glm::normalize(clip_motion), planes[i]);
+			
+			// it's ok for this plane
+			if (into > 0.1f) { continue; }
+
+			// clip vel
+			// TODO recheck this
+			clip_motion = hit_to_velocity(clip_motion, planes[i]);
+
+
+			// see if there's a second plane the new move enters
+			for (int j = 0; j < numplanes; j++) {
+				if (i == j) { 
+					continue; 
+				}
+				if (glm::dot(glm::normalize(clip_motion), planes[j]) > 0.1f) {
+					continue;
+				}
+
+				// try clipping
+				clip_motion = hit_to_velocity(clip_motion, planes[j]);
+
+				// see if it goes back to the first clip plane
+				if (glm::dot(glm::normalize(clip_motion), planes[i]) > 0.f) {
+					continue;
+				}
+
+				// slide along the cease
+				glm::vec3 dir = glm::cross(planes[i], planes[j]);
+				glm::normalize(dir);
+				float d = glm::dot(dir, clip_motion);
+				clip_motion = dir * d;
+
+				// see if there is a 3rd plane
+				for (int k = 0; k < numplanes; k++) {
+					if (k == i || k == j) {
+						continue;
+					}
+					if (glm::dot(glm::normalize(clip_motion), planes[k]) > 0.1f) {
+						continue;
+					}
+
+					// stop if there's a 3rd one
+					return;
+				}
+			}
+
+			// try another move
+			motion = clip_motion;
+		}
+			
+		timeleft -= callback.m_closestHitFraction * delta;
+	}
+
+	teleport(m_position);
 }
 
 };

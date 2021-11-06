@@ -23,6 +23,7 @@ public:
 	glm::vec3 collide_and_block(const btDynamicsWorld *world, const glm::vec3 &velocity);
 	void stick_to_floor(const btDynamicsWorld *world);
 	void try_move(const btDynamicsWorld *world, const glm::vec3 &velocity, float delta);
+	void slide_move(const btDynamicsWorld *world, const glm::vec3 &displacement, float delta);
 };
 
 };
