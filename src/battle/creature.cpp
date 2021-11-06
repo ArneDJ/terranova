@@ -69,6 +69,7 @@ void Creature::update_transform()
 	bumper->sync_transform();
 
 	transform->position = bumper->transform->position;
+	transform->scale = glm::vec3(0.01f);
 }
 	
 void Creature::update_animation(const ozz::animation::Skeleton *skeleton, const ozz::animation::Animation *animation, float delta)

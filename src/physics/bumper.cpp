@@ -61,11 +61,13 @@ public:
 			hitNormalWorld = convexResult.m_hitCollisionObject->getWorldTransform().getBasis() * convexResult.m_hitNormalLocal;
 		}
 
+		/*
 		btScalar dotUp = m_up.dot(hitNormalWorld);
 		if (dotUp < m_minSlopeDot)
 		{
 			return btScalar(1.0);
 		}
+		*/
 
 		return ClosestConvexResultCallback::addSingleResult(convexResult, normalInWorldSpace);
 	}
@@ -80,31 +82,6 @@ Trace trace_movement(btPairCachingGhostObject *object, const btConvexShape *shap
 
 #define	STOP_EPSILON 0.1f
 
-int clip_velocity(const glm::vec3 &in, const glm::vec3 &normal, glm::vec3 &out, float overbounce)
-{
-
-	int blocked = 0;
-
-	if (normal.y > 0) {
-		blocked |= 1;		// floor
-	}
-	if (!normal.y) {
-		blocked |= 2;		// step
-	}
-
-	float backoff = glm::dot(in, normal) * overbounce;
-
-	for (int i = 0; i < 3; i++) {
-		float change = normal[i] * backoff;
-		out[i] = in[i] - change;
-		if (out[i] > -STOP_EPSILON && out[i] < STOP_EPSILON) {
-			out[i] = 0;
-		}
-	}
-
-	return blocked;
-}
-
 glm::vec3 clip_vel(const glm::vec3 &in, const glm::vec3 &normal)
 {
 	glm::vec3 out = { 0.f, 0.f, 0.f };
@@ -116,9 +93,9 @@ glm::vec3 clip_vel(const glm::vec3 &in, const glm::vec3 &normal)
 	for (int i = 0; i < 3; i++) {
 		float change = normal[i] * backoff;
 		out[i] = in[i] - change;
-		if (out[i] > -STOP_EPSILON && out[i] < STOP_EPSILON) {
-			out[i] = 0;
-		}
+		//if (out[i] > -STOP_EPSILON && out[i] < STOP_EPSILON) {
+			//out[i] = 0;
+		//}
 	}
 
 	return out;
@@ -157,16 +134,12 @@ Bumper::Bumper(const glm::vec3 &origin, float radius, float length)
 	
 void Bumper::update(btDynamicsWorld *world, float delta)
 {
-	// if collide and slide was done correctly this shouldn't be necessary
-	//glm::vec3 impulse = local_push(world, delta, speed);
-	//apply_velocity(10.f * impulse);
-
 	glm::vec3 velocity = speed * walk_direction;
-
-	//try_move(world, velocity, delta);
 	velocity = collide_and_slide(world, walk_direction, speed * delta);
-
 	teleport(velocity);
+
+	//glm::vec3 displacement = speed * delta * walk_direction;
+	//collide_n_slide(world, displacement);
 	//glm::vec3 velocity = speed * walk_direction;
 	//slide_move(world, velocity, delta);
 }
@@ -187,9 +160,15 @@ void Bumper::teleport(const glm::vec3 &position)
 	ghost_object->setWorldTransform(t);
 }
 	
+// The basic solid body movement clip that slides along multiple planes
 glm::vec3 Bumper::collide_and_slide(const btDynamicsWorld *world, const glm::vec3 &velocity, float delta)
 {
 	glm::vec3 origin = bt_to_vec3(ghost_object->getWorldTransform().getOrigin());
+
+	// no motion early exit
+	if (glm::length(velocity) < 1e-6f) {
+		return origin;
+	}
 
 	float time_left = delta;
 
@@ -208,36 +187,25 @@ glm::vec3 Bumper::collide_and_slide(const btDynamicsWorld *world, const glm::vec
 		if (trace.fraction >= 1.f) {
 			final_position = end;
 			break;
-		} else {
-			// TODO calculate correctly so it doesn't cause penetration
-			//glm::vec3 endpos = position + 0.0001f * (trace.endpos - position);
-			glm::vec3 motion_dir = glm::normalize(new_velocity);
-			glm::vec3 moved = motion_dir * (trace.fraction * glm::length(new_velocity) - 0.01f);
-			glm::vec3 endpos = position + 0.5f * moved;
-
-			position = endpos;
-			final_position = endpos;
-			// slide
-			glm::vec3 direction = glm::normalize(new_velocity);
-			float d = glm::dot(direction, trace.normal);
-			glm::vec3 nv = direction - (d * trace.normal);
-		
-			//printf("original v: %f, %f, %f\n", new_velocity.x, new_velocity.y, new_velocity.z);
-			//printf("hit normal: %f, %f, %f\n", trace.normal.x, trace.normal.y, trace.normal.z);
-			//printf("new v: %f, %f, %f\n", nv.x, nv.y, nv.z);
-			//printf("--\n");
-
-			//glm::vec3 new_position = origin + delta * glm::length(velocity) * nv;
-			//glm::vec3 new_position = endpos + time_left * nv;
-
-			//new_velocity = new_position - endpos;
-			new_velocity = time_left * nv;
-			//position = origin;
-			end = position + new_velocity;
-
-
-			time_left -= trace.fraction * delta;
 		}
+
+		glm::vec3 motion_dir = glm::normalize(new_velocity);
+		glm::vec3 moved = motion_dir * (trace.fraction * glm::length(new_velocity) - 0.01f);
+		glm::vec3 endpos = position + 0.5f * moved;
+
+		position = endpos;
+		final_position = endpos;
+		// slide
+		glm::vec3 direction = glm::normalize(new_velocity);
+		float d = glm::dot(direction, trace.normal);
+		glm::vec3 nv = direction - (d * trace.normal);
+	
+		// substract covered distance
+		time_left -= trace.fraction * delta;
+
+		new_velocity = time_left * nv;
+
+		end = position + new_velocity;
 	}
 
 	glm::vec3 final_velocity = final_position - origin;
@@ -250,55 +218,6 @@ glm::vec3 Bumper::collide_and_slide(const btDynamicsWorld *world, const glm::vec
 	return origin + final_velocity;
 }
 	
-// TODO this is wrong, find a more accurate push
-// finds penetration points and adds them to a vector to push away from them
-glm::vec3 Bumper::local_push(btDynamicsWorld *world, float delta, float speed)
-{
-	// TODO check what this does
-	btVector3 minAabb, maxAabb;
-	shape->getAabb(ghost_object->getWorldTransform(), minAabb, maxAabb);
-	world->getBroadphase()->setAabb(ghost_object->getBroadphaseHandle(), minAabb, maxAabb, world->getDispatcher());
-
-	world->getDispatcher()->dispatchAllCollisionPairs(ghost_object->getOverlappingPairCache(), world->getDispatchInfo(), world->getDispatcher());
-
-	glm::vec3 current_position = bt_to_vec3(ghost_object->getWorldTransform().getOrigin());
-	glm::vec3 displacement = glm::vec3(0.f);
-
-	for (int i = 0; i < ghost_object->getOverlappingPairCache()->getNumOverlappingPairs(); i++) {
-		btBroadphasePair *pair = &ghost_object->getOverlappingPairCache()->getOverlappingPairArray()[i];
-
-		btCollisionObject *obj0 = static_cast<btCollisionObject*>(pair->m_pProxy0->m_clientObject);
-		btCollisionObject *obj1 = static_cast<btCollisionObject*>(pair->m_pProxy1->m_clientObject);
-
-		if ((obj0 && !obj0->hasContactResponse()) || (obj1 && !obj1->hasContactResponse())) {
-			continue;
-		}
-
-		btManifoldArray manifolds;
-		if (pair->m_algorithm) {
-			pair->m_algorithm->getAllContactManifolds(manifolds);
-		}
-		for (int j = 0; j < manifolds.size(); j++) {
-			btPersistentManifold* manifold = manifolds[j];
-			float sign = manifold->getBody0() == ghost_object.get() ? -1.f : 1.f;
-
-			for (int p = 0; p < manifold->getNumContacts(); p++) {
-				const btManifoldPoint &point = manifold->getContactPoint(p);
-
-				// distance between what?
-				float dist = point.getDistance();
-				//printf("%f\n", dist);
-
-				glm::vec3 impulse = bt_to_vec3(point.m_normalWorldOnB) * (sign * dist);
-				displacement += impulse;
-			}
-		}
-	}
-
-
-	return displacement;
-}
-
 void Bumper::stick_to_floor(const btDynamicsWorld *world)
 {
 	ClosestNotMe ray_callback(ghost_object.get());
@@ -328,112 +247,6 @@ void Bumper::apply_velocity(const glm::vec3 &velocity)
 
 #define	MAX_CLIP_PLANES	5
 
-// The basic solid body movement clip that slides along multiple planes
-void Bumper::try_move(const btDynamicsWorld *world, const glm::vec3 &velocity, float delta)
-{
-	bool blocked = false; // assume not blocked
-	int numplanes = 0; //  and not sliding along any planes
-	glm::vec3 planes[MAX_CLIP_PLANES];
-
-	glm::vec3 mv_velocity = velocity;
-
-	// Store original velocity
-	glm::vec3 original_velocity = velocity;
-	glm::vec3 primal_velocity = velocity;
-
-	float time_left = delta;   // Total time for this movement operation.
-
-	int i = 0;
-	int j = 0;
-
-	glm::vec3 mv_origin = bt_to_vec3(ghost_object->getWorldTransform().getOrigin());
-
-	bool no_hit = false;
-
-	int numbumps = 4;
-	int bumpcount = 0;
-	for (bumpcount = 0; bumpcount < numbumps; bumpcount++) {
-		if (glm::length(mv_velocity) == 0.f) {
-			break;
-		}
-		// Assume we can move all the way from the current origin to the end point
-		glm::vec3 end = mv_origin + time_left * mv_velocity;
-
-		Trace trace = trace_movement(ghost_object.get(), shape.get(), world, mv_origin, end);
-
-		if (trace.fraction > 0.f) {	// actually covered some distance
-			mv_origin = trace.endpos;
-			numplanes = 0;
-		}
-
-		if (trace.fraction == 1.f) {
-			no_hit = true;
-			break;		// moved the entire distance
-		}
-
-		// TODO check if floor or step
-		/*
-		if (trace.plane.normal.y > 0.7f) {
-			blocked |= 1;		// floor
-		}
-		if (trace.plane.normal.y == 0.f) {
-			blocked |= 2;		// step
-		}
-		*/
-
-		// adjust time left
-		time_left -= time_left * trace.fraction;
-
-		// cliped to another plane
-		if (numplanes >= MAX_CLIP_PLANES) {	// this shouldn't really happen
-			mv_velocity = glm::vec3(0.f);
-			break;
-		}
-
-		planes[numplanes] = trace.normal;
-		numplanes++;
-
-		// modify original_velocity so it parallels all of the clip planes
-		for (i = 0; i < numplanes; i++) {
-			clip_velocity(original_velocity, planes[i], mv_velocity, 1);
-			for (j = 0; j < numplanes; j++) {
-				if (j != i) {
-					if (glm::dot(mv_velocity, planes[j]) < 0.f) {
-						break;	// not ok
-					}
-				}
-			}
-			if (j == numplanes) {
-				break;
-			}
-		}
-
-		if (i != numplanes) {	// go along this plane
-		} else {	// go along the crease
-			if (numplanes != 2) {
-				mv_velocity = glm::vec3(0.f);
-				break;
-			}
-			glm::vec3 dir = glm::cross(planes[0], planes[1]);
-			float d = glm::dot(dir, mv_velocity);
-			mv_velocity = d * dir;
-		}
-
-		// if velocity is against the original velocity, stop dead
-// to avoid tiny occilations in sloping corners
-		if (glm::dot(mv_velocity, primal_velocity) <= 0.f) {
-			mv_velocity = glm::vec3(0.f);
-			break;
-		}
-	}
-	
-	if (no_hit) {
-		teleport(mv_origin);
-	} else {
-		apply_velocity(delta * mv_velocity);
-	}
-}
-
 Trace trace_movement(btPairCachingGhostObject *object, const btConvexShape *shape, const btDynamicsWorld *world, const glm::vec3 &origin, const glm::vec3 &destination)
 {
 	Trace trace = {};
@@ -458,14 +271,7 @@ Trace trace_movement(btPairCachingGhostObject *object, const btConvexShape *shap
 		glm::vec3 hitpoint = bt_to_vec3(callback.m_hitPointWorld);
 		trace.fraction = callback.m_closestHitFraction;
 		trace.normal = bt_to_vec3(callback.m_hitNormalWorld);
-		// TODO this is incorrect!!!!!!!
 		trace.endpos = origin + (trace.fraction * direction);
-
-		//printf("fraction: %f\n", trace.fraction);
-		//printf("hitpoint: %f, %f, %f\n", hitpoint.x, hitpoint.y, hitpoint.z);
-		//printf("endpos: %f, %f, %f\n", trace.endpos.x, trace.endpos.y, trace.endpos.z);
-		//printf("hit endpos dist: %f\n", glm::distance(hitpoint, trace.endpos));
-		//printf("\n");
 	}
 
 	return trace;
@@ -498,7 +304,7 @@ void Bumper::slide_move(const btDynamicsWorld *world, const glm::vec3 &displacem
 
 		// compute position
 		glm::vec3 start = m_position;
-		glm::vec3 end = start + timeleft * motion;
+		glm::vec3 end = start + motion;
 
 		btVector3 _start = vec3_to_bt(start);
 		btVector3 _end = vec3_to_bt(end);
@@ -558,7 +364,7 @@ void Bumper::slide_move(const btDynamicsWorld *world, const glm::vec3 &displacem
 
 			// clip vel
 			// TODO recheck this
-			clip_motion = hit_to_velocity(clip_motion, planes[i]);
+			clip_motion = clip_vel(clip_motion, planes[i]);
 
 
 			// see if there's a second plane the new move enters
@@ -571,7 +377,7 @@ void Bumper::slide_move(const btDynamicsWorld *world, const glm::vec3 &displacem
 				}
 
 				// try clipping
-				clip_motion = hit_to_velocity(clip_motion, planes[j]);
+				clip_motion = clip_vel(clip_motion, planes[j]);
 
 				// see if it goes back to the first clip plane
 				if (glm::dot(glm::normalize(clip_motion), planes[i]) > 0.f) {
@@ -599,13 +405,50 @@ void Bumper::slide_move(const btDynamicsWorld *world, const glm::vec3 &displacem
 			}
 
 			// try another move
-			motion = clip_motion;
+			motion = timeleft * clip_motion;
 		}
 			
 		timeleft -= callback.m_closestHitFraction * delta;
 	}
 
 	teleport(m_position);
+}
+	
+void Bumper::collide_n_slide(const btDynamicsWorld *world, const glm::vec3 &displacement)
+{
+	// no motion early exit
+	if (glm::length(displacement) < 1e-6f) {
+		return;
+	}
+
+	glm::vec3 position = bt_to_vec3(ghost_object->getWorldTransform().getOrigin());
+
+	glm::vec3 start = position;
+	glm::vec3 end = position + displacement;
+	glm::vec3 motion = displacement;
+
+	for (int i = 0; i < 4; i++) {
+		if (glm::length(motion) < 1e-6f) {
+			return;
+		}
+		// find collision with convex sweep
+		Trace trace = trace_movement(ghost_object.get(), shape.get(), world, start, end);
+		// hit nothing early exit
+		if (trace.fraction >= 1.f) {
+			position = end;
+			break;
+		}
+		// we must have hit something
+		// find the position right before the collision occurs
+		glm::vec3 moved = glm::normalize(motion) * (trace.fraction * glm::length(motion) - 0.1f);
+		start += moved;
+
+		position = start;
+		break;
+
+	}
+
+	teleport(position);
 }
 
 };

@@ -52,13 +52,9 @@ glm::vec3 creature_fly_direction(const glm::vec3 &view, bool forward, bool backw
 	glm::vec3 direction = { 0.f, 0.f, 0.f };
 	glm::vec3 dir = glm::normalize(view);
 	if (forward) {
-		//direction.x += dir.x;
-		//direction.y += dir.z;
 		direction = dir;
 	}
 	if (backward) {
-		//direction.x -= dir.x;
-		//direction.y -= dir.z;
 		direction = -dir;
 	}
 	if (right) {
@@ -188,6 +184,10 @@ void Battle::prepare(const BattleParameters &params)
 			creature_entities.push_back(std::move(creature));
 		}
 	}
+
+	// grab mouse
+	mousegrab = true;
+	SDL_SetRelativeMouseMode(SDL_TRUE);
 }
 
 void Battle::clear()
@@ -207,10 +207,19 @@ void Battle::clear()
 
 void Battle::update(float delta)
 {
+	if (util::InputManager::key_pressed(SDLK_ESCAPE)) { 
+		mousegrab = !mousegrab;
+		if (mousegrab) {
+			SDL_SetRelativeMouseMode(SDL_TRUE);
+		} else {
+			SDL_SetRelativeMouseMode(SDL_FALSE);
+		}
+	}
+
 	// update camera
 	float modifier = 10.f * delta;
 	float speed = 10.f * modifier;
-	if (util::InputManager::key_down(SDL_BUTTON_LEFT)) {
+	if (mousegrab) {
 		glm::vec2 offset = modifier * 0.05f * util::InputManager::rel_mouse_coords();
 		camera.add_offset(offset);
 	}
@@ -238,6 +247,8 @@ void Battle::update(float delta)
 	for (auto &creature : creature_entities) {
 		creature->update_transform();
 	}
+	
+	player->update_animation(skeleton, animation, delta);
 
 	camera.position = player->transform->position;
 	//camera.position.y += 1.f;

@@ -16,6 +16,7 @@ class Battle {
 public:
 	BattleParameters parameters;
 	util::Camera camera;
+	bool mousegrab = true;
 	std::unique_ptr<gfx::SceneGroup> scene;
 	std::unique_ptr<Terrain> terrain;
 	std::unique_ptr<Debugger> debugger;

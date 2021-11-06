@@ -26,6 +26,8 @@ PhysicalSystem::PhysicalSystem()
 
 	m_ghost_callback = std::make_unique<btGhostPairCallback>();
 	m_world->getBroadphase()->getOverlappingPairCache()->setInternalGhostPairCallback(m_ghost_callback.get());
+
+	m_world->getDispatchInfo().m_allowedCcdPenetration = 0;
 }
 	
 PhysicalSystem::~PhysicalSystem()
