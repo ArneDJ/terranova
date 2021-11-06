@@ -16,10 +16,8 @@ public:
 	void apply_velocity(const glm::vec3 &velocity);
 	void sync_transform();
 private:
-	glm::vec3 collide_and_slide(const btDynamicsWorld *world, const glm::vec3 &velocity, float delta);
 	void stick_to_floor(const btDynamicsWorld *world);
-	void slide_move(const btDynamicsWorld *world, const glm::vec3 &displacement, float delta);
-	void collide_n_slide(const btDynamicsWorld *world, const glm::vec3 &displacement);
+	void collide_and_slide(const btDynamicsWorld *world, const glm::vec3 &displacement);
 };
 
 };

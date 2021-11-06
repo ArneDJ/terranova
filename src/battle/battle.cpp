@@ -174,7 +174,7 @@ void Battle::prepare(const BattleParameters &params)
 	debugger->add_capsule(0.5f, 1.f, player->bumper->transform.get());
 
 	for (int i = 0; i < 16; i++) {
-		for (int j = 0; j < 0; j++) {
+		for (int j = 0; j < 16; j++) {
 			glm::vec3 position = { 512.f + (i+i), 64.f, 512.f + (j+j) };
 			position.y = vertical_offset(position.x, position.z) + 1.f;
 			auto creature = std::make_unique<Creature>();
