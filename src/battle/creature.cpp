@@ -45,13 +45,8 @@ void Creature::set_animation(const ozz::animation::Skeleton *skeleton, const ozz
 	joint_matrices.update_present();
 }
 	
-void Creature::update(const glm::vec3 &direction, bool jump_request)
+void Creature::set_movement(const glm::vec3 &direction, bool jump_request)
 {
-	/*
-	if (jump_request && char_con->onGround()) {
-		char_con->jump(btVector3(0,6,0));
-	}
-	*/
 	if (direction != glm::vec3(0, 0, 0)) {
 		bumper->walk_direction = glm::normalize(direction);
 	} else {
@@ -85,5 +80,10 @@ void Creature::update_animation(const ozz::animation::Skeleton *skeleton, const 
 		}
 		joint_matrices.update_present();
 	}
+}
+	
+void Creature::update_collision(const btDynamicsWorld *world, float delta)
+{
+	bumper->update(world, delta);
 }
 

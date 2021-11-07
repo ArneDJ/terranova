@@ -15,12 +15,6 @@
 
 namespace fysx {
 
-struct Trace {
-	float fraction = 1.f; // time completed, 1.0 = didn't hit anything
-	glm::vec3 endpos; // final position
-	glm::vec3 normal; // surface normal at impact
-};
-	
 class ClosestNotMe : public btCollisionWorld::ClosestRayResultCallback {
 public:
 	ClosestNotMe(btCollisionObject *body) : btCollisionWorld::ClosestRayResultCallback(btVector3(0.0, 0.0, 0.0), btVector3(0.0, 0.0, 0.0))
@@ -37,8 +31,7 @@ protected:
 	btCollisionObject *me;
 };
 
-class BumperConvexCallback : public btCollisionWorld::ClosestConvexResultCallback
-{
+class BumperConvexCallback : public btCollisionWorld::ClosestConvexResultCallback {
 public:
 	BumperConvexCallback(btCollisionObject* me, const btVector3& up, btScalar minSlopeDot)
 		: btCollisionWorld::ClosestConvexResultCallback(btVector3(0.0, 0.0, 0.0), btVector3(0.0, 0.0, 0.0)), m_me(me), m_up(up), m_minSlopeDot(minSlopeDot)
@@ -63,8 +56,7 @@ public:
 
 		/*
 		btScalar dotUp = m_up.dot(hitNormalWorld);
-		if (dotUp < m_minSlopeDot)
-		{
+		if (dotUp < m_minSlopeDot) {
 			return btScalar(1.0);
 		}
 		*/
@@ -73,33 +65,50 @@ public:
 	}
 
 protected:
-	btCollisionObject* m_me;
-	const btVector3 m_up;
+	btCollisionObject *m_me;
+	const btVector3 m_up = btVector3(0, 1, 0);
 	btScalar m_minSlopeDot;
 };
 
-Trace trace_movement(btPairCachingGhostObject *object, const btConvexShape *shape, const btDynamicsWorld *world, const glm::vec3 &origin, const glm::vec3 &destination);
+struct Trace {
+	float fraction = 1.f; // time completed, 1.0 = didn't hit anything
+	glm::vec3 endpos; // final position
+	glm::vec3 normal; // surface normal at impact
+};
 
-#define	STOP_EPSILON 0.1f
+static const float V_GRAVITY = 9.81F;
+static const float TERMINAL_VELOCITY = 55.F;
 
-glm::vec3 clip_vel(const glm::vec3 &in, const glm::vec3 &normal)
+Trace trace_movement(btPairCachingGhostObject *object, const btConvexShape *shape, const btDynamicsWorld *world, const glm::vec3 &origin, const glm::vec3 &destination)
 {
-	glm::vec3 out = { 0.f, 0.f, 0.f };
+	Trace trace = {};
+	trace.fraction = 1.f;
+	trace.endpos = origin;
 
-	float overbounce = 1.f;
+	glm::vec3 sweep_direction = origin - destination;
 
-	float backoff = glm::dot(in, normal) * overbounce;
+	btTransform start = object->getWorldTransform();
+	btTransform end = start;
+	end.setOrigin(vec3_to_bt(destination));
 
-	for (int i = 0; i < 3; i++) {
-		float change = normal[i] * backoff;
-		out[i] = in[i] - change;
-		//if (out[i] > -STOP_EPSILON && out[i] < STOP_EPSILON) {
-			//out[i] = 0;
-		//}
+	BumperConvexCallback callback(object, vec3_to_bt(sweep_direction), 0.45);
+	callback.m_collisionFilterGroup = object->getBroadphaseHandle()->m_collisionFilterGroup;
+	callback.m_collisionFilterMask = object->getBroadphaseHandle()->m_collisionFilterMask;
+
+	object->convexSweepTest(shape, start, end, callback, world->getDispatchInfo().m_allowedCcdPenetration);
+
+	glm::vec3 direction = destination - origin;
+
+	if (callback.hasHit() && object->hasContactResponse()) {
+		glm::vec3 hitpoint = bt_to_vec3(callback.m_hitPointWorld);
+		trace.fraction = callback.m_closestHitFraction;
+		trace.normal = bt_to_vec3(callback.m_hitNormalWorld);
+		trace.endpos = origin + (trace.fraction * direction);
 	}
 
-	return out;
+	return trace;
 }
+	
 
 glm::vec3 hit_to_velocity(const glm::vec3 &velocity, const glm::vec3 &normal)
 {
@@ -132,10 +141,18 @@ Bumper::Bumper(const glm::vec3 &origin, float radius, float length)
 	transform->position = origin;
 }
 	
-void Bumper::update(btDynamicsWorld *world, float delta)
+void Bumper::update(const btDynamicsWorld *world, float delta)
 {
+	const glm::vec3 start_position = bt_to_vec3(ghost_object->getWorldTransform().getOrigin());
+
 	glm::vec3 displacement = speed * delta * walk_direction;
 	collide_and_slide(world, displacement);
+		
+	apply_gravity(world, delta);
+
+	const glm::vec3 end_position = bt_to_vec3(ghost_object->getWorldTransform().getOrigin());
+
+	update_fallen_distance(start_position, end_position);
 }
 	
 void Bumper::sync_transform()
@@ -154,25 +171,38 @@ void Bumper::teleport(const glm::vec3 &position)
 	ghost_object->setWorldTransform(t);
 }
 	
-void Bumper::stick_to_floor(const btDynamicsWorld *world)
+void Bumper::apply_gravity(const btDynamicsWorld *world, float delta)
 {
-	ClosestNotMe ray_callback(ghost_object.get());
+	glm::vec3 gravity = { 0.f, -V_GRAVITY, 0.f };
 
-	world->rayTest(ghost_object->getWorldTransform().getOrigin(), ghost_object->getWorldTransform().getOrigin() - btVector3(0.0f, 2.f, 0.0f), ray_callback);
-
-	if (ray_callback.hasHit()) {
-		grounded = true;
-		float fraction = ray_callback.m_closestHitFraction;
-		glm::vec3 current_pos = bt_to_vec3(ghost_object->getWorldTransform().getOrigin());
-		float hit_pos = current_pos.y - fraction * 2.f;
-
-		current_pos.y = hit_pos + 1.05f;
-	
-		teleport(current_pos);
-
-	} else {
-		grounded = false;
+	if (!on_ground) {
+		gravity.y = -sqrtf(6.f * V_GRAVITY * fallen_distance);
+		if (fabs(gravity.y) > TERMINAL_VELOCITY) {
+			gravity.y = -TERMINAL_VELOCITY;
+		}
+		// in case fallen distance was 0 (start of fall)
+		if (!gravity.y) {
+			gravity.y = -V_GRAVITY;
+		}
 	}
+
+	gravity.y *= delta;
+	
+	// find closest ground collision
+	const glm::vec3 origin = bt_to_vec3(ghost_object->getWorldTransform().getOrigin());
+	glm::vec3 destination = origin + gravity;
+	Trace trace = trace_movement(ghost_object.get(), shape.get(), world, origin, destination);
+
+	on_ground = (trace.fraction < 1.f);
+
+	if (on_ground) {
+		// stick on ground if not in air
+		glm::vec3 moved = glm::normalize(gravity) * (trace.fraction * glm::length(gravity - 0.1f));
+		destination = origin + moved;
+		on_ground = true;
+	}
+		
+	teleport(destination);
 }
 	
 void Bumper::apply_velocity(const glm::vec3 &velocity)
@@ -181,38 +211,6 @@ void Bumper::apply_velocity(const glm::vec3 &velocity)
 	teleport(current_position + velocity);
 }
 
-#define	MAX_CLIP_PLANES	5
-
-Trace trace_movement(btPairCachingGhostObject *object, const btConvexShape *shape, const btDynamicsWorld *world, const glm::vec3 &origin, const glm::vec3 &destination)
-{
-	Trace trace = {};
-	trace.fraction = 1.f;
-	trace.endpos = origin;
-
-	glm::vec3 sweep_direction = origin - destination;
-
-	btTransform start = object->getWorldTransform();
-	btTransform end = start;
-	end.setOrigin(vec3_to_bt(destination));
-
-	BumperConvexCallback callback(object, vec3_to_bt(sweep_direction), btScalar(0.0));
-	callback.m_collisionFilterGroup = object->getBroadphaseHandle()->m_collisionFilterGroup;
-	callback.m_collisionFilterMask = object->getBroadphaseHandle()->m_collisionFilterMask;
-
-	object->convexSweepTest(shape, start, end, callback, world->getDispatchInfo().m_allowedCcdPenetration);
-
-	glm::vec3 direction = destination - origin;
-
-	if (callback.hasHit() && object->hasContactResponse()) {
-		glm::vec3 hitpoint = bt_to_vec3(callback.m_hitPointWorld);
-		trace.fraction = callback.m_closestHitFraction;
-		trace.normal = bt_to_vec3(callback.m_hitNormalWorld);
-		trace.endpos = origin + (trace.fraction * direction);
-	}
-
-	return trace;
-}
-	
 void Bumper::collide_and_slide(const btDynamicsWorld *world, const glm::vec3 &displacement)
 {
 	// no motion early exit
@@ -220,7 +218,7 @@ void Bumper::collide_and_slide(const btDynamicsWorld *world, const glm::vec3 &di
 		return;
 	}
 
-	static const float CLIP_OFFSET = 0.001F;
+	static const float CLIP_OFFSET = 0.01F;
 
 	const glm::vec3 origin = bt_to_vec3(ghost_object->getWorldTransform().getOrigin());
 
@@ -267,6 +265,15 @@ void Bumper::collide_and_slide(const btDynamicsWorld *world, const glm::vec3 &di
 	}
 
 	teleport(position);
+}
+	
+void Bumper::update_fallen_distance(const glm::vec3 &start, const glm::vec3 &end)
+{
+	if (on_ground) {
+		fallen_distance = 0.f;
+	} else {
+		fallen_distance += glm::distance(start.y, end.y);
+	}
 }
 
 };

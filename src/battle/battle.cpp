@@ -87,13 +87,13 @@ glm::vec2 creature_direction(const glm::vec3 &view, bool forward, bool backward,
 	}
 	if (right) {
 		glm::vec3 tmp(glm::normalize(glm::cross(view, glm::vec3(0.f, 1.f, 0.f))));
-		direction.x = tmp.x;
-		direction.y = tmp.z;
+		direction.x += tmp.x;
+		direction.y += tmp.z;
 	}
 	if (left) {
 		glm::vec3 tmp(glm::normalize(glm::cross(view, glm::vec3(0.f, 1.f, 0.f))));
-		direction.x = -tmp.x;
-		direction.y = -tmp.z;
+		direction.x -= tmp.x;
+		direction.y -= tmp.z;
 	}
 
 	return direction;
@@ -104,7 +104,7 @@ void Battle::init(const gfx::ShaderGroup *shaders)
 	debugger = std::make_unique<Debugger>(shaders->debug, shaders->debug, shaders->culling);
 
 	scene = std::make_unique<gfx::SceneGroup>(shaders->debug, shaders->culling);
-	scene->set_scene_type(gfx::SceneType::DYNAMIC);
+	scene->set_scene_type(gfx::SceneType::FIXED);
 
 	terrain = std::make_unique<Terrain>(shaders->terrain, SCENE_BOUNDS);
 	terrain->add_material("TILES", MediaManager::load_texture("modules/native/media/textures/terrain/tiles.dds"));
@@ -166,15 +166,15 @@ void Battle::prepare(const BattleParameters &params)
 
 	player = std::make_unique<Creature>();
 	glm::vec3 location = { 500.f, 255.f, 512.f };
-	location.y = vertical_offset(location.x, location.z) + 1.f;
+	//location.y = vertical_offset(location.x, location.z) + 1.f;
 	player->teleport(location);
 	player->model = MediaManager::load_model("modules/native/media/models/human.glb");
 	player->set_animation(skeleton, animation);
 	physics.add_object(player->bumper->ghost_object.get(), btBroadphaseProxy::CharacterFilter, btBroadphaseProxy::AllFilter);
-	debugger->add_capsule(0.5f, 1.f, player->bumper->transform.get());
+	//debugger->add_capsule(0.5f, 1.f, player->bumper->transform.get());
 
 	for (int i = 0; i < 16; i++) {
-		for (int j = 0; j < 16; j++) {
+		for (int j = 0; j < 0; j++) {
 			glm::vec3 position = { 512.f + (i+i), 64.f, 512.f + (j+j) };
 			position.y = vertical_offset(position.x, position.z) + 1.f;
 			auto creature = std::make_unique<Creature>();
@@ -188,6 +188,8 @@ void Battle::prepare(const BattleParameters &params)
 	// grab mouse
 	mousegrab = true;
 	SDL_SetRelativeMouseMode(SDL_TRUE);
+	
+	player_mode = BattlePlayerMode::CREATURE_CONTROL;
 }
 
 void Battle::clear()
@@ -216,28 +218,21 @@ void Battle::update(float delta)
 		}
 	}
 
-	// update camera
-	float modifier = 10.f * delta;
-	float speed = 10.f * modifier;
-	if (mousegrab) {
-		glm::vec2 offset = modifier * 0.05f * util::InputManager::rel_mouse_coords();
-		camera.add_offset(offset);
-	}
-	/*
-	if (util::InputManager::key_down(SDLK_w)) { camera.move_forward(speed); }
-	if (util::InputManager::key_down(SDLK_s)) { camera.move_backward(speed); }
-	if (util::InputManager::key_down(SDLK_d)) { camera.move_right(speed); }
-	if (util::InputManager::key_down(SDLK_a)) { camera.move_left(speed); }
-	*/
-	glm::vec3 direction = creature_fly_direction(camera.direction, util::InputManager::key_down(SDLK_w), util::InputManager::key_down(SDLK_s), util::InputManager::key_down(SDLK_d), util::InputManager::key_down(SDLK_a));
+	rotate_camera(delta);
 
-	player->update(direction, util::InputManager::key_down(SDLK_SPACE));
-	player->bumper->update(physics.world(), delta);
+	//glm::vec3 direction = creature_fly_direction(camera.direction, util::InputManager::key_down(SDLK_w), util::InputManager::key_down(SDLK_s), util::InputManager::key_down(SDLK_d), util::InputManager::key_down(SDLK_a));
+	glm::vec2 dir = creature_direction(camera.direction, util::InputManager::key_down(SDLK_w), util::InputManager::key_down(SDLK_s), util::InputManager::key_down(SDLK_d), util::InputManager::key_down(SDLK_a));
+	glm::vec3 direction = { dir.x, 0.f, dir.y };
+
+	if (player_mode == BattlePlayerMode::CREATURE_CONTROL) {
+		player->set_movement(direction, util::InputManager::key_down(SDLK_SPACE));
+	}
+	player->update_collision(physics.world(), delta);
 
 	auto world = physics.world();
 	for (auto &creature : creature_entities) {
-		creature->update(direction, util::InputManager::key_down(SDLK_SPACE));
-		creature->bumper->update(world, delta);
+		creature->set_movement(direction, util::InputManager::key_down(SDLK_SPACE));
+		creature->update_collision(physics.world(), delta);
 	}
 
 	physics.update(delta);
@@ -250,11 +245,7 @@ void Battle::update(float delta)
 	
 	player->update_animation(skeleton, animation, delta);
 
-	camera.position = player->transform->position;
-	//camera.position.y += 1.f;
-	camera.position -= (5.f * camera.direction);
-
-	camera.update_viewing();
+	position_camera(delta);
 
 	debugger->update(camera);
 }
@@ -297,6 +288,15 @@ void Battle::update_debug_menu()
 	ImGui::Text("seed: %d", parameters.seed);
 	ImGui::Text("tile: %d", parameters.tile);
 	ImGui::Text("town size: %d", parameters.town_size);
+
+	static bool freecam = false;
+	ImGui::Checkbox("Freecam", &freecam);
+	if (freecam) {
+		player_mode = BattlePlayerMode::FLYING_CAMERA_NOCLIP;
+	} else {
+		player_mode = BattlePlayerMode::CREATURE_CONTROL;
+	}
+
 	ImGui::End();
 }
 	
@@ -323,4 +323,32 @@ void Battle::add_houses()
 	for (const auto &building : building_entities) {
 		physics.add_body(building->body.get());
 	}
+}
+	
+void Battle::rotate_camera(float delta)
+{
+	float modifier = 10.f * delta;
+	if (mousegrab) {
+		glm::vec2 offset = modifier * 0.05f * util::InputManager::rel_mouse_coords();
+		camera.add_offset(offset);
+	}
+}
+	
+void Battle::position_camera(float delta)
+{
+	if (player_mode == BattlePlayerMode::CREATURE_CONTROL) {
+		camera.position = player->transform->position;
+		camera.position.y += 1.f;
+		//camera.position -= (5.f * camera.direction);
+	}
+
+	float speed = 50.f * delta;
+	if (player_mode == BattlePlayerMode::FLYING_CAMERA_NOCLIP) {
+		if (util::InputManager::key_down(SDLK_w)) { camera.move_forward(speed); }
+		if (util::InputManager::key_down(SDLK_s)) { camera.move_backward(speed); }
+		if (util::InputManager::key_down(SDLK_d)) { camera.move_right(speed); }
+		if (util::InputManager::key_down(SDLK_a)) { camera.move_left(speed); }
+	}
+
+	camera.update_viewing();
 }
