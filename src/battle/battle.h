@@ -52,4 +52,5 @@ private:
 	void position_camera(float delta);
 private:
 	void add_houses();
+	void add_creatures();
 };

@@ -3,7 +3,7 @@ namespace fysx {
 class Bumper {
 public:
 	std::unique_ptr<geom::Transform> transform;
-	std::unique_ptr<btConvexShape> shape;
+	std::unique_ptr<btCapsuleShape> shape;
 	std::unique_ptr<btPairCachingGhostObject> ghost_object;
 	glm::vec3 walk_direction = {};
 public:
