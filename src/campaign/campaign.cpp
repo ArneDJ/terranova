@@ -189,7 +189,22 @@ void Campaign::prepare()
 	for (const auto &fiefdom : settlement_controller.fiefdoms) {
 		glm::vec3 color = faction_controller.factions[fiefdom.second->faction()]->color();
 		for (const auto &tile : fiefdom.second->tiles()) {
-			board->add_paint_job(tile, color);
+			board->paint_tile(tile, color);
+		}
+	}
+
+	const auto &atlas = board->atlas();	
+	const auto &borders = atlas.borders();	
+	const auto &tiles = atlas.tiles();	
+	const auto &edges = atlas.graph().edges;	
+	const auto &cells = atlas.graph().cells;	
+	for (const auto &tile : tiles) {
+		const auto &cell = cells[tile.index];
+		for (const auto &edge : cell.edges) {
+			const auto &border = borders[edge->index];
+			if (tile.frontier && border.frontier) {
+				board->paint_border(tile.index, border.index, glm::vec3(1.f, 0.f, 0.f));
+			}
 		}
 	}
 
@@ -443,7 +458,7 @@ void Campaign::spawn_fiefdom(Town *town)
 	// add tile paint jobs
 	glm::vec3 color = faction_controller.factions[faction]->color();
 	for (const auto &tile : fiefdom->tiles()) {
-		board->add_paint_job(tile, color);
+		board->paint_tile(tile, color);
 	}
 
 	settlement_controller.fiefdoms[id] = std::move(fiefdom);
@@ -614,7 +629,7 @@ void Campaign::transfer_town(Town *town, uint32_t faction)
 	glm::vec3 color = faction_controller.factions[faction]->color();
 	for (const auto &tile : fiefdom->tiles()) {
 		faction_controller.tile_owners[tile] = faction;
-		board->add_paint_job(tile, color);
+		board->paint_tile(tile, color);
 	}
 
 	// transfer capital

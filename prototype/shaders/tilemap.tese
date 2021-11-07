@@ -2,12 +2,14 @@
 
 layout(triangles, equal_spacing, ccw) in;
 
-in vec3 tesscolor[];
+in vec3 tile_color[];
+in vec3 edge_color[];
 
 out TESSEVAL {
 	vec3 position;
 	vec3 barycentric;
-	vec3 color;
+	vec3 tile_color;
+	vec3 edge_color;
 	vec2 texcoord;
 	float zclipspace;
 } tesseval;
@@ -24,7 +26,8 @@ vec3 interpolate(vec3 v0, vec3 v1, vec3 v2)
 
 void main(void)
 {
-	tesseval.color = tesscolor[0];
+	tesseval.tile_color = tile_color[0];
+	tesseval.edge_color = mix(edge_color[0], edge_color[1], 0.5);
 
 	tesseval.barycentric = gl_TessCoord;
 

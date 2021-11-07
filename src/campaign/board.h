@@ -1,8 +1,12 @@
 
 struct BoardMeshVertex {
 	glm::vec2 position = {};
-	glm::vec3 color = {};
+	glm::vec3 tile_color = {};
+	glm::vec3 edge_color = {};
 };
+
+using TriangleKey = std::pair<uint32_t, uint32_t>; // left tile index, right border index
+using VertexPair = std::pair<uint32_t, uint32_t>;
 
 class BoardMesh {
 public:
@@ -11,7 +15,9 @@ public:
 	void refresh();
 	void draw() const;
 	void clear();
+public:
 	void color_tile(uint32_t tile, const glm::vec3 &color);
+	void color_border(uint32_t tile, uint32_t border, const glm::vec3 &color);
 private:
 	gfx::Primitive m_primitive;
 	gfx::BufferObject m_vbo;
@@ -19,7 +25,8 @@ private:
 	gfx::VertexArrayObject m_vao;
 private:
 	std::vector<BoardMeshVertex> m_vertices;
-	std::unordered_map<uint32_t, std::vector<uint32_t>> m_tile_vertices;
+	std::unordered_map<uint32_t, std::vector<uint32_t>> m_tile_targets; // reference from tile to vertices
+	std::map<TriangleKey, VertexPair> m_triangle_targets;
 };
 
 class BoardModel {
@@ -29,6 +36,7 @@ public:
 	void set_scale(const glm::vec3 &scale);
 	void reload(const Atlas &atlas);
 	void color_tile(uint32_t tile, const glm::vec3 &color);
+	void color_border(uint32_t tile, uint32_t border, const glm::vec3 &color);
 	void update_mesh();
 public:
 	void set_marker(const glm::vec2 &position);
@@ -44,8 +52,14 @@ private:
 	float m_marker_radius = 3.f;
 };
 
-struct PaintJob {
+struct TilePaintJob {
 	uint32_t tile;
+	glm::vec3 color;
+};
+
+struct BorderPaintJob {
+	uint32_t tile;
+	uint32_t border;
 	glm::vec3 color;
 };
 
@@ -59,7 +73,8 @@ public:
 	void generate(int seed);
 	void reload();
 	void update();
-	void add_paint_job(uint32_t tile, const glm::vec3 &color);
+	void paint_tile(uint32_t tile, const glm::vec3 &color);
+	void paint_border(uint32_t tile, uint32_t border, const glm::vec3 &color);
 	void set_marker(const glm::vec2 &position);
 public:
 	fysx::HeightField* height_field();
@@ -89,7 +104,9 @@ private:
 	BoardModel m_model;
 	std::unique_ptr<fysx::HeightField> m_height_field;
 	util::Navigation m_land_navigation;
-	std::queue<PaintJob> m_paint_jobs;
+private:
+	std::queue<TilePaintJob> m_paint_jobs;
+	std::queue<BorderPaintJob> m_border_paint_jobs;
 private:
 	void build_navigation();
 };

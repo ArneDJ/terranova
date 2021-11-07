@@ -16,16 +16,17 @@ enum TileFlags {
 
 struct Border {
 	uint32_t index;
-	bool frontier = true;
+	bool frontier = false;
 };
 
 struct Corner {
 	uint32_t index;
-	bool frontier = true;
+	bool frontier = false;
 };
 
 struct Tile {
 	uint32_t index;
+	bool frontier = false;
 	uint8_t height = 0;
 	uint32_t flags = 0;
 	ReliefType relief = ReliefType::SEABED;
@@ -46,7 +47,7 @@ void serialize(Archive &archive, Corner &corner)
 template <class Archive>
 void serialize(Archive &archive, Tile &tile)
 {
-	archive(tile.index, tile.height, tile.relief, tile.flags);
+	archive(tile.index, tile.frontier, tile.height, tile.relief, tile.flags);
 }
 
 struct AtlasParameters {

@@ -67,6 +67,17 @@ void Atlas::generate(int seed, const geom::Rectangle &bounds, const AtlasParamet
 		m_corners[vertex.index] = corner;
 	}
 
+	// find edge cases
+	for (auto &border : m_borders) {
+		const auto &edge = m_graph.edges[border.index];
+		if (edge.left_cell == edge.right_cell) {
+			border.frontier = true;
+			m_tiles[edge.left_cell->index].frontier = true;
+			m_corners[edge.left_vertex->index].frontier = true;
+			m_corners[edge.right_vertex->index].frontier = true;
+		}
+	}
+
 	// create height map
 	FastNoise fastnoise;
 	fastnoise.SetSeed(seed);

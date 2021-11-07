@@ -402,10 +402,10 @@ static void adapt_edges(const jcv_diagram *diagram, std::vector<VoronoiCell> &ce
 	for (int i = 0; i < edges.size(); i++) {
 		VoronoiEdge *e = &edges[i];
 		e->index = i;
-		if (e->left_cell != nullptr) {
+		if (e->left_cell == e->right_cell) {
 			cells[e->left_cell->index].edges.push_back(&edges[i]);
-		}
-		if (e->right_cell != nullptr) {
+		} else {
+			cells[e->left_cell->index].edges.push_back(&edges[i]);
 			cells[e->right_cell->index].edges.push_back(&edges[i]);
 		}
 	}

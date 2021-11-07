@@ -3,7 +3,8 @@
 in TESSEVAL {
 	vec3 position;
 	vec3 barycentric;
-	vec3 color;
+	vec3 tile_color;
+	vec3 edge_color;
 	vec2 texcoord;
 	float zclipspace;
 } fragment;
@@ -15,11 +16,11 @@ void main(void)
 {
 	vec3 marker_color = vec3(1.0, 1.0, 0.0);
 
-	vec3 final_color = fragment.color;
+	vec3 final_color = fragment.tile_color;
 
 	if (fragment.barycentric.b < 0.1) {
 		float strength = 1.0 - fragment.barycentric.b;
-		final_color = mix(final_color, vec3(1.0, 1.0, 1.0), 0.1 * pow(strength, 6));
+		final_color = mix(final_color, fragment.edge_color, 0.1 * pow(strength, 6));
 	}
 
 	float dist = distance(fragment.position.xz, MARKER_POS);

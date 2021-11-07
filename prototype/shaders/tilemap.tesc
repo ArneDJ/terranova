@@ -2,9 +2,11 @@
 
 layout(vertices = 3) out;
 
-in vec3 color[];
+in vec3 v_cell_color[];
+in vec3 v_edge_color[];
 
-out vec3 tesscolor[];
+out vec3 tile_color[];
+out vec3 edge_color[];
 
 void main(void)
 {
@@ -16,7 +18,8 @@ void main(void)
 		gl_TessLevelInner[0] = detail;
 	}
 
-	tesscolor[gl_InvocationID] = color[gl_InvocationID];
+	tile_color[gl_InvocationID] = v_cell_color[gl_InvocationID];
+	edge_color[gl_InvocationID] = v_edge_color[gl_InvocationID];
 
 	gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
 }
