@@ -198,14 +198,14 @@ void Campaign::prepare()
 	const auto &tiles = atlas.tiles();	
 	const auto &borders = atlas.borders();	
 	for (const auto &tile : tiles) {
-		glm::vec3 color = tile.relief == ReliefType::SEABED ? glm::vec3(1.f, 0.f, 1.f) : glm::vec3(0.f, 1.f, 0.f);
+		glm::vec3 color = tile.relief == ReliefType::SEABED ? glm::vec3(1.f, 0.f, 1.f) : glm::vec3(0.f, 0.f, 0.f);
 		if (tile.flags & TILE_FLAG_COAST) {
 			//board->paint_tile(tile.index, color);
 		}
 		const auto &cell = graph.cells[tile.index];
 		for (const auto &edge : cell.edges) {
 			const auto &border = borders[edge->index];
-			if (border.flags & TILE_FLAG_COAST) {
+			if (border.flags & TILE_FLAG_RIVER) {
 				board->paint_border(tile.index, border.index, color);
 			}
 		}

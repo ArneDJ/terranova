@@ -2,6 +2,7 @@
 #include <random>
 #include <memory>
 #include <queue>
+#include <list>
 #include <unordered_map>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
@@ -19,9 +20,141 @@
 
 #include "atlas.h"
 	
+static RiverBranch *create_branch(const Corner *confluence)
+{
+	RiverBranch *node = new RiverBranch;
+	node->confluence = confluence;
+	node->left = nullptr;
+	node->right = nullptr;
+	node->streamorder = 1;
+
+	return node;
+}
+
+static void prune_branches(RiverBranch *root)
+{
+	if (root == nullptr) { return; }
+
+	std::queue<RiverBranch*> queue;
+	queue.push(root);
+
+	while (!queue.empty()) {
+		RiverBranch *front = queue.front();
+		queue.pop();
+		if (front->left) { queue.push(front->left); }
+		if (front->right) { queue.push(front->right); }
+
+		delete front;
+	}
+
+	root = nullptr;
+}
+
+static void delete_basin(DrainageBasin *tree)
+{
+	if (tree->mouth == nullptr) { return; }
+
+	prune_branches(tree->mouth);
+
+	tree->mouth = nullptr;
+}
+
+// Strahler stream order
+// https://en.wikipedia.org/wiki/Strahler_number
+static inline int strahler(const RiverBranch *node)
+{
+	// if node has no children it is a leaf with stream order 1
+	if (node->left == nullptr && node->right == nullptr) {
+		return 1;
+	}
+
+	int left = (node->left != nullptr) ? node->left->streamorder : 0;
+	int right = (node->right != nullptr) ? node->right->streamorder : 0;
+
+	if (left == right) {
+		return std::max(left, right) + 1;
+	} else {
+		return std::max(left, right);
+	}
+}
+
+// Shreve stream order
+// https://en.wikipedia.org/wiki/Stream_order#Shreve_stream_order
+static inline int shreve(const RiverBranch *node)
+{
+	// if node has no children it is a leaf with stream order 1
+	if (node->left == nullptr && node->right == nullptr) {
+		return 1;
+	}
+
+	int left = (node->left != nullptr) ? node->left->streamorder : 0;
+	int right = (node->right != nullptr) ? node->right->streamorder : 0;
+
+	return left + right;
+}
+
+static inline int postorder_level(RiverBranch *node)
+{
+	if (node->left == nullptr && node->right == nullptr) {
+		return 0;
+	}
+
+	if (node->left != nullptr && node->right != nullptr) {
+		return std::max(node->left->depth, node->right->depth) + 1;
+	}
+
+	if (node->left) { return node->left->depth + 1; }
+	if (node->right) { return node->right->depth + 1; }
+
+	return 0;
+}
+
+// post order tree traversal
+static void stream_postorder(DrainageBasin *tree)
+{
+	std::list<RiverBranch*> stack;
+	RiverBranch *prev = nullptr;
+	stack.push_back(tree->mouth);
+
+	while (!stack.empty()) {
+		RiverBranch *current = stack.back();
+
+		if (prev == nullptr || prev->left == current || prev->right == current) {
+			if (current->left != nullptr) {
+				stack.push_back(current->left);
+			} else if (current->right != nullptr) {
+				stack.push_back(current->right);
+			} else {
+				current->streamorder = strahler(current);
+    				current->depth = postorder_level(current);
+				stack.pop_back();
+			}
+		} else if (current->left == prev) {
+			if (current->right != nullptr) {
+				stack.push_back(current->right);
+			} else {
+				current->streamorder = strahler(current);
+    				current->depth = postorder_level(current);
+				stack.pop_back();
+			}
+		} else if (current->right == prev) {
+			current->streamorder = strahler(current);
+    			current->depth = postorder_level(current);
+			stack.pop_back();
+		}
+
+		prev = current;
+	}
+}
+
 Atlas::Atlas()
 {
 	m_heightmap.resize(1024, 1024, util::COLORSPACE_GRAYSCALE);
+}
+	
+Atlas::~Atlas()
+{
+	clear();
 }
 
 void Atlas::generate(int seed, const geom::Rectangle &bounds, const AtlasParameters &parameters)
@@ -132,6 +265,8 @@ void Atlas::clear()
 	m_tiles.clear();
 	m_corners.clear();
 	m_borders.clear();
+
+	delete_basins();
 
 	m_graph.clear();
 
@@ -354,6 +489,15 @@ void Atlas::form_rivers()
 	}
 
 	form_drainage_basins(candidates);
+
+	//trim_river_basins();
+	//
+	// after trimming make sure river properties of corners are correct
+	for (auto &corner : m_corners) { 
+		corner.flags &= ~TILE_FLAG_RIVER;
+	}
+
+	assign_rivers();
 }
 
 void Atlas::form_drainage_basins(const std::vector<const Corner*> &candidates)
@@ -384,7 +528,83 @@ void Atlas::form_drainage_basins(const std::vector<const Corner*> &candidates)
 	}
 
 	// breadth first search to start the drainage basin
+	// assign scores
 	for (auto root : candidates) {
+		if (root->flags & TILE_FLAG_COAST) {
+			std::queue<const Corner*> frontier;
+			lookup[root].visited = true;
+			frontier.push(root);
+			while (!frontier.empty()) {
+				const Corner *corner = frontier.front();
+				frontier.pop();
+				Meta &data = lookup[corner];
+				int depth = data.score + data.elevation + 1;
+				for (const auto &vertex : m_graph.vertices[corner->index].adjacent) {
+					const Corner *neighbor = &m_corners[vertex->index];
+					bool river = neighbor->flags & TILE_FLAG_RIVER;
+					bool coast = neighbor->flags & TILE_FLAG_COAST;
+					if (river && !coast) {
+						Meta &neighbor_data = lookup[neighbor];
+
+						if (!neighbor_data.visited) {
+							neighbor_data.visited = true;
+							neighbor_data.score = depth;
+							frontier.push(neighbor);
+						} else if (neighbor_data.score > depth && neighbor_data.elevation >= data.elevation) {
+							neighbor_data.score = depth;
+							frontier.push(neighbor);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// reset visited
+	for (auto node : candidates) {
+		lookup[node].visited = false;
+	}
+
+	// create the drainage basin binary trees
+	for (auto root : candidates) {
+		if (root->flags & TILE_FLAG_COAST) {
+			lookup[root].visited = true;
+			// new drainage basin
+			DrainageBasin basin = {};
+			basin.mouth = create_branch(root);
+			std::queue<RiverBranch*> frontier;
+			frontier.push(basin.mouth);
+			while (!frontier.empty()) {
+				RiverBranch *fork = frontier.front(); frontier.pop();
+				const Corner *corner = fork->confluence;
+				Meta &corner_data = lookup[corner];
+				for (const auto &vertex : m_graph.vertices[corner->index].adjacent) {
+					const Corner *neighbor = &m_corners[vertex->index];
+					Meta &neighbor_data = lookup[neighbor];
+					bool coast = neighbor->flags & TILE_FLAG_COAST;
+					if (!neighbor_data.visited && !coast) {
+						if (neighbor_data.score > corner_data.score && neighbor_data.elevation >= corner_data.elevation) {
+							neighbor_data.visited = true;
+							// create a new branch
+							RiverBranch *child = create_branch(neighbor);
+							frontier.push(child);
+							if (fork->left == nullptr) {
+								fork->left = child;
+							} else if (fork->right == nullptr) {
+								fork->right = child;
+							}
+						}
+					}
+				}
+			}
+
+			basins.push_back(basin);
+		}
+	}
+
+	// assign stream order numbers
+	for (auto &basin : basins) {
+		stream_postorder(&basin);
 	}
 }
 
@@ -396,8 +616,52 @@ void Atlas::trim_stubby_rivers(uint8_t min_branch, uint8_t min_basin)
 {
 }
 
-void Atlas::correct_border_rivers()
+// assign river data from basins to the graph data
+void Atlas::assign_rivers()
 {
+	// link the borders with the river corners
+	std::map<std::pair<uint32_t, uint32_t>, Border*> link;
+	for (auto &border : m_borders) {
+		border.flags &= ~TILE_FLAG_RIVER;
+		const auto &edge = m_graph.edges[border.index];
+		link[std::minmax(edge.left_vertex->index, edge.right_vertex->index)] = &border;
+	}
+
+	for (const auto &basin : basins) {
+		if (basin.mouth) {
+			std::queue<RiverBranch*> queue;
+			queue.push(basin.mouth);
+			while (!queue.empty()) {
+				RiverBranch *cur = queue.front(); queue.pop();
+				m_corners[cur->confluence->index].flags |= TILE_FLAG_RIVER;
+				m_corners[cur->confluence->index].river_depth = cur->depth;
+				if (cur->right != nullptr) {
+					Border *bord = link[std::minmax(cur->confluence->index, cur->right->confluence->index)];
+					if (bord) { 
+						bord->flags |= TILE_FLAG_RIVER;
+					}
+					queue.push(cur->right);
+				}
+				if (cur->left != nullptr) {
+					Border *bord = link[std::minmax(cur->confluence->index, cur->left->confluence->index)];
+					if (bord) { 
+						bord->flags |= TILE_FLAG_RIVER;
+					}
+					queue.push(cur->left);
+				}
+			}
+
+		}
+	}
+}
+	
+void Atlas::delete_basins()
+{
+	for (auto &basin : basins) {
+		delete_basin(&basin);
+	}
+
+	basins.clear();
 }
 
 bool walkable_tile(const Tile *tile)

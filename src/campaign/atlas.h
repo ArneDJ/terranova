@@ -22,6 +22,7 @@ struct Border {
 struct Corner {
 	uint32_t index;
 	uint32_t flags = 0;
+	int river_depth = 0;
 };
 
 struct Tile {
@@ -53,7 +54,7 @@ void serialize(Archive &archive, Border &border)
 template <class Archive>
 void serialize(Archive &archive, Corner &corner)
 {
-	archive(corner.index, corner.flags);
+	archive(corner.index, corner.flags, corner.river_depth);
 }
 
 template <class Archive>
@@ -77,6 +78,7 @@ struct AtlasParameters {
 class Atlas {
 public:
 	Atlas();
+	~Atlas();
 public:
 	void generate(int seed, const geom::Rectangle &bounds, const AtlasParameters &parameters);
 public:
@@ -100,6 +102,9 @@ private:
 	std::vector<Border> m_borders;
 	util::Image<uint8_t> m_heightmap;
 private:
+	std::list<DrainageBasin> basins;
+	void delete_basins();
+private:
 	void clear();
 private: // relief stuff
 	void floodfill_relief(unsigned max_size, ReliefType target, ReliefType replacement);
@@ -111,7 +116,7 @@ private: // river stuff
 	void form_drainage_basins(const std::vector<const Corner*> &candidates);
 	void trim_river_basins(size_t min);
 	void trim_stubby_rivers(uint8_t min_branch, uint8_t min_basin);
-	void correct_border_rivers();
+	void assign_rivers();
 };
 
 bool walkable_tile(const Tile *tile);
