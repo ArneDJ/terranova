@@ -193,21 +193,6 @@ void Campaign::prepare()
 		}
 	}
 
-	const auto &atlas = board->atlas();	
-	const auto &borders = atlas.borders();	
-	const auto &tiles = atlas.tiles();	
-	const auto &edges = atlas.graph().edges;	
-	const auto &cells = atlas.graph().cells;	
-	for (const auto &tile : tiles) {
-		const auto &cell = cells[tile.index];
-		for (const auto &edge : cell.edges) {
-			const auto &border = borders[edge->index];
-			if (tile.frontier && border.frontier) {
-				board->paint_border(tile.index, border.index, glm::vec3(1.f, 0.f, 0.f));
-			}
-		}
-	}
-
 	board->update();
 
 	meeple_controller.player = meeple_controller.meeples[player_data.meeple_id].get();

@@ -6,7 +6,7 @@ enum class ReliefType : uint8_t {
 	MOUNTAINS
 };
 
-enum TileFlags {
+enum AtlasFlags {
 	TILE_FLAG_NONE = 0,
 	TILE_FLAG_FRONTIER = 1 << 0,
 	TILE_FLAG_RIVER = 1 << 1,
@@ -16,38 +16,50 @@ enum TileFlags {
 
 struct Border {
 	uint32_t index;
-	bool frontier = false;
+	uint32_t flags = 0;
 };
 
 struct Corner {
 	uint32_t index;
-	bool frontier = false;
+	uint32_t flags = 0;
 };
 
 struct Tile {
 	uint32_t index;
-	bool frontier = false;
 	uint8_t height = 0;
 	uint32_t flags = 0;
 	ReliefType relief = ReliefType::SEABED;
 };
 
+struct RiverBranch {
+	const Corner *confluence = nullptr;
+	RiverBranch *left = nullptr;
+	RiverBranch *right = nullptr;
+	int streamorder = 0;
+	int depth = 0;
+};
+
+struct DrainageBasin {
+	RiverBranch *mouth = nullptr; // binary tree root
+	size_t height = 0; // binary tree height
+};
+
 template <class Archive>
 void serialize(Archive &archive, Border &border)
 {
-	archive(border.index, border.frontier);
+	archive(border.index, border.flags);
 }
 
 template <class Archive>
 void serialize(Archive &archive, Corner &corner)
 {
-	archive(corner.index, corner.frontier);
+	archive(corner.index, corner.flags);
 }
 
 template <class Archive>
 void serialize(Archive &archive, Tile &tile)
 {
-	archive(tile.index, tile.frontier, tile.height, tile.relief, tile.flags);
+	archive(tile.index, tile.height, tile.relief, tile.flags);
 }
 
 struct AtlasParameters {
