@@ -205,7 +205,7 @@ void Campaign::prepare()
 		const auto &cell = graph.cells[tile.index];
 		for (const auto &edge : cell.edges) {
 			const auto &border = borders[edge->index];
-			if (border.flags & TILE_FLAG_RIVER) {
+			if (border.flags & BORDER_FLAG_RIVER) {
 				board->paint_border(tile.index, border.index, color);
 			}
 		}

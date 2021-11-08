@@ -218,10 +218,10 @@ void Atlas::generate(int seed, const geom::Rectangle &bounds, const AtlasParamet
 	for (auto &border : m_borders) {
 		const auto &edge = m_graph.edges[border.index];
 		if (edge.left_cell == edge.right_cell) {
-			border.flags |= TILE_FLAG_FRONTIER;
+			border.flags |= BORDER_FLAG_FRONTIER;
 			m_tiles[edge.left_cell->index].flags |= TILE_FLAG_FRONTIER;
-			m_corners[edge.left_vertex->index].flags |= TILE_FLAG_FRONTIER;
-			m_corners[edge.right_vertex->index].flags |= TILE_FLAG_FRONTIER;
+			m_corners[edge.left_vertex->index].flags |= CORNER_FLAG_FRONTIER;
+			m_corners[edge.right_vertex->index].flags |= CORNER_FLAG_FRONTIER;
 		}
 	}
 
@@ -270,6 +270,8 @@ void Atlas::generate(int seed, const geom::Rectangle &bounds, const AtlasParamet
 	mark_islands(64);
 
 	mark_coasts();
+
+	mark_walls();
 
 	form_rivers();
 }
@@ -474,9 +476,47 @@ void Atlas::mark_coasts()
 		bool left_land = m_tiles[edge.left_cell->index].relief != ReliefType::SEABED;
 		bool right_land = m_tiles[edge.right_cell->index].relief != ReliefType::SEABED;
 		if (left_land ^ right_land) {
-			border.flags |= TILE_FLAG_COAST;
-			m_corners[edge.left_vertex->index].flags |= TILE_FLAG_COAST;
-			m_corners[edge.right_vertex->index].flags |= TILE_FLAG_COAST;
+			border.flags |= BORDER_FLAG_COAST;
+			m_corners[edge.left_vertex->index].flags |= CORNER_FLAG_COAST;
+			m_corners[edge.right_vertex->index].flags |= CORNER_FLAG_COAST;
+		}
+	}
+}
+
+// a wall is a border between a mountain tile and a non mountain tile
+void Atlas::mark_walls()
+{
+	for (auto &corner : m_corners) {
+		corner.flags &= ~CORNER_FLAG_WALL; // reset
+		bool walkable = false;
+		bool near_mountain = false;
+		const auto &vertex = m_graph.vertices[corner.index];
+		for (const auto &cell : vertex.cells) {
+			const auto &tile = m_tiles[cell->index];
+			if (tile.relief == ReliefType::MOUNTAINS)  {
+				near_mountain = true;
+			} else if (tile.relief == ReliefType::HILLS || tile.relief == ReliefType::LOWLAND) {
+				walkable = true;
+			}
+		}
+		bool frontier = corner.flags & CORNER_FLAG_FRONTIER;
+		if (near_mountain && walkable) {
+			corner.flags |= CORNER_FLAG_WALL;
+		}
+		if (near_mountain && frontier) {
+			corner.flags |= CORNER_FLAG_WALL;
+		}
+	}
+
+	for (auto &border : m_borders) {
+		const auto &edge = m_graph.edges[border.index];
+		auto &left = m_tiles[edge.left_cell->index];
+		auto &right = m_tiles[edge.right_cell->index];
+		bool frontier = border.flags & BORDER_FLAG_FRONTIER;
+		if (frontier && (left.relief == ReliefType::MOUNTAINS || right.relief == ReliefType::MOUNTAINS)) {
+			border.flags |= BORDER_FLAG_WALL;
+		} else if ((left.relief == ReliefType::MOUNTAINS) ^ (right.relief == ReliefType::MOUNTAINS)) {
+			border.flags |= BORDER_FLAG_WALL;
 		}
 	}
 }
@@ -488,14 +528,14 @@ void Atlas::form_rivers()
 	std::vector<const Corner*> candidates;
 	for (auto &corner : m_corners) {
 		const auto &vertex = m_graph.vertices[corner.index];
-		bool frontier = corner.flags & TILE_FLAG_FRONTIER;
+		bool frontier = corner.flags & CORNER_FLAG_FRONTIER;
 		if (!frontier) {
 			// find if corner touches land
 			for (const auto &cell : vertex.cells) {
 				const auto &tile = m_tiles[cell->index];
 				if (tile.relief != ReliefType::SEABED) {
 					candidates.push_back(&corner);
-					corner.flags |= TILE_FLAG_RIVER;
+					corner.flags |= CORNER_FLAG_RIVER;
 					break;
 				}
 			}
@@ -504,13 +544,101 @@ void Atlas::form_rivers()
 
 	form_drainage_basins(candidates);
 
+	// TODO mountain river erosion
+	// rivers will erode some mountains
+	// river_erode_mountains();
+
 	trim_river_basins(3);
 	//
 	// after trimming make sure river properties of corners are correct
 	for (auto &corner : m_corners) { 
-		corner.flags &= ~TILE_FLAG_RIVER;
+		corner.flags &= ~CORNER_FLAG_RIVER;
 	}
 
+	// first river assign
+	assign_rivers();
+
+	// remove rivers too close to each other
+	static const float MIN_RIVER_DISTANCE = 4.F;
+	for (auto &border : m_borders) {
+		if (!(border.flags & BORDER_FLAG_RIVER)) {
+			const auto &edge = m_graph.edges[border.index];
+			// river with the smallest stream order is trimmed
+			// if they have the same stream order do a coin flip
+			auto &left = m_corners[edge.left_vertex->index];
+			auto &right = m_corners[edge.right_vertex->index];
+			if ((left.flags & CORNER_FLAG_RIVER) && (right.flags & CORNER_FLAG_RIVER)) {
+				float d = glm::distance(edge.left_vertex->position, edge.right_vertex->position);
+				if (d < MIN_RIVER_DISTANCE) {
+					if (left.river_depth > right.river_depth) {
+						right.flags &= ~CORNER_FLAG_RIVER;
+					} else {
+						left.flags &= ~CORNER_FLAG_RIVER;
+					}
+				}
+			}
+		}
+	}
+
+	// remove rivers too close to map edges or mountains
+	for (auto &corner : m_corners) {
+		if (corner.flags & CORNER_FLAG_RIVER) {
+			const auto &vertex = m_graph.vertices[corner.index];
+			for (const auto &adjacent : vertex.adjacent) {
+				const auto &neighbor = m_corners[adjacent->index];
+				if (neighbor.flags & CORNER_FLAG_WALL) {
+					corner.flags &= ~CORNER_FLAG_RIVER;
+					break;
+				}
+			}
+		}
+	}
+
+	// do the actual pruning in the basin
+	for (auto it = basins.begin(); it != basins.end(); ) {
+		DrainageBasin &basin = *it;
+		std::queue<RiverBranch*> queue;
+		queue.push(basin.mouth);
+		while (!queue.empty()) {
+			RiverBranch *cur = queue.front();
+			queue.pop();
+
+			if (cur->right != nullptr) {
+				if ((cur->right->confluence->flags & CORNER_FLAG_RIVER) == false) {
+					prune_branches(cur->right);
+					cur->right = nullptr;
+				} else {
+					queue.push(cur->right);
+				}
+			}
+			if (cur->left != nullptr) {
+				if ((cur->left->confluence->flags & CORNER_FLAG_RIVER) == false) {
+					prune_branches(cur->left);
+					cur->left = nullptr;
+				} else {
+					queue.push(cur->left);
+				}
+			}
+		}
+		if (basin.mouth->right == nullptr && basin.mouth->left == nullptr) {
+			delete basin.mouth;
+			basin.mouth = nullptr;
+			it = basins.erase(it);
+		} else {
+			++it;
+		}
+	}
+
+	trim_stubby_rivers(3, 4);
+
+	// after trimming correct rivers again
+	for (auto &corner : m_corners) { 
+		corner.flags &= ~CORNER_FLAG_RIVER;
+	}
+	for (auto &border : m_borders) { 
+		border.flags &= ~BORDER_FLAG_RIVER;
+	}
+	// second river assign
 	assign_rivers();
 }
 
@@ -544,7 +672,7 @@ void Atlas::form_drainage_basins(const std::vector<const Corner*> &candidates)
 	// breadth first search to start the drainage basin
 	// assign scores
 	for (auto root : candidates) {
-		if (root->flags & TILE_FLAG_COAST) {
+		if (root->flags & CORNER_FLAG_COAST) {
 			std::queue<const Corner*> frontier;
 			lookup[root].visited = true;
 			frontier.push(root);
@@ -555,8 +683,8 @@ void Atlas::form_drainage_basins(const std::vector<const Corner*> &candidates)
 				int depth = data.score + data.elevation + 1;
 				for (const auto &vertex : m_graph.vertices[corner->index].adjacent) {
 					const Corner *neighbor = &m_corners[vertex->index];
-					bool river = neighbor->flags & TILE_FLAG_RIVER;
-					bool coast = neighbor->flags & TILE_FLAG_COAST;
+					bool river = neighbor->flags & CORNER_FLAG_RIVER;
+					bool coast = neighbor->flags & CORNER_FLAG_COAST;
 					if (river && !coast) {
 						Meta &neighbor_data = lookup[neighbor];
 
@@ -581,7 +709,7 @@ void Atlas::form_drainage_basins(const std::vector<const Corner*> &candidates)
 
 	// create the drainage basin binary trees
 	for (auto root : candidates) {
-		if (root->flags & TILE_FLAG_COAST) {
+		if (root->flags & CORNER_FLAG_COAST) {
 			lookup[root].visited = true;
 			// new drainage basin
 			DrainageBasin basin = {};
@@ -595,7 +723,7 @@ void Atlas::form_drainage_basins(const std::vector<const Corner*> &candidates)
 				for (const auto &vertex : m_graph.vertices[corner->index].adjacent) {
 					const Corner *neighbor = &m_corners[vertex->index];
 					Meta &neighbor_data = lookup[neighbor];
-					bool coast = neighbor->flags & TILE_FLAG_COAST;
+					bool coast = neighbor->flags & CORNER_FLAG_COAST;
 					if (!neighbor_data.visited && !coast) {
 						if (neighbor_data.score > corner_data.score && neighbor_data.elevation >= corner_data.elevation) {
 							neighbor_data.visited = true;
@@ -660,15 +788,92 @@ void Atlas::trim_river_basins(size_t min)
 
 void Atlas::trim_stubby_rivers(uint8_t min_branch, uint8_t min_basin)
 {
+	std::unordered_map<const RiverBranch*, int> depth;
+	std::unordered_map<const RiverBranch*, bool> removable;
+	std::unordered_map<RiverBranch*, RiverBranch*> parents;
+	std::vector<RiverBranch*> endnodes;
+
+	// find river end nodes
+	for (auto it = basins.begin(); it != basins.end(); ) {
+		DrainageBasin &bas = *it;
+		std::queue<RiverBranch*> queue;
+		queue.push(bas.mouth);
+		parents[bas.mouth] = nullptr;
+		removable[bas.mouth] = false;
+		while (!queue.empty()) {
+			RiverBranch *cur = queue.front();
+			depth[cur] = -1;
+			queue.pop();
+			if (cur->right == nullptr && cur->left == nullptr) {
+				endnodes.push_back(cur);
+				depth[cur] = 0;
+			} else {
+				if (cur->right != nullptr) {
+					queue.push(cur->right);
+					parents[cur->right] = cur;
+				}
+				if (cur->left != nullptr) {
+					queue.push(cur->left);
+					parents[cur->left] = cur;
+				}
+			}
+
+		}
+		++it;
+	}
+
+	// starting from end nodes assign depth to nodes until they reach a branch
+	for (auto &node : endnodes) {
+		std::queue<RiverBranch*> queue;
+		queue.push(node);
+		while (!queue.empty()) {
+			RiverBranch *cur = queue.front();
+			queue.pop();
+			RiverBranch *parent = parents[cur];
+			if (parent) {
+				depth[parent] = depth[cur] + 1;
+				if (parent->left != nullptr && parent->right != nullptr) {
+				// reached a branch
+					if (depth[cur] > -1 && depth[cur] < min_branch) {
+						prune_branches(cur);
+						if (cur == parent->left) {
+							parent->left = nullptr;
+						} else if (cur == parent->right) {
+							parent->right = nullptr;
+						}
+					}
+				} else {
+					queue.push(parent);
+				}
+			} else if (depth[cur] < min_basin) {
+			// reached the river mouth
+			// river is simply too small so mark it for deletion
+				removable[cur] = true;
+			}
+		}
+	}
+
+	// remove river basins if they are too small
+	for (auto it = basins.begin(); it != basins.end(); ) {
+		DrainageBasin &bas = *it;
+		if (removable[bas.mouth]) {
+			delete_basin(&bas);
+			it = basins.erase(it);
+		} else {
+			it++;
+		}
+	}
 }
 
 // assign river data from basins to the graph data
 void Atlas::assign_rivers()
 {
+	// TODO first reset everything
+	//
 	// link the borders with the river corners
 	std::map<std::pair<uint32_t, uint32_t>, Border*> link;
 	for (auto &border : m_borders) {
-		border.flags &= ~TILE_FLAG_RIVER;
+		border.flags &= ~BORDER_FLAG_RIVER;
 		const auto &edge = m_graph.edges[border.index];
 		link[std::minmax(edge.left_vertex->index, edge.right_vertex->index)] = &border;
 	}
@@ -679,19 +884,19 @@ void Atlas::assign_rivers()
 			queue.push(basin.mouth);
 			while (!queue.empty()) {
 				RiverBranch *cur = queue.front(); queue.pop();
-				m_corners[cur->confluence->index].flags |= TILE_FLAG_RIVER;
+				m_corners[cur->confluence->index].flags |= CORNER_FLAG_RIVER;
 				m_corners[cur->confluence->index].river_depth = cur->depth;
 				if (cur->right != nullptr) {
 					Border *bord = link[std::minmax(cur->confluence->index, cur->right->confluence->index)];
 					if (bord) { 
-						bord->flags |= TILE_FLAG_RIVER;
+						bord->flags |= BORDER_FLAG_RIVER;
 					}
 					queue.push(cur->right);
 				}
 				if (cur->left != nullptr) {
 					Border *bord = link[std::minmax(cur->confluence->index, cur->left->confluence->index)];
 					if (bord) { 
-						bord->flags |= TILE_FLAG_RIVER;
+						bord->flags |= BORDER_FLAG_RIVER;
 					}
 					queue.push(cur->left);
 				}

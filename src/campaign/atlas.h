@@ -6,12 +6,28 @@ enum class ReliefType : uint8_t {
 	MOUNTAINS
 };
 
-enum AtlasFlags {
+enum TileFlags {
 	TILE_FLAG_NONE = 0,
 	TILE_FLAG_FRONTIER = 1 << 0,
 	TILE_FLAG_RIVER = 1 << 1,
 	TILE_FLAG_COAST = 1 << 2,
 	TILE_FLAG_ISLAND = 1 << 3
+};
+
+enum BorderFlags {
+	BORDER_FLAG_NONE = 0,
+	BORDER_FLAG_FRONTIER = 1 << 0,
+	BORDER_FLAG_RIVER = 1 << 1,
+	BORDER_FLAG_COAST = 1 << 2,
+	BORDER_FLAG_WALL = 1 << 3 // border between mountain and non mountain tile
+};
+
+enum CornerFlags {
+	CORNER_FLAG_NONE = 0,
+	CORNER_FLAG_FRONTIER = 1 << 0,
+	CORNER_FLAG_RIVER = 1 << 1,
+	CORNER_FLAG_COAST = 1 << 2,
+	CORNER_FLAG_WALL = 1 << 3
 };
 
 struct Border {
@@ -111,6 +127,7 @@ private: // relief stuff
 	void remove_echoriads();
 	void mark_islands(unsigned max_size);
 	void mark_coasts();
+	void mark_walls();
 private: // river stuff
 	void form_rivers();
 	void form_drainage_basins(const std::vector<const Corner*> &candidates);
