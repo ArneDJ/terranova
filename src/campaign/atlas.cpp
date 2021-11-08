@@ -147,6 +147,20 @@ static void stream_postorder(DrainageBasin *tree)
 	}
 }
 
+static bool prunable(const RiverBranch *node, uint8_t min_stream)
+{
+	// prune rivers right next to mountains
+	/*
+	for (const auto t : node->confluence->touches) {
+		if (t->relief == ReliefType::HIGHLAND) { return true; }
+	}
+	*/
+
+	if (node->streamorder < min_stream) { return true; }
+
+	return false;
+}
+
 Atlas::Atlas()
 {
 	m_heightmap.resize(1024, 1024, util::COLORSPACE_GRAYSCALE);
@@ -490,7 +504,7 @@ void Atlas::form_rivers()
 
 	form_drainage_basins(candidates);
 
-	//trim_river_basins();
+	trim_river_basins(3);
 	//
 	// after trimming make sure river properties of corners are correct
 	for (auto &corner : m_corners) { 
@@ -610,6 +624,38 @@ void Atlas::form_drainage_basins(const std::vector<const Corner*> &candidates)
 
 void Atlas::trim_river_basins(size_t min)
 {
+	// prune binary tree branch if the stream order is too low
+	for (auto it = basins.begin(); it != basins.end(); ) {
+		DrainageBasin &bas = *it;
+		std::queue<RiverBranch*> queue;
+		queue.push(bas.mouth);
+		while (!queue.empty()) {
+			RiverBranch *cur = queue.front(); queue.pop();
+			if (cur->right != nullptr) {
+				if (prunable(cur->right, min)) {
+					prune_branches(cur->right);
+					cur->right = nullptr;
+				} else {
+					queue.push(cur->right);
+				}
+			}
+			if (cur->left != nullptr) {
+				if (prunable(cur->left, min)) {
+					prune_branches(cur->left);
+					cur->left = nullptr;
+				} else {
+					queue.push(cur->left);
+				}
+			}
+		}
+		if (bas.mouth->right == nullptr && bas.mouth->left == nullptr) {
+			delete bas.mouth;
+			bas.mouth = nullptr;
+			it = basins.erase(it);
+		} else {
+			++it;
+		}
+	}
 }
 
 void Atlas::trim_stubby_rivers(uint8_t min_branch, uint8_t min_basin)
