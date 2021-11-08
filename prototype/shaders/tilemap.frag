@@ -20,7 +20,7 @@ void main(void)
 
 	if (fragment.barycentric.b < 0.1) {
 		float strength = 1.0 - fragment.barycentric.b;
-		final_color = mix(final_color, fragment.edge_color, 0.1 * pow(strength, 6));
+		final_color = mix(final_color, fragment.edge_color, 0.8 * pow(strength, 6));
 	}
 
 	float dist = distance(fragment.position.xz, MARKER_POS);

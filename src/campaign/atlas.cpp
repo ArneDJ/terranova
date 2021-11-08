@@ -121,6 +121,10 @@ void Atlas::generate(int seed, const geom::Rectangle &bounds, const AtlasParamet
 	remove_echoriads();
 
 	mark_islands(64);
+
+	mark_coasts();
+
+	form_rivers();
 }
 	
 void Atlas::clear()
@@ -301,6 +305,99 @@ void Atlas::mark_islands(unsigned max_size)
 			}
 		}
 	}
+}
+	
+void Atlas::mark_coasts()
+{
+	for (auto &tile : m_tiles) {
+		bool local_land = tile.relief != ReliefType::SEABED;
+		for (const auto &cell : m_graph.cells[tile.index].neighbors) {
+			Tile *neighbor = &m_tiles[cell->index];
+			bool neighbor_land = neighbor->relief != ReliefType::SEABED;
+			if (local_land ^ neighbor_land) {
+				tile.flags |= TILE_FLAG_COAST;
+			}
+		}
+	}
+
+	for (auto &border : m_borders) {
+		const auto &edge = m_graph.edges[border.index];
+		bool left_land = m_tiles[edge.left_cell->index].relief != ReliefType::SEABED;
+		bool right_land = m_tiles[edge.right_cell->index].relief != ReliefType::SEABED;
+		if (left_land ^ right_land) {
+			border.flags |= TILE_FLAG_COAST;
+			m_corners[edge.left_vertex->index].flags |= TILE_FLAG_COAST;
+			m_corners[edge.right_vertex->index].flags |= TILE_FLAG_COAST;
+		}
+	}
+}
+
+void Atlas::form_rivers()
+{
+	// construct the drainage basin candidate graph
+	// only land corners not on the edge of the map can be candidates for the graph
+	std::vector<const Corner*> candidates;
+	for (auto &corner : m_corners) {
+		const auto &vertex = m_graph.vertices[corner.index];
+		bool frontier = corner.flags & TILE_FLAG_FRONTIER;
+		if (!frontier) {
+			// find if corner touches land
+			for (const auto &cell : vertex.cells) {
+				const auto &tile = m_tiles[cell->index];
+				if (tile.relief != ReliefType::SEABED) {
+					candidates.push_back(&corner);
+					corner.flags |= TILE_FLAG_RIVER;
+					break;
+				}
+			}
+		}
+	}
+
+	form_drainage_basins(candidates);
+}
+
+void Atlas::form_drainage_basins(const std::vector<const Corner*> &candidates)
+{
+	struct Meta {
+		bool visited = false;
+		int elevation = 0;
+		int score = 0;
+	};
+	
+	std::unordered_map<const Corner*, Meta> lookup;
+
+	// add starting weight based on elevation
+	// corners with higher elevation will get a higher weight
+	for (auto node : candidates) {
+		int weight = 0;
+		const auto &vertex = m_graph.vertices[node->index];
+		for (const auto &cell : vertex.cells) {
+			const auto &tile = m_tiles[cell->index];
+			if (tile.relief == ReliefType::HILLS) {
+				weight += 3;
+			} else if (tile.relief == ReliefType::MOUNTAINS) {
+				weight += 4;
+			}
+		}
+		Meta data = { false, weight, 0 };
+		lookup[node] = data;
+	}
+
+	// breadth first search to start the drainage basin
+	for (auto root : candidates) {
+	}
+}
+
+void Atlas::trim_river_basins(size_t min)
+{
+}
+
+void Atlas::trim_stubby_rivers(uint8_t min_branch, uint8_t min_basin)
+{
+}
+
+void Atlas::correct_border_rivers()
+{
 }
 
 bool walkable_tile(const Tile *tile)

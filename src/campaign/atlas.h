@@ -101,9 +101,17 @@ private:
 	util::Image<uint8_t> m_heightmap;
 private:
 	void clear();
+private: // relief stuff
 	void floodfill_relief(unsigned max_size, ReliefType target, ReliefType replacement);
 	void remove_echoriads();
 	void mark_islands(unsigned max_size);
+	void mark_coasts();
+private: // river stuff
+	void form_rivers();
+	void form_drainage_basins(const std::vector<const Corner*> &candidates);
+	void trim_river_basins(size_t min);
+	void trim_stubby_rivers(uint8_t min_branch, uint8_t min_basin);
+	void correct_border_rivers();
 };
 
 bool walkable_tile(const Tile *tile);
