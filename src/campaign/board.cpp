@@ -310,33 +310,52 @@ void Board::build_navigation()
 	int index = 0;
 
 	const auto &graph = m_atlas.graph();
-	for (const auto &vertex : graph.vertices) {
-		vertices.push_back(vertex.position.x);
-		vertices.push_back(0.f);
-		vertices.push_back(vertex.position.y);
-		index++;
-	}
 	const auto &tiles = m_atlas.tiles();
-	for (const auto &cell : graph.cells) {
-		const auto &tile = tiles[cell.index];
-		if (tile.relief == ReliefType::LOWLAND || tile.relief == ReliefType::HILLS) {
+	const auto &borders = m_atlas.borders();
+
+	// create triangle data
+	// tiles with rivers have adjusted triangles
+	for (const auto &tile : tiles) {
+		if (walkable_tile(&tile)) {
+			const auto &cell = graph.cells[tile.index];
 			for (const auto &edge : cell.edges) {
+				const auto &border = borders[edge->index];
 				indices.push_back(index);
-				if (geom::clockwise(cell.center, edge->left_vertex->position, edge->right_vertex->position)) {
-					indices.push_back(edge->left_vertex->index);
-					indices.push_back(edge->right_vertex->index);
-				} else {
-					indices.push_back(edge->right_vertex->index);
-					indices.push_back(edge->left_vertex->index);
+				indices.push_back(index + 1);
+				indices.push_back(index + 2);
+			
+				vertices.push_back(cell.center.x);
+				vertices.push_back(0.f);
+				vertices.push_back(cell.center.y);
+
+				glm::vec2 a = edge->left_vertex->position;
+				glm::vec2 b = edge->right_vertex->position;
+
+				// rivers are not part of navigation mesh
+				if (border.flags & BORDER_FLAG_RIVER) {
+					a = geom::midpoint(a, cell.center);
+					b = geom::midpoint(b, cell.center);
 				}
+
+				// TODO desired river width
+
+				if (!geom::clockwise(cell.center, a, b)) {
+					std::swap(a, b);
+				}
+
+				vertices.push_back(a.x);
+				vertices.push_back(0.f);
+				vertices.push_back(a.y);
+
+				vertices.push_back(b.x);
+				vertices.push_back(0.f);
+				vertices.push_back(b.y);
+
+				index += 3;
 			}
-			vertices.push_back(cell.center.x);
-			vertices.push_back(0.f);
-			vertices.push_back(cell.center.y);
-			index++;
 		}
 	}
-
+	
 	m_land_navigation.build(vertices, indices);
 }
 

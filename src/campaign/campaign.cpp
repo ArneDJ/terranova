@@ -218,6 +218,8 @@ void Campaign::prepare()
 		meeple.second->sync();
 		place_meeple(meeple.second.get());
 	}
+	
+	debugger->add_navmesh(board->navigation().navmesh());
 }
 
 void Campaign::clear()
@@ -287,6 +289,7 @@ void Campaign::display()
 	
 	if (display_debug) {
 		debugger->display_wireframe();
+		debugger->display_navmeshes();
 	}
 
 	labeler->display(camera);

@@ -213,18 +213,22 @@ void Debugger::update(const util::Camera &camera)
 void Debugger::display() const
 {
 	m_scene.display();
-
-	m_shader->use();
-	m_shader->uniform_bool("INDIRECT_DRAW", false);
-	m_shader->uniform_mat4("MODEL", glm::mat4(1.f));
-	for (const auto &mesh : m_navigation_meshes) {
-		mesh->draw();
-	}
 }
 
 void Debugger::display_wireframe() const
 {
 	m_scene.display_wireframe();
+}
+	
+void Debugger::display_navmeshes() const
+{
+	m_shader->use();
+	m_shader->uniform_bool("INDIRECT_DRAW", false);
+	m_shader->uniform_bool("WIRED_MODE", false);
+	m_shader->uniform_mat4("MODEL", glm::mat4(1.f));
+	for (const auto &mesh : m_navigation_meshes) {
+		mesh->draw();
+	}
 }
 	
 void Debugger::clear()
