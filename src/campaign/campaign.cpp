@@ -431,6 +431,7 @@ void Campaign::spawn_fiefdom(Town *town)
 	const auto &atlas = board->atlas();	
 	const auto &cells = atlas.graph().cells;	
 	const auto &tiles = atlas.tiles();	
+	const auto &borders = atlas.borders();	
 
 	std::unordered_map<uint32_t, uint32_t> depth;
 	std::queue<uint32_t> nodes;
@@ -446,13 +447,17 @@ void Campaign::spawn_fiefdom(Town *town)
 		uint32_t layer = depth[node] + 1;
 		if (layer < radius) {
 			const auto &cell = cells[node];
-			for (const auto &neighbor : cell.neighbors) {
-				const Tile *tile = &tiles[neighbor->index];
-				bool passable = tile->relief == ReliefType::LOWLAND || tile->relief == ReliefType::HILLS;
-				if (passable && (faction_controller.tile_owners[tile->index] == 0)) {
-					depth[tile->index] = layer;
-					faction_controller.tile_owners[tile->index] = faction;
-					nodes.push(tile->index);
+			for (const auto &edge : cell.edges) {
+				const auto &border = borders[edge->index];
+				// if no river is between them
+				if (!(border.flags & BORDER_FLAG_RIVER) && !(border.flags & BORDER_FLAG_FRONTIER)) {
+					auto neighbor_index = edge->left_cell->index == node ? edge->right_cell->index : edge->left_cell->index;
+					const Tile *neighbor = &tiles[neighbor_index];
+					if (walkable_tile(neighbor) && (faction_controller.tile_owners[neighbor->index] == 0)) {
+						depth[neighbor->index] = layer;
+						faction_controller.tile_owners[neighbor->index] = faction;
+						nodes.push(neighbor->index);
+					}
 				}
 			}
 		}
