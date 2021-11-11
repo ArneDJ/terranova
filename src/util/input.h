@@ -16,6 +16,7 @@ public:
 	static bool key_pressed(uint32_t key); // is key pressed once
 	static glm::vec2 abs_mouse_coords();
 	static glm::vec2 rel_mouse_coords();
+	static int mousewheel();
 private:
 	static Keymap m_current;
 	static Keymap m_previous;

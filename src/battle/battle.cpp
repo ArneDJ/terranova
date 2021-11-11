@@ -140,7 +140,9 @@ void Battle::load_molds(const Module &module)
 	// load skeletons and animations
 	// TODO import from module
 	skeleton = MediaManager::load_skeleton("modules/native/media/skeletons/human.ozz");
-	animation = MediaManager::load_animation("modules/native/media/animations/human/run.ozz");
+	animation_idle = MediaManager::load_animation("modules/native/media/animations/human/idle.ozz");
+	animation_run = MediaManager::load_animation("modules/native/media/animations/human/run.ozz");
+	animation_falling = MediaManager::load_animation("modules/native/media/animations/human/falling.ozz");
 }
 
 void Battle::prepare(const BattleParameters &params)
@@ -167,7 +169,7 @@ void Battle::prepare(const BattleParameters &params)
 	mousegrab = true;
 	SDL_SetRelativeMouseMode(SDL_TRUE);
 	
-	player_mode = BattlePlayerMode::CREATURE_CONTROL;
+	camera_mode = BattleCamMode::THIRD_PERSON;
 }
 
 void Battle::clear()
@@ -196,13 +198,34 @@ void Battle::update(float delta)
 		}
 	}
 
+	// camera distance third person control
+	int scroll = util::InputManager::mousewheel();
+
+	// change state
+	if (camera_mode == BattleCamMode::FIRST_PERSON && scroll < 0) {
+		camera_mode = BattleCamMode::THIRD_PERSON;
+	}
+
+	const float CAM_SCROLL_SPEED = 10.F;
+	if (scroll > 0) {
+		camera_zoom -= scroll * CAM_SCROLL_SPEED * delta;
+	} else if (scroll < 0) {
+		camera_zoom += (-scroll) * CAM_SCROLL_SPEED * delta;
+	}
+
+	if (camera_mode == BattleCamMode::THIRD_PERSON && camera_zoom < 0.2f) {
+		camera_mode = BattleCamMode::FIRST_PERSON;
+	}
+
+	camera_zoom = glm::clamp(camera_zoom, 0.1f, 5.f);
+
 	rotate_camera(delta);
 
 	//glm::vec3 direction = creature_fly_direction(camera.direction, util::InputManager::key_down(SDLK_w), util::InputManager::key_down(SDLK_s), util::InputManager::key_down(SDLK_d), util::InputManager::key_down(SDLK_a));
 	glm::vec2 dir = creature_direction(camera.direction, util::InputManager::key_down(SDLK_w), util::InputManager::key_down(SDLK_s), util::InputManager::key_down(SDLK_d), util::InputManager::key_down(SDLK_a));
 	glm::vec3 direction = { dir.x, 0.f, dir.y };
 
-	if (player_mode == BattlePlayerMode::CREATURE_CONTROL) {
+	if (camera_mode == BattleCamMode::FIRST_PERSON || camera_mode == BattleCamMode::THIRD_PERSON) {
 		player->set_movement(direction, util::InputManager::key_down(SDLK_SPACE));
 	}
 	player->update_collision(physics.world(), delta);
@@ -221,7 +244,13 @@ void Battle::update(float delta)
 		creature->update_transform();
 	}
 	
-	player->update_animation(skeleton, animation, delta);
+	if (player->current_animation == CA_IDLE) {
+		player->update_animation(skeleton, animation_idle, delta);
+	} else if (player->current_animation == CA_RUN) {
+		player->update_animation(skeleton, animation_run, delta);
+	} else if (player->current_animation == CA_FALLING) {
+		player->update_animation(skeleton, animation_falling, delta);
+	}
 
 	position_camera(delta);
 
@@ -234,13 +263,11 @@ void Battle::display()
 	scene->cull_frustum();
 	scene->display();
 
-	/*
 	creature_shader->use();
 	creature_shader->uniform_mat4("CAMERA_VP", camera.VP);
 	creature_shader->uniform_mat4("MODEL", player->transform->to_matrix());
 	player->joint_matrices.buffer.bind_base(0);
 	player->model->display();
-	*/
 
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	terrain->display(camera);
@@ -270,9 +297,9 @@ void Battle::update_debug_menu()
 	static bool freecam = false;
 	ImGui::Checkbox("Freecam", &freecam);
 	if (freecam) {
-		player_mode = BattlePlayerMode::FLYING_CAMERA_NOCLIP;
+		camera_mode = BattleCamMode::FLYING_NOCLIP;
 	} else {
-		player_mode = BattlePlayerMode::CREATURE_CONTROL;
+		camera_mode = BattleCamMode::THIRD_PERSON;
 	}
 
 	ImGui::End();
@@ -310,7 +337,7 @@ void Battle::add_creatures()
 	//location.y = vertical_offset(location.x, location.z) + 1.f;
 	player->teleport(location);
 	player->model = MediaManager::load_model("modules/native/media/models/human.glb");
-	player->set_animation(skeleton, animation);
+	player->set_animation(skeleton, animation_idle);
 	physics.add_object(player->bumper->ghost_object.get(), btBroadphaseProxy::CharacterFilter, btBroadphaseProxy::AllFilter);
 	//debugger->add_capsule(player->bumper->shape->getRadius(), player->bumper->shape->getHalfHeight(), player->bumper->transform.get());
 
@@ -338,14 +365,17 @@ void Battle::rotate_camera(float delta)
 	
 void Battle::position_camera(float delta)
 {
-	if (player_mode == BattlePlayerMode::CREATURE_CONTROL) {
+	if (camera_mode == BattleCamMode::FIRST_PERSON) {
 		camera.position = player->transform->position;
-		camera.position.y += 1.f;
-		//camera.position -= (5.f * camera.direction);
+		camera.position.y += 1.8f;
+	} else if (camera_mode == BattleCamMode::THIRD_PERSON) {
+		camera.position = player->transform->position;
+		camera.position.y += 1.5f;
+		camera.position -= (camera_zoom * camera.direction);
 	}
 
 	float speed = 50.f * delta;
-	if (player_mode == BattlePlayerMode::FLYING_CAMERA_NOCLIP) {
+	if (camera_mode == BattleCamMode::FLYING_NOCLIP) {
 		if (util::InputManager::key_down(SDLK_w)) { camera.move_forward(speed); }
 		if (util::InputManager::key_down(SDLK_s)) { camera.move_backward(speed); }
 		if (util::InputManager::key_down(SDLK_d)) { camera.move_right(speed); }

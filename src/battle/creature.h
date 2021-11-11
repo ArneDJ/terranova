@@ -1,4 +1,10 @@
 
+enum CreatureAnimation : uint8_t {
+	CA_IDLE = 1,
+	CA_RUN,
+	CA_FALLING
+};
+
 class Creature {
 public:
 	std::unique_ptr<fysx::Bumper> bumper;
@@ -7,6 +13,7 @@ public: // animation stuff
 	const gfx::Model *model = nullptr;
 	gfx::BufferDataPair<glm::mat4> joint_matrices;
 	util::CharacterAnimation character_animation;
+	CreatureAnimation current_animation = CA_IDLE;
 public:
 	Creature();
 	void teleport(const glm::vec3 &position);

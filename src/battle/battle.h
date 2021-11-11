@@ -12,10 +12,11 @@ struct BattleParameters {
 	uint8_t town_size = 0;
 };
 
-enum class BattlePlayerMode {
-	FLYING_CAMERA_NOCLIP,
-	FLYING_CAMERA_CLIP,
-	CREATURE_CONTROL
+enum class BattleCamMode {
+	FLYING_NOCLIP,
+	FLYING_CLIP,
+	FIRST_PERSON,
+	THIRD_PERSON
 };
 
 class Battle {
@@ -30,14 +31,17 @@ public:
 	std::vector<std::unique_ptr<Creature>> creature_entities;
 	std::shared_ptr<gfx::Shader> creature_shader;
 public:
-	BattlePlayerMode player_mode = BattlePlayerMode::CREATURE_CONTROL;
+	BattleCamMode camera_mode = BattleCamMode::FIRST_PERSON;
+	float camera_zoom = 1.f;
 	util::Camera camera;
 	std::unique_ptr<Creature> player;
 	bool mousegrab = true;
 public:
 	std::unordered_map<uint32_t, std::unique_ptr<HouseMold>> house_molds;
 	const ozz::animation::Skeleton *skeleton;
-	const ozz::animation::Animation *animation;
+	const ozz::animation::Animation *animation_idle;
+	const ozz::animation::Animation *animation_run;
+	const ozz::animation::Animation *animation_falling;
 public:
 	void init(const gfx::ShaderGroup *shaders);
 	void load_molds(const Module &module);

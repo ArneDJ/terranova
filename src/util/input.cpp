@@ -69,6 +69,11 @@ glm::vec2 InputManager::rel_mouse_coords()
 {
 	return m_mouse_coords.relative;
 }
+	
+int InputManager::mousewheel()
+{
+	return m_mousewheel;
+}
 
 void InputManager::sample_event(const SDL_Event *event)
 {

@@ -26,9 +26,17 @@
 
 #include "creature.h"
 
+static inline glm::quat direction_to_quat(glm::vec2 direction)
+{
+	float angle = atan2(direction.x, direction.y);
+	glm::quat rotation = glm::angleAxis(angle, glm::vec3(0.f, 1.f, 0.f));
+
+	return rotation;
+}
+
 Creature::Creature()
 {
-	bumper = std::make_unique<fysx::Bumper>(glm::vec3(0.f), 0.5f, 2.f);
+	bumper = std::make_unique<fysx::Bumper>(glm::vec3(0.f), 0.3f, 2.f);
 
 	transform = std::make_unique<geom::Transform>();
 	
@@ -64,7 +72,23 @@ void Creature::update_transform()
 	bumper->sync_transform();
 
 	transform->position = bumper->transform->position;
+	transform->position.y -= (bumper->shape->getHalfHeight() + bumper->shape->getRadius());
 	transform->scale = glm::vec3(0.01f);
+
+	// set rotation
+	if (bumper->walk_direction.x != 0.f || bumper->walk_direction.z != 0.f) {
+		glm::vec2 d = { bumper->walk_direction.x, bumper->walk_direction.z };
+		transform->rotation = direction_to_quat(glm::normalize(d));
+	}
+
+	// select animation
+	if (!bumper->on_ground) {
+		current_animation = CA_FALLING;
+	} else if (bumper->walk_direction.x != 0.f || bumper->walk_direction.z != 0.f) {
+		current_animation = CA_RUN;
+	} else {
+		current_animation = CA_IDLE;
+	}
 }
 	
 void Creature::update_animation(const ozz::animation::Skeleton *skeleton, const ozz::animation::Animation *animation, float delta)
