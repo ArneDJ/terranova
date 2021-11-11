@@ -104,6 +104,20 @@ void Creature::update_animation(const ozz::animation::Skeleton *skeleton, const 
 		}
 		joint_matrices.update_present();
 	}
+
+	// find eye position
+	// Prepares attached object transformation.
+	// Gets model space transformation of the joint.
+    	//const glm::mat4 &joint = joint_matrices.data[5];
+    	const glm::mat4 &joint = util::ozz_to_mat4(character_animation.models[6]);
+
+	glm::mat4 translation = transform->to_matrix() * joint;
+
+	 // Builds offset transformation matrix.
+   	//const ozz::math::SimdFloat4 translation = ozz::math::simd_float4::Load3PtrU(&offset_.x);
+	eye_position.x = translation[3][0];
+	eye_position.y = translation[3][1];
+	eye_position.z = translation[3][2];
 }
 	
 void Creature::update_collision(const btDynamicsWorld *world, float delta)

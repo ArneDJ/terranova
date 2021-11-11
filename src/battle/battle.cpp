@@ -144,6 +144,16 @@ void Battle::load_molds(const Module &module)
 	animation_idle = MediaManager::load_animation("modules/native/media/animations/human/idle.ozz");
 	animation_run = MediaManager::load_animation("modules/native/media/animations/human/run.ozz");
 	animation_falling = MediaManager::load_animation("modules/native/media/animations/human/falling.ozz");
+
+	// find attachments
+	for (int i = 0; i < skeleton->num_joints(); i++) {
+		if (std::strstr(skeleton->joint_names()[i], "mixamorig1:HeadTop_End")) {
+			head_attachment = i;
+			break;
+		}
+	}	
+
+	ConsoleManager::print("head %d\n", head_attachment);
 }
 
 void Battle::prepare(const BattleParameters &params)
@@ -367,8 +377,8 @@ void Battle::rotate_camera(float delta)
 void Battle::position_camera(float delta)
 {
 	if (camera_mode == BattleCamMode::FIRST_PERSON) {
-		camera.position = player->transform->position;
-		camera.position.y += 1.8f;
+		camera.position = player->eye_position;
+		//camera.position.y += 0.2f;
 	} else if (camera_mode == BattleCamMode::THIRD_PERSON) {
 		camera.position = player->transform->position;
 		camera.position.y += 1.5f;

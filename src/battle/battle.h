@@ -42,6 +42,7 @@ public:
 	const ozz::animation::Animation *animation_idle;
 	const ozz::animation::Animation *animation_run;
 	const ozz::animation::Animation *animation_falling;
+	int head_attachment = -1;
 public:
 	void init(const gfx::ShaderGroup *shaders);
 	void load_molds(const Module &module);

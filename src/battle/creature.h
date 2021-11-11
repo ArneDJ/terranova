@@ -9,6 +9,7 @@ class Creature {
 public:
 	std::unique_ptr<fysx::Bumper> bumper;
 	std::unique_ptr<geom::Transform> transform;
+	glm::vec3 eye_position = {};
 public: // animation stuff
 	const gfx::Model *model = nullptr;
 	gfx::BufferDataPair<glm::mat4> joint_matrices;
