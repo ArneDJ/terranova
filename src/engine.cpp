@@ -95,6 +95,8 @@ Engine::~Engine()
 {
 	MediaManager::clear();
 
+	ConsoleManager::clear();
+
 	// in reverse order of initialization
 	SDL_GL_DeleteContext(glcontext);
 	// Close and destroy the window
@@ -343,10 +345,16 @@ void Engine::update_battle_menu()
 	ImGui::End();
 
 	battle.update_debug_menu();
+
+	if (show_console) {
+		ConsoleManager::display();
+	}
 }
 	
 void Engine::run_battle()
 {
+	ConsoleManager::print("starting new battle\n");
+
 	state = EngineState::BATTLE; 
 
 	BattleParameters parameters;
@@ -360,6 +368,10 @@ void Engine::run_battle()
 		frame_timer.begin();
 	
 		util::InputManager::update();
+
+		if (util::InputManager::key_pressed(SDLK_BACKQUOTE)) {
+			show_console = !show_console;
+		}
 		
 		update_battle_menu();
 		

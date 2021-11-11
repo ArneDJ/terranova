@@ -304,8 +304,6 @@ void Battle::update_debug_menu()
 	}
 
 	ImGui::End();
-
-	console.display();
 }
 	
 void Battle::add_houses()

@@ -1,15 +1,12 @@
 
-class Console {
+class ConsoleManager {
 public:
-	Console();
-	~Console();
-public:
-	void clear();
-	void print(const char *fmt, ...) IM_FMTARGS(2);
-	void display();
+	static void clear();
+	static void print(const char *fmt, ...) IM_FMTARGS(2);
+	static void display();
 private:
-	ImVector<char*> m_items;
-	ImGuiTextFilter m_filter;
-	bool m_auto_scroll = true;
-	bool m_scroll_to_bottom = false;
+	static ImVector<char*> m_items;
+	static ImGuiTextFilter m_filter;
+	static bool m_auto_scroll;
+	static bool m_scroll_to_bottom;
 };

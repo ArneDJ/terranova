@@ -21,7 +21,6 @@ enum class BattleCamMode {
 
 class Battle {
 public:
-	Console console;
 	BattleParameters parameters;
 	std::unique_ptr<gfx::SceneGroup> scene;
 	std::unique_ptr<Terrain> terrain;

@@ -7,6 +7,11 @@
 
 #include "console.h"
 
+ImVector<char*> ConsoleManager::m_items;
+ImGuiTextFilter ConsoleManager::m_filter;
+bool ConsoleManager::m_auto_scroll = true;
+bool ConsoleManager::m_scroll_to_bottom = false;
+
 static char* Strdup(const char* s)                           
 { 
 	IM_ASSERT(s); 
@@ -17,28 +22,15 @@ static char* Strdup(const char* s)
 	return (char*)memcpy(buf, (const void*)s, len); 
 }
 
-Console::Console() 
-{
-	clear();
-
-	m_auto_scroll = true;
-	m_scroll_to_bottom = false;
-	print("Welcome to Dear ImGui!");
-}
-
-Console::~Console()
-{
-	clear();
-}
-
-void Console::clear()
+void ConsoleManager::clear()
 {
 	for (int i = 0; i < m_items.Size; i++) {
 	    free(m_items[i]);
 	}
 	m_items.clear();
 }
-void Console::print(const char *fmt, ...) IM_FMTARGS(2)
+
+void ConsoleManager::print(const char *fmt, ...) IM_FMTARGS(2)
 {
 	// FIXME-OPT
 	char buf[1024];
@@ -50,7 +42,7 @@ void Console::print(const char *fmt, ...) IM_FMTARGS(2)
 	m_items.push_back(Strdup(buf));
 }
 
-void Console::display()
+void ConsoleManager::display()
 {
 	ImGui::SetNextWindowSize(ImVec2(520, 600), ImGuiCond_FirstUseEver);
 	ImGui::Begin("Console");

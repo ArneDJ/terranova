@@ -73,6 +73,8 @@ private:
 	Battle battle;
 	std::unique_ptr<gfx::ShaderGroup> shaders;
 private:
+	bool show_console = false;
+private:
 	void init_opengl();
 	void init_imgui();
 	void load_shaders();
