@@ -35,6 +35,7 @@
 #include "../physics/heightfield.h"
 #include "../physics/bumper.h"
 
+#include "../console.h"
 #include "../debugger.h"
 #include "../module.h"
 #include "../media.h"
@@ -303,6 +304,8 @@ void Battle::update_debug_menu()
 	}
 
 	ImGui::End();
+
+	console.display();
 }
 	
 void Battle::add_houses()

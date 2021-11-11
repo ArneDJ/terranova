@@ -21,6 +21,7 @@
 #include "physics/trigger.h"
 #include "physics/bumper.h"
 
+#include "console.h"
 #include "debugger.h"
 #include "media.h"
 #include "module.h"
