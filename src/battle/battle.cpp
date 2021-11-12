@@ -140,20 +140,13 @@ void Battle::load_molds(const Module &module)
 
 	// load skeletons and animations
 	// TODO import from module
-	skeleton = MediaManager::load_skeleton("modules/native/media/skeletons/human.ozz");
-	animation_idle = MediaManager::load_animation("modules/native/media/animations/human/idle.ozz");
-	animation_run = MediaManager::load_animation("modules/native/media/animations/human/run.ozz");
-	animation_falling = MediaManager::load_animation("modules/native/media/animations/human/falling.ozz");
+	anim_set = std::make_unique<util::AnimationSet>();
+	anim_set->skeleton = MediaManager::load_skeleton("modules/native/media/skeletons/human.ozz");
+	anim_set->animations[CA_IDLE] = MediaManager::load_animation("modules/native/media/animations/human/idle.ozz");
+	anim_set->animations[CA_RUN] = MediaManager::load_animation("modules/native/media/animations/human/run.ozz");
+	anim_set->animations[CA_FALLING] = MediaManager::load_animation("modules/native/media/animations/human/falling.ozz");
 
-	// find attachments
-	for (int i = 0; i < skeleton->num_joints(); i++) {
-		if (std::strstr(skeleton->joint_names()[i], "mixamorig1:HeadTop_End")) {
-			head_attachment = i;
-			break;
-		}
-	}	
-
-	ConsoleManager::print("head %d\n", head_attachment);
+	anim_set->find_max_tracks();
 }
 
 void Battle::prepare(const BattleParameters &params)
@@ -224,11 +217,11 @@ void Battle::update(float delta)
 		camera_zoom += (-scroll) * CAM_SCROLL_SPEED * delta;
 	}
 
-	if (camera_mode == BattleCamMode::THIRD_PERSON && camera_zoom < 0.2f) {
+	if (camera_mode == BattleCamMode::THIRD_PERSON && camera_zoom < 0.6f) {
 		camera_mode = BattleCamMode::FIRST_PERSON;
 	}
 
-	camera_zoom = glm::clamp(camera_zoom, 0.1f, 5.f);
+	camera_zoom = glm::clamp(camera_zoom, 0.5f, 5.f);
 
 	rotate_camera(delta);
 
@@ -255,13 +248,7 @@ void Battle::update(float delta)
 		creature->update_transform();
 	}
 	
-	if (player->current_animation == CA_IDLE) {
-		player->update_animation(skeleton, animation_idle, delta);
-	} else if (player->current_animation == CA_RUN) {
-		player->update_animation(skeleton, animation_run, delta);
-	} else if (player->current_animation == CA_FALLING) {
-		player->update_animation(skeleton, animation_falling, delta);
-	}
+	player->update_animation(delta);
 
 	position_camera(delta);
 
@@ -348,7 +335,7 @@ void Battle::add_creatures()
 	//location.y = vertical_offset(location.x, location.z) + 1.f;
 	player->teleport(location);
 	player->model = MediaManager::load_model("modules/native/media/models/human.glb");
-	player->set_animation(skeleton, animation_idle);
+	player->set_animation(anim_set.get());
 	physics.add_object(player->bumper->ghost_object.get(), btBroadphaseProxy::CharacterFilter, btBroadphaseProxy::AllFilter);
 	//debugger->add_capsule(player->bumper->shape->getRadius(), player->bumper->shape->getHalfHeight(), player->bumper->transform.get());
 
@@ -378,7 +365,6 @@ void Battle::position_camera(float delta)
 {
 	if (camera_mode == BattleCamMode::FIRST_PERSON) {
 		camera.position = player->eye_position;
-		//camera.position.y += 0.2f;
 	} else if (camera_mode == BattleCamMode::THIRD_PERSON) {
 		camera.position = player->transform->position;
 		camera.position.y += 1.5f;

@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+#include <unordered_map>
 #include <map>
 
 #include <glm/gtc/matrix_transform.hpp>
@@ -73,6 +74,18 @@ bool update_character_animation(CharacterAnimation *character, const ozz::animat
 	if (!ltm_job.Run()) { return false; }
 
 	return true;
+}
+	
+void AnimationSet::find_max_tracks()
+{
+	max_tracks = 0;
+
+	for (auto it = animations.begin(); it != animations.end(); it++) {
+		auto anim = it->second;
+		if (anim->num_tracks() > max_tracks) {
+			max_tracks =anim->num_tracks();
+		}
+	}
 }
 
 };

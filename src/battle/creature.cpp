@@ -43,14 +43,24 @@ Creature::Creature()
 	joint_matrices.buffer.set_target(GL_SHADER_STORAGE_BUFFER);
 }
 	
-void Creature::set_animation(const ozz::animation::Skeleton *skeleton, const ozz::animation::Animation *animation)
+void Creature::set_animation(util::AnimationSet *set)
 {
-	character_animation.locals.resize(skeleton->num_soa_joints());
-	character_animation.models.resize(skeleton->num_joints());
-	character_animation.cache.Resize(animation->num_tracks());
+	anim_set = set;
 
-	joint_matrices.data.resize(skeleton->num_joints());
+	character_animation.locals.resize(set->skeleton->num_soa_joints());
+	character_animation.models.resize(set->skeleton->num_joints());
+	character_animation.cache.Resize(set->max_tracks);
+
+	joint_matrices.data.resize(set->skeleton->num_joints());
 	joint_matrices.update_present();
+
+	// find attachments
+	for (int i = 0; i < set->skeleton->num_joints(); i++) {
+		if (std::strstr(set->skeleton->joint_names()[i], "eyes")) {
+			skeleton_attachments.eyes = i;
+			break;
+		}
+	}	
 }
 	
 void Creature::set_movement(const glm::vec3 &direction, bool jump_request)
@@ -73,7 +83,6 @@ void Creature::update_transform()
 
 	transform->position = bumper->transform->position;
 	transform->position.y -= (bumper->shape->getHalfHeight() + bumper->shape->getRadius());
-	transform->scale = glm::vec3(0.01f);
 
 	// set rotation
 	if (bumper->walk_direction.x != 0.f || bumper->walk_direction.z != 0.f) {
@@ -91,9 +100,11 @@ void Creature::update_transform()
 	}
 }
 	
-void Creature::update_animation(const ozz::animation::Skeleton *skeleton, const ozz::animation::Animation *animation, float delta)
+void Creature::update_animation(float delta)
 {
-	if (update_character_animation(&character_animation, animation, skeleton, delta)) {
+	const ozz::animation::Animation *animation = anim_set->animations[current_animation];
+
+	if (update_character_animation(&character_animation, animation, anim_set->skeleton, delta)) {
 		for (const auto &skin : model->skins()) {
 			if (skin->inverse_binds.size() == character_animation.models.size()) {
 				for (int i = 0; i < character_animation.models.size(); i++) {
@@ -108,16 +119,15 @@ void Creature::update_animation(const ozz::animation::Skeleton *skeleton, const 
 	// find eye position
 	// Prepares attached object transformation.
 	// Gets model space transformation of the joint.
-    	//const glm::mat4 &joint = joint_matrices.data[5];
-    	const glm::mat4 &joint = util::ozz_to_mat4(character_animation.models[6]);
+	if (skeleton_attachments.eyes >= 0) {
+		const glm::mat4 &joint = util::ozz_to_mat4(character_animation.models[skeleton_attachments.eyes]);
 
-	glm::mat4 translation = transform->to_matrix() * joint;
+		glm::mat4 translation = transform->to_matrix() * joint;
 
-	 // Builds offset transformation matrix.
-   	//const ozz::math::SimdFloat4 translation = ozz::math::simd_float4::Load3PtrU(&offset_.x);
-	eye_position.x = translation[3][0];
-	eye_position.y = translation[3][1];
-	eye_position.z = translation[3][2];
+		eye_position.x = translation[3][0];
+		eye_position.y = translation[3][1];
+		eye_position.z = translation[3][2];
+	}
 }
 	
 void Creature::update_collision(const btDynamicsWorld *world, float delta)

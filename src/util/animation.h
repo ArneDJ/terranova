@@ -43,6 +43,7 @@ private:
 };
 
 // contains all the data required to sample and blend a character animation
+// this is unique for every animated character
 struct CharacterAnimation {
 	PlaybackController controller;
 	ozz::animation::SamplingCache cache;
@@ -52,12 +53,15 @@ struct CharacterAnimation {
 
 bool update_character_animation(CharacterAnimation *character, const ozz::animation::Animation *animation, const ozz::animation::Skeleton *skeleton, float dt);
 
-/*
+// this is shared among animated characters
 class AnimationSet {
-private:
-	std::unordered_map<uint8_t, Animation*> animation_binds; // left action, right animation
+public:
+	const ozz::animation::Skeleton *skeleton = nullptr;
+	std::unordered_map<uint8_t, const ozz::animation::Animation*> animations; // left action, right animation
+	int max_tracks = 0;
+public:
+	void find_max_tracks();
 };
- */
 
 inline glm::mat4 ozz_to_mat4(const ozz::math::Float4x4 &matrix)
 {

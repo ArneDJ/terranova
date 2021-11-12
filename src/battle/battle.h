@@ -38,11 +38,7 @@ public:
 	bool mousegrab = true;
 public:
 	std::unordered_map<uint32_t, std::unique_ptr<HouseMold>> house_molds;
-	const ozz::animation::Skeleton *skeleton;
-	const ozz::animation::Animation *animation_idle;
-	const ozz::animation::Animation *animation_run;
-	const ozz::animation::Animation *animation_falling;
-	int head_attachment = -1;
+	std::unique_ptr<util::AnimationSet> anim_set;
 public:
 	void init(const gfx::ShaderGroup *shaders);
 	void load_molds(const Module &module);
