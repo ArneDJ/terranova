@@ -96,7 +96,7 @@ const ozz::animation::Skeleton* MediaManager::load_skeleton(const std::string &f
 
 		// Checks file status, which can be closed if filepath.c_str() is invalid.
 		if (!file.opened()) {
-			LOG_F(ERROR, "cannot open skeleton file %s", filepath);
+			LOG_F(ERROR, "cannot open skeleton file %s", filepath.c_str());
 		}
 
 		ozz::io::IArchive archive(&file);
@@ -127,7 +127,7 @@ const ozz::animation::Animation* MediaManager::load_animation(const std::string 
 		
 		ozz::io::File file(filepath.c_str(), "rb");
 		if (!file.opened()) {
-			LOG_F(ERROR, "cannot open animation file %s", filepath);
+			LOG_F(ERROR, "cannot open animation file %s", filepath.c_str());
 		}
 		ozz::io::IArchive archive(&file);
 		if (!archive.TestTag<ozz::animation::Animation>()) {
