@@ -9,6 +9,8 @@ in TESSEVAL {
 	float zclipspace;
 } fragment;
 
+out vec4 fcolor;
+
 uniform vec2 MARKER_POS;
 uniform float MARKER_RADIUS;
 
@@ -32,5 +34,5 @@ void main(void)
 		final_color = mix(marker_color, final_color, transparency);
 	}
 
-	gl_FragColor = vec4(final_color, 1.0);
+	fcolor = vec4(final_color, 1.0);
 };

@@ -337,7 +337,7 @@ void Battle::add_creatures()
 	player->model = MediaManager::load_model("modules/native/media/models/human.glb");
 	player->set_animation(anim_set.get());
 	physics.add_object(player->bumper->ghost_object.get(), btBroadphaseProxy::CharacterFilter, btBroadphaseProxy::AllFilter);
-	//debugger->add_capsule(player->bumper->shape->getRadius(), player->bumper->shape->getHalfHeight(), player->bumper->transform.get());
+	//debugger->add_capsule(player->bumper->shape->getRadius(), 2.f * player->bumper->shape->getHalfHeight(), player->bumper->transform.get());
 
 	for (int i = 0; i < 16; i++) {
 		for (int j = 0; j < 0; j++) {
@@ -346,7 +346,7 @@ void Battle::add_creatures()
 			auto creature = std::make_unique<Creature>();
 			creature->teleport(position);
 			physics.add_object(creature->bumper->ghost_object.get(), btBroadphaseProxy::CharacterFilter, btBroadphaseProxy::AllFilter);
-			debugger->add_capsule(creature->bumper->shape->getRadius(), creature->bumper->shape->getHalfHeight(), creature->bumper->transform.get());
+			debugger->add_capsule(creature->bumper->shape->getRadius(), 2.f * creature->bumper->shape->getHalfHeight(), creature->bumper->transform.get());
 			creature_entities.push_back(std::move(creature));
 		}
 	}

@@ -25,10 +25,13 @@ public: // animation stuff
 	CreatureAnimation current_animation = CA_IDLE;
 public:
 	Creature();
+public:
 	void teleport(const glm::vec3 &position);
 	void set_animation(util::AnimationSet *set);
 	void set_movement(const glm::vec3 &direction, bool jump_request);
 	void update_collision(const btDynamicsWorld *world, float delta);
 	void update_transform();
 	void update_animation(float delta);
+public:
+	void set_scale(float scale);
 };

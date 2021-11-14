@@ -17,6 +17,7 @@ public:
 	void teleport(const glm::vec3 &position);
 	void apply_velocity(const glm::vec3 &velocity);
 	void sync_transform();
+	void set_scale(float scale);
 private:
 	void apply_gravity(const btDynamicsWorld *world, float delta);
 	void collide_and_slide(const btDynamicsWorld *world, const glm::vec3 &displacement);

@@ -275,6 +275,11 @@ void Bumper::update_fallen_distance(const glm::vec3 &start, const glm::vec3 &end
 		fallen_distance += glm::distance(start.y, end.y);
 	}
 }
+	
+void Bumper::set_scale(float scale)
+{
+	shape->setLocalScaling(btVector3(scale, scale, scale));
+}
 
 };
 

@@ -26,6 +26,9 @@
 
 #include "creature.h"
 
+static const float STANDARD_CAPSULE_RADIUS = 0.4F;
+static const float STANDARD_CAPSULE_HEIGHT = 2.F;
+
 static inline glm::quat direction_to_quat(glm::vec2 direction)
 {
 	float angle = atan2(direction.x, direction.y);
@@ -36,7 +39,7 @@ static inline glm::quat direction_to_quat(glm::vec2 direction)
 
 Creature::Creature()
 {
-	bumper = std::make_unique<fysx::Bumper>(glm::vec3(0.f), 0.3f, 2.f);
+	bumper = std::make_unique<fysx::Bumper>(glm::vec3(0.f), STANDARD_CAPSULE_RADIUS, STANDARD_CAPSULE_HEIGHT);
 
 	transform = std::make_unique<geom::Transform>();
 	
@@ -135,3 +138,11 @@ void Creature::update_collision(const btDynamicsWorld *world, float delta)
 	bumper->update(world, delta);
 }
 
+void Creature::set_scale(float scale)
+{
+	transform->scale.x = scale;
+	transform->scale.y = scale;
+	transform->scale.z = scale;
+
+	bumper->set_scale(scale);
+}
