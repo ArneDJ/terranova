@@ -144,7 +144,7 @@ void Battle::load_molds(const Module &module)
 	anim_set->skeleton = MediaManager::load_skeleton("modules/native/media/skeletons/human.ozz");
 	anim_set->animations[CA_IDLE] = MediaManager::load_animation("modules/native/media/animations/human/idle.ozz");
 	anim_set->animations[CA_RUN] = MediaManager::load_animation("modules/native/media/animations/human/run.ozz");
-	anim_set->animations[CA_FALLING] = MediaManager::load_animation("modules/native/media/animations/human/falling.ozz");
+	anim_set->animations[CA_FALLING] = MediaManager::load_animation("modules/native/media/animations/human/fall.ozz");
 
 	anim_set->find_max_tracks();
 }
@@ -338,6 +338,11 @@ void Battle::add_creatures()
 	player->set_animation(anim_set.get());
 	physics.add_object(player->bumper->ghost_object.get(), btBroadphaseProxy::CharacterFilter, btBroadphaseProxy::AllFilter);
 	//debugger->add_capsule(player->bumper->shape->getRadius(), 2.f * player->bumper->shape->getHalfHeight(), player->bumper->transform.get());
+	// add hitboxes to collision world
+	for (auto &hitbox : player->hitboxes) {
+		physics.add_object(hitbox->ghost_object.get(), btBroadphaseProxy::SensorTrigger, btBroadphaseProxy::SensorTrigger); // TODO custom flags
+		debugger->add_capsule(hitbox->shape->getRadius(), 2.f * hitbox->shape->getHalfHeight(), hitbox->transform.get());
+	}
 
 	for (int i = 0; i < 16; i++) {
 		for (int j = 0; j < 0; j++) {

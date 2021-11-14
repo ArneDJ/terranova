@@ -9,6 +9,9 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/matrix_decompose.hpp>
+#include <glm/gtx/quaternion.hpp>
+#include <glm/gtx/rotate_vector.hpp>
 
 #include "../extern/loguru/loguru.hpp"
 
@@ -28,6 +31,19 @@
 
 static const float STANDARD_CAPSULE_RADIUS = 0.4F;
 static const float STANDARD_CAPSULE_HEIGHT = 2.F;
+
+static const std::vector<HitBoxInput> input_hitboxes = {
+	{ "spine.004", "spine.005", 0.1f, 0.3f },
+	{ "spine.001", "spine.003", 0.2f, 0.4f },
+	{ "upper_arm.R", "forearm.R", 0.08f, 0.3f },
+	{ "upper_arm.L", "forearm.L", 0.08f, 0.3f },
+	{ "forearm.R", "hand.R", 0.08f, 0.3f },
+	{ "forearm.L", "hand.L", 0.08f, 0.3f },
+	{ "thigh.R", "shin.R", 0.1f, 0.3f },
+	{ "thigh.L", "shin.L", 0.1f, 0.3f },
+	{ "shin.R", "foot.R", 0.1f, 0.4f },
+	{ "shin.L", "foot.L", 0.1f, 0.4f }
+};
 
 static inline glm::quat direction_to_quat(glm::vec2 direction)
 {
@@ -64,6 +80,54 @@ void Creature::set_animation(util::AnimationSet *set)
 			break;
 		}
 	}	
+	for (int i = 0; i < set->skeleton->num_joints(); i++) {
+		if (std::strstr(set->skeleton->joint_names()[i], "spine.002")) {
+			skeleton_attachments.spine = i;
+			break;
+		}
+	}	
+	for (int i = 0; i < set->skeleton->num_joints(); i++) {
+		if (std::strstr(set->skeleton->joint_names()[i], "spine.005")) {
+			skeleton_attachments.head = i;
+			break;
+		}
+	}	
+	for (int i = 0; i < set->skeleton->num_joints(); i++) {
+		if (std::strstr(set->skeleton->joint_names()[i], "upper_arm.R")) {
+			skeleton_attachments.upper_right_arm = i;
+			break;
+		}
+	}	
+	for (int i = 0; i < set->skeleton->num_joints(); i++) {
+		if (std::strstr(set->skeleton->joint_names()[i], "forearm.R")) {
+			skeleton_attachments.lower_right_arm = i;
+			break;
+		}
+	}	
+
+	for (const auto &input : input_hitboxes) {
+		int joint_a = -1;
+		int joint_b = -1;
+		for (int i = 0; i < set->skeleton->num_joints(); i++) {
+			if (std::strstr(set->skeleton->joint_names()[i], input.joint_a.c_str())) {
+				joint_a = i;
+				break;
+			}
+		}	
+		for (int i = 0; i < set->skeleton->num_joints(); i++) {
+			if (std::strstr(set->skeleton->joint_names()[i], input.joint_b.c_str())) {
+				joint_b = i;
+				break;
+			}
+		}	
+
+		if (joint_a >= 0 && joint_b >= 0) {
+			auto hitbox = std::make_unique<HitBox>(input.radius, input.half_height);
+			hitbox->joint_target_a = joint_a;
+			hitbox->joint_target_b = joint_b;
+			hitboxes.push_back(std::move(hitbox));
+		}
+	}
 }
 	
 void Creature::set_movement(const glm::vec3 &direction, bool jump_request)
@@ -130,6 +194,25 @@ void Creature::update_animation(float delta)
 		eye_position.x = translation[3][0];
 		eye_position.y = translation[3][1];
 		eye_position.z = translation[3][2];
+	}
+
+	// update hitboxes
+	for (auto &hitbox : hitboxes) {
+		const glm::mat4 &joint_a = util::ozz_to_mat4(character_animation.models[hitbox->joint_target_a]);
+		glm::mat4 translation_a = transform->to_matrix() * joint_a;
+		glm::vec3 position_a = { translation_a[3][0], translation_a[3][1], translation_a[3][2] };
+
+		const glm::mat4 &joint_b = util::ozz_to_mat4(character_animation.models[hitbox->joint_target_b]);
+		glm::mat4 translation_b = transform->to_matrix() * joint_b;
+		glm::vec3 position_b = { translation_b[3][0], translation_b[3][1], translation_b[3][2] };
+
+		glm::vec3 position = geom::midpoint(position_a, position_b);
+		glm::vec3 direction = glm::normalize(position_a - position_b);
+
+		glm::mat4 rotmat = glm::orientation(direction, glm::vec3(0.f, 1.f, 0.f));
+		glm::quat rotation = glm::quat(rotmat);
+
+		hitbox->set_transform(position, rotation);
 	}
 }
 	
