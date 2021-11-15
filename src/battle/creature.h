@@ -28,6 +28,7 @@ class HitBox {
 public:
 	std::unique_ptr<btCapsuleShape> shape;
 	std::unique_ptr<btPairCachingGhostObject> ghost_object;
+	//geom::Capsule capsule = {};
 	std::unique_ptr<geom::Transform> transform;
 	int joint_target_a = -1; // follows the animation
 	int joint_target_b = -1; // follows the animation
@@ -64,6 +65,10 @@ public:
 
 		ghost_object->setWorldTransform(t);
 	}
+	void set_scale(float scale)
+	{
+		shape->setLocalScaling(btVector3(scale, scale, scale));
+	}
 };
 
 class Creature {
@@ -89,6 +94,7 @@ public:
 	void update_collision(const btDynamicsWorld *world, float delta);
 	void update_transform();
 	void update_animation(float delta);
+	void update_hitboxes();
 public:
 	void set_scale(float scale);
 };

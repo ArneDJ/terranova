@@ -24,6 +24,12 @@ struct Sphere {
 	float radius = 1.f;
 };
 
+struct Capsule {
+	glm::vec3 a = {}; // medial line segment start point
+	glm::vec3 b = {}; // medial line segment end point
+	float radius = 1.f;
+};
+
 struct Segment {
 	glm::vec2 A = {};
 	glm::vec2 B = {};

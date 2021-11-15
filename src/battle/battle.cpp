@@ -42,6 +42,16 @@
 
 #include "battle.h"
 
+enum BattleCollisionGroup {
+	COLLISION_GROUP_NONE = 0,
+	COLLISION_GROUP_RAY = 1 << 0,
+	COLLISION_GROUP_VISIBILITY = 1 << 1,
+	COLLISION_GROUP_HITBOX = 1 << 2,
+	COLLISION_GROUP_WEAPON = 1 << 3,
+	COLLISION_GROUP_LANDSCAPE = 1 << 4,
+	COLLISION_GROUP_BUMPER = 1 << 5
+};
+
 const geom::AABB SCENE_BOUNDS = {
 	{ 0.F, 0.F, 0.F },
 	{ 1024.F, 255.F, 1024.F }
@@ -163,7 +173,9 @@ void Battle::prepare(const BattleParameters &params)
 
 	landscaper.generate(parameters.seed, parameters.tile, parameters.town_size);
 	
-	physics.add_object(terrain->height_field()->object());
+	int group = COLLISION_GROUP_LANDSCAPE;
+	int mask = COLLISION_GROUP_RAY | COLLISION_GROUP_BUMPER;
+	physics.add_object(terrain->height_field()->object(), group, mask);
 
 	add_houses();
 
@@ -249,6 +261,13 @@ void Battle::update(float delta)
 	}
 	
 	player->update_animation(delta);
+	player->update_hitboxes();
+
+	// TODO optimize this
+	for (auto &creature : creature_entities) {
+		creature->update_animation(delta);
+		creature->update_hitboxes();
+	}
 
 	position_camera(delta);
 
@@ -266,6 +285,12 @@ void Battle::display()
 	creature_shader->uniform_mat4("MODEL", player->transform->to_matrix());
 	player->joint_matrices.buffer.bind_base(0);
 	player->model->display();
+
+	for (const auto &creature : creature_entities) {
+		creature_shader->uniform_mat4("MODEL", creature->transform->to_matrix());
+		creature->joint_matrices.buffer.bind_base(0);
+		creature->model->display();
+	}
 
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	terrain->display(camera);
@@ -323,8 +348,10 @@ void Battle::add_houses()
 	}
 
 	// add collision
+	int group = COLLISION_GROUP_LANDSCAPE;
+	int mask = COLLISION_GROUP_RAY | COLLISION_GROUP_BUMPER;
 	for (const auto &building : building_entities) {
-		physics.add_body(building->body.get());
+		physics.add_body(building->body.get(), group, mask);
 	}
 }
 
@@ -336,22 +363,32 @@ void Battle::add_creatures()
 	player->teleport(location);
 	player->model = MediaManager::load_model("modules/native/media/models/human.glb");
 	player->set_animation(anim_set.get());
-	physics.add_object(player->bumper->ghost_object.get(), btBroadphaseProxy::CharacterFilter, btBroadphaseProxy::AllFilter);
+
+	int group = COLLISION_GROUP_BUMPER;
+	int mask = COLLISION_GROUP_RAY | COLLISION_GROUP_BUMPER | COLLISION_GROUP_LANDSCAPE;
+
+	physics.add_object(player->bumper->ghost_object.get(), group, mask);
 	//debugger->add_capsule(player->bumper->shape->getRadius(), 2.f * player->bumper->shape->getHalfHeight(), player->bumper->transform.get());
 	// add hitboxes to collision world
 	for (auto &hitbox : player->hitboxes) {
-		physics.add_object(hitbox->ghost_object.get(), btBroadphaseProxy::SensorTrigger, btBroadphaseProxy::SensorTrigger); // TODO custom flags
+		physics.add_object(hitbox->ghost_object.get(), COLLISION_GROUP_HITBOX, COLLISION_GROUP_RAY);
 		debugger->add_capsule(hitbox->shape->getRadius(), 2.f * hitbox->shape->getHalfHeight(), hitbox->transform.get());
 	}
 
 	for (int i = 0; i < 16; i++) {
-		for (int j = 0; j < 0; j++) {
+		for (int j = 0; j < 16; j++) {
 			glm::vec3 position = { 512.f + (i+i), 64.f, 512.f + (j+j) };
 			position.y = vertical_offset(position.x, position.z) + 1.f;
 			auto creature = std::make_unique<Creature>();
 			creature->teleport(position);
-			physics.add_object(creature->bumper->ghost_object.get(), btBroadphaseProxy::CharacterFilter, btBroadphaseProxy::AllFilter);
-			debugger->add_capsule(creature->bumper->shape->getRadius(), 2.f * creature->bumper->shape->getHalfHeight(), creature->bumper->transform.get());
+			creature->model = MediaManager::load_model("modules/native/media/models/human.glb");
+			creature->set_animation(anim_set.get());
+			physics.add_object(creature->bumper->ghost_object.get(), group, mask);
+			for (auto &hitbox : creature->hitboxes) {
+				physics.add_object(hitbox->ghost_object.get(), COLLISION_GROUP_HITBOX, COLLISION_GROUP_RAY);
+				debugger->add_capsule(hitbox->shape->getRadius(), 2.f * hitbox->shape->getHalfHeight(), hitbox->transform.get());
+			}
+			//debugger->add_capsule(creature->bumper->shape->getRadius(), 2.f * creature->bumper->shape->getHalfHeight(), creature->bumper->transform.get());
 			creature_entities.push_back(std::move(creature));
 		}
 	}

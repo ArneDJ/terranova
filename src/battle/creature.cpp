@@ -195,8 +195,10 @@ void Creature::update_animation(float delta)
 		eye_position.y = translation[3][1];
 		eye_position.z = translation[3][2];
 	}
-
-	// update hitboxes
+}
+	
+void Creature::update_hitboxes()
+{
 	for (auto &hitbox : hitboxes) {
 		const glm::mat4 &joint_a = util::ozz_to_mat4(character_animation.models[hitbox->joint_target_a]);
 		glm::mat4 translation_a = transform->to_matrix() * joint_a;
@@ -228,4 +230,8 @@ void Creature::set_scale(float scale)
 	transform->scale.z = scale;
 
 	bumper->set_scale(scale);
+
+	for (auto &hitbox : hitboxes) {
+		hitbox->set_scale(scale);
+	}
 }
