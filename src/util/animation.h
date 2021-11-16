@@ -19,6 +19,8 @@ public:
 	void set_time_ratio(float ratio);
 	// Sets loop modes. If true, animation time is always clamped between 0 and 1.
 	void set_looping(bool loop) { m_looping = loop; }
+
+	void set_speed(float speed) { m_playback_speed = speed; }
 	// Gets loop mode.
 	bool looping() const { return m_looping; }
 	// Updates animation time if in "play" state, according to playback speed and

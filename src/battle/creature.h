@@ -2,7 +2,8 @@
 enum CreatureAnimation : uint8_t {
 	CA_IDLE = 1,
 	CA_RUN,
-	CA_FALLING
+	CA_FALLING,
+	CA_ATTACK_SLASH,
 };
 
 struct CreatureSkeletonAttachments {
@@ -24,18 +25,15 @@ struct HitBoxInput {
 	float half_height = 1.f;
 };
 
-class HitBox {
+class HitBoxRoot {
 public:
-	std::unique_ptr<btCapsuleShape> shape;
+	std::unique_ptr<btSphereShape> shape;
 	std::unique_ptr<btPairCachingGhostObject> ghost_object;
-	//geom::Capsule capsule = {};
 	std::unique_ptr<geom::Transform> transform;
-	int joint_target_a = -1; // follows the animation
-	int joint_target_b = -1; // follows the animation
 public:
-	HitBox(float radius, float half_height)
+	HitBoxRoot(float radius)
 	{
-		shape = std::make_unique<btCapsuleShape>(radius, half_height);
+		shape = std::make_unique<btSphereShape>(radius);
 
 		btTransform t;
 		t.setIdentity();
@@ -53,15 +51,13 @@ public:
 		transform->position = fysx::bt_to_vec3(t.getOrigin());
 		transform->rotation = fysx::bt_to_quat(t.getRotation());
 	}
-	void set_transform(const glm::vec3 &position, const glm::quat &rotation) 
+	void set_position(const glm::vec3 &position) 
 	{
 		transform->position = position;
-		transform->rotation = rotation;
 
 		btTransform t;
 		t.setIdentity ();
 		t.setOrigin(fysx::vec3_to_bt(position));
-		t.setRotation(fysx::quat_to_bt(rotation));
 
 		ghost_object->setWorldTransform(t);
 	}
@@ -71,11 +67,43 @@ public:
 	}
 };
 
+class HitBox {
+public:
+	geom::Capsule capsule = {};
+	std::unique_ptr<geom::Transform> transform;
+	int joint_target_a = -1; // follows the animation
+	int joint_target_b = -1; // follows the animation
+	float height = 0.f;
+public:
+	HitBox(float radius, float half_height)
+	{
+		capsule.radius = radius;
+
+		height = half_height;
+
+		transform = std::make_unique<geom::Transform>();
+	}
+	void set_transform(const glm::vec3 &position, const glm::quat &rotation) 
+	{
+		transform->position = position;
+		transform->rotation = rotation;
+	}
+	/*
+	void set_scale(float scale)
+	{
+		shape->setLocalScaling(btVector3(scale, scale, scale));
+	}
+	*/
+};
+
 class Creature {
 public:
 	std::unique_ptr<fysx::Bumper> bumper;
 	std::unique_ptr<geom::Transform> transform;
+	std::unique_ptr<geom::Transform> model_transform; // for the animated 3d model
 	glm::vec3 eye_position = {};
+	//glm::vec3 right_hand_position = {};
+	glm::mat4 right_hand_transform = {};
 public: // animation stuff
 	const gfx::Model *model = nullptr;
 	util::AnimationSet *anim_set = nullptr;
@@ -85,6 +113,13 @@ public: // animation stuff
 	CreatureAnimation current_animation = CA_IDLE;
 public:
 	std::vector<std::unique_ptr<HitBox>> hitboxes;
+	// the root hitbox, this encompasses all the other hitboxes
+	// when checking for a ray hitbox collision it first has to hit the root hitbox
+	// before iterating over the individual hitboxes
+	std::unique_ptr<HitBoxRoot> root_hitbox;
+public: // maybe use flags instead of bools for this?
+	bool attacking = false;
+	bool running = false;
 public:
 	Creature();
 public:
@@ -95,6 +130,8 @@ public:
 	void update_transform();
 	void update_animation(float delta);
 	void update_hitboxes();
+public:
+	void attack_request();
 public:
 	void set_scale(float scale);
 };

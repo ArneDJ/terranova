@@ -1,4 +1,7 @@
 #include <iostream>
+#include <thread>
+#include <atomic>
+#include <future>
 #include <chrono>
 #include <unordered_map>
 #include <list>
@@ -56,7 +59,7 @@ const geom::AABB SCENE_BOUNDS = {
 	{ 0.F, 0.F, 0.F },
 	{ 1024.F, 255.F, 1024.F }
 };
-	
+  
 // TODO remove
 glm::vec3 creature_fly_direction(const glm::vec3 &view, bool forward, bool backward, bool right, bool left)
 {
@@ -126,6 +129,8 @@ void Battle::init(const gfx::ShaderGroup *shaders)
 	};
 	
 	creature_shader = shaders->creature;
+
+	object_shader = shaders->debug;
 }
 
 void Battle::load_molds(const Module &module)
@@ -155,8 +160,11 @@ void Battle::load_molds(const Module &module)
 	anim_set->animations[CA_IDLE] = MediaManager::load_animation("modules/native/media/animations/human/idle.ozz");
 	anim_set->animations[CA_RUN] = MediaManager::load_animation("modules/native/media/animations/human/run.ozz");
 	anim_set->animations[CA_FALLING] = MediaManager::load_animation("modules/native/media/animations/human/fall.ozz");
+	anim_set->animations[CA_ATTACK_SLASH] = MediaManager::load_animation("modules/native/media/animations/human/slash.ozz");
 
 	anim_set->find_max_tracks();
+
+	sword_model = MediaManager::load_model("modules/native/media/models/sword.glb");
 }
 
 void Battle::prepare(const BattleParameters &params)
@@ -232,6 +240,10 @@ void Battle::update(float delta)
 	if (camera_mode == BattleCamMode::THIRD_PERSON && camera_zoom < 0.6f) {
 		camera_mode = BattleCamMode::FIRST_PERSON;
 	}
+	
+	if (util::InputManager::key_down(SDL_BUTTON_LEFT)) {
+		player->attack_request();
+	}
 
 	camera_zoom = glm::clamp(camera_zoom, 0.5f, 5.f);
 
@@ -248,7 +260,7 @@ void Battle::update(float delta)
 
 	auto world = physics.world();
 	for (auto &creature : creature_entities) {
-		creature->set_movement(direction, util::InputManager::key_down(SDLK_SPACE));
+		////creature->set_movement(direction, util::InputManager::key_down(SDLK_SPACE));
 		creature->update_collision(physics.world(), delta);
 	}
 
@@ -280,14 +292,20 @@ void Battle::display()
 	scene->cull_frustum();
 	scene->display();
 
+	object_shader->use();
+	object_shader->uniform_bool("INDIRECT_DRAW", false);
+	object_shader->uniform_mat4("CAMERA_VP", camera.VP);
+	object_shader->uniform_mat4("MODEL", player->right_hand_transform);
+	sword_model->display();
+
 	creature_shader->use();
 	creature_shader->uniform_mat4("CAMERA_VP", camera.VP);
-	creature_shader->uniform_mat4("MODEL", player->transform->to_matrix());
+	creature_shader->uniform_mat4("MODEL", player->model_transform->to_matrix());
 	player->joint_matrices.buffer.bind_base(0);
 	player->model->display();
 
 	for (const auto &creature : creature_entities) {
-		creature_shader->uniform_mat4("MODEL", creature->transform->to_matrix());
+		creature_shader->uniform_mat4("MODEL", creature->model_transform->to_matrix());
 		creature->joint_matrices.buffer.bind_base(0);
 		creature->model->display();
 	}
@@ -370,13 +388,13 @@ void Battle::add_creatures()
 	physics.add_object(player->bumper->ghost_object.get(), group, mask);
 	//debugger->add_capsule(player->bumper->shape->getRadius(), 2.f * player->bumper->shape->getHalfHeight(), player->bumper->transform.get());
 	// add hitboxes to collision world
+	physics.add_object(player->root_hitbox->ghost_object.get(), COLLISION_GROUP_HITBOX, COLLISION_GROUP_RAY | COLLISION_GROUP_WEAPON);
 	for (auto &hitbox : player->hitboxes) {
-		physics.add_object(hitbox->ghost_object.get(), COLLISION_GROUP_HITBOX, COLLISION_GROUP_RAY);
-		debugger->add_capsule(hitbox->shape->getRadius(), 2.f * hitbox->shape->getHalfHeight(), hitbox->transform.get());
+		//debugger->add_capsule(hitbox->capsule.radius, hitbox->height, hitbox->transform.get());
 	}
 
 	for (int i = 0; i < 16; i++) {
-		for (int j = 0; j < 16; j++) {
+		for (int j = 0; j < 4; j++) {
 			glm::vec3 position = { 512.f + (i+i), 64.f, 512.f + (j+j) };
 			position.y = vertical_offset(position.x, position.z) + 1.f;
 			auto creature = std::make_unique<Creature>();
@@ -384,9 +402,9 @@ void Battle::add_creatures()
 			creature->model = MediaManager::load_model("modules/native/media/models/human.glb");
 			creature->set_animation(anim_set.get());
 			physics.add_object(creature->bumper->ghost_object.get(), group, mask);
+			physics.add_object(creature->root_hitbox->ghost_object.get(), COLLISION_GROUP_HITBOX, COLLISION_GROUP_RAY | COLLISION_GROUP_WEAPON);
 			for (auto &hitbox : creature->hitboxes) {
-				physics.add_object(hitbox->ghost_object.get(), COLLISION_GROUP_HITBOX, COLLISION_GROUP_RAY);
-				debugger->add_capsule(hitbox->shape->getRadius(), 2.f * hitbox->shape->getHalfHeight(), hitbox->transform.get());
+				//debugger->add_capsule(hitbox->capsule.radius, hitbox->height, hitbox->transform.get());
 			}
 			//debugger->add_capsule(creature->bumper->shape->getRadius(), 2.f * creature->bumper->shape->getHalfHeight(), creature->bumper->transform.get());
 			creature_entities.push_back(std::move(creature));

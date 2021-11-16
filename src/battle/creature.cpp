@@ -32,17 +32,19 @@
 static const float STANDARD_CAPSULE_RADIUS = 0.4F;
 static const float STANDARD_CAPSULE_HEIGHT = 2.F;
 
+float FBX_SCALING_FACTOR = 0.01F; // fbx models downloaded from mixamo scales to 100 for some dumb reason
+
 static const std::vector<HitBoxInput> input_hitboxes = {
-	{ "spine.004", "spine.005", 0.1f, 0.3f },
-	{ "spine.001", "spine.003", 0.2f, 0.4f },
-	{ "upper_arm.R", "forearm.R", 0.08f, 0.3f },
-	{ "upper_arm.L", "forearm.L", 0.08f, 0.3f },
-	{ "forearm.R", "hand.R", 0.08f, 0.3f },
-	{ "forearm.L", "hand.L", 0.08f, 0.3f },
-	{ "thigh.R", "shin.R", 0.1f, 0.3f },
-	{ "thigh.L", "shin.L", 0.1f, 0.3f },
-	{ "shin.R", "foot.R", 0.1f, 0.4f },
-	{ "shin.L", "foot.L", 0.1f, 0.4f }
+	{ "mixamorig:Hips", "mixamorig:Neck", 0.2f, 0.4f },
+	{ "mixamorig:Neck", "mixamorig:Head", 0.1f, 0.3f },
+	{ "mixamorig:RightArm", "mixamorig:RightForeArm", 0.08f, 0.3f },
+	{ "mixamorig:LeftArm", "mixamorig:LeftForeArm", 0.08f, 0.3f },
+	{ "mixamorig:RightForeArm", "mixamorig:RightHand", 0.08f, 0.3f },
+	{ "mixamorig:LeftForeArm", "mixamorig:LeftHand", 0.08f, 0.3f },
+	{ "mixamorig:RightUpLeg", "mixamorig:RightLeg", 0.1f, 0.3f },
+	{ "mixamorig:LeftUpLeg", "mixamorig:LeftLeg", 0.1f, 0.3f },
+	{ "mixamorig:RightLeg", "mixamorig:RightFoot", 0.1f, 0.4f },
+	{ "mixamorig:LeftLeg", "mixamorig:LeftFoot", 0.1f, 0.4f }
 };
 
 static inline glm::quat direction_to_quat(glm::vec2 direction)
@@ -58,8 +60,13 @@ Creature::Creature()
 	bumper = std::make_unique<fysx::Bumper>(glm::vec3(0.f), STANDARD_CAPSULE_RADIUS, STANDARD_CAPSULE_HEIGHT);
 
 	transform = std::make_unique<geom::Transform>();
+	model_transform = std::make_unique<geom::Transform>();
+	model_transform->scale = glm::vec3(0.01f);
 	
 	joint_matrices.buffer.set_target(GL_SHADER_STORAGE_BUFFER);
+
+	root_hitbox = std::make_unique<HitBoxRoot>(1.1F * (STANDARD_CAPSULE_HEIGHT));
+	root_hitbox->ghost_object->setUserPointer(this);
 }
 	
 void Creature::set_animation(util::AnimationSet *set)
@@ -75,7 +82,7 @@ void Creature::set_animation(util::AnimationSet *set)
 
 	// find attachments
 	for (int i = 0; i < set->skeleton->num_joints(); i++) {
-		if (std::strstr(set->skeleton->joint_names()[i], "eyes")) {
+		if (std::strstr(set->skeleton->joint_names()[i], "HeadTop_End")) {
 			skeleton_attachments.eyes = i;
 			break;
 		}
@@ -101,6 +108,18 @@ void Creature::set_animation(util::AnimationSet *set)
 	for (int i = 0; i < set->skeleton->num_joints(); i++) {
 		if (std::strstr(set->skeleton->joint_names()[i], "forearm.R")) {
 			skeleton_attachments.lower_right_arm = i;
+			break;
+		}
+	}	
+	for (int i = 0; i < set->skeleton->num_joints(); i++) {
+		if (std::strstr(set->skeleton->joint_names()[i], "RightHandIndex1")) {
+			skeleton_attachments.right_hand = i;
+			break;
+		}
+	}	
+	for (int i = 0; i < set->skeleton->num_joints(); i++) {
+		if (std::strstr(set->skeleton->joint_names()[i], "hand.L")) {
+			skeleton_attachments.left_hand = i;
 			break;
 		}
 	}	
@@ -149,26 +168,42 @@ void Creature::update_transform()
 	bumper->sync_transform();
 
 	transform->position = bumper->transform->position;
-	transform->position.y -= (bumper->shape->getHalfHeight() + bumper->shape->getRadius());
+
+	model_transform->position = bumper->transform->position;
+	model_transform->position.y -= (bumper->shape->getHalfHeight() + bumper->shape->getRadius());
+
+	root_hitbox->set_position(bumper->transform->position);
 
 	// set rotation
 	if (bumper->walk_direction.x != 0.f || bumper->walk_direction.z != 0.f) {
 		glm::vec2 d = { bumper->walk_direction.x, bumper->walk_direction.z };
-		transform->rotation = direction_to_quat(glm::normalize(d));
+		model_transform->rotation = direction_to_quat(glm::normalize(d));
 	}
 
 	// select animation
-	if (!bumper->on_ground) {
-		current_animation = CA_FALLING;
-	} else if (bumper->walk_direction.x != 0.f || bumper->walk_direction.z != 0.f) {
-		current_animation = CA_RUN;
-	} else {
-		current_animation = CA_IDLE;
+	if (!attacking) {
+		if (!bumper->on_ground) {
+			current_animation = CA_FALLING;
+		} else if (bumper->walk_direction.x != 0.f || bumper->walk_direction.z != 0.f) {
+			current_animation = CA_RUN;
+		} else {
+			current_animation = CA_IDLE;
+		}
 	}
 }
 	
 void Creature::update_animation(float delta)
 {
+	// non looping animation is finished
+	if (attacking) {
+		if (character_animation.controller.time_ratio >= 1.f) {
+			character_animation.controller.set_looping(true);
+			character_animation.controller.set_speed(1.f);
+			current_animation = CA_IDLE;
+			attacking = false;
+		}
+	}
+	
 	const ozz::animation::Animation *animation = anim_set->animations[current_animation];
 
 	if (update_character_animation(&character_animation, animation, anim_set->skeleton, delta)) {
@@ -187,29 +222,38 @@ void Creature::update_animation(float delta)
 	// Prepares attached object transformation.
 	// Gets model space transformation of the joint.
 	if (skeleton_attachments.eyes >= 0) {
-		const glm::mat4 &joint = util::ozz_to_mat4(character_animation.models[skeleton_attachments.eyes]);
+		const glm::mat4 joint = util::ozz_to_mat4(character_animation.models[skeleton_attachments.eyes]);
 
-		glm::mat4 translation = transform->to_matrix() * joint;
+		glm::mat4 translation = model_transform->to_matrix() * joint;
 
 		eye_position.x = translation[3][0];
 		eye_position.y = translation[3][1];
 		eye_position.z = translation[3][2];
+	}
+	// find hand positions
+	if (skeleton_attachments.right_hand >= 0) {
+		glm::mat4 joint = util::ozz_to_mat4(character_animation.models[skeleton_attachments.right_hand]);
+		glm::vec4 offset = { -0.02f, 0.03f, 0.05f, 1.f };
+
+		//glm::vec4 transform = joint * offset;
+		//right_hand_transform = model_transform->to_matrix() * joint;
+		right_hand_transform = model_transform->to_matrix() * joint;
 	}
 }
 	
 void Creature::update_hitboxes()
 {
 	for (auto &hitbox : hitboxes) {
-		const glm::mat4 &joint_a = util::ozz_to_mat4(character_animation.models[hitbox->joint_target_a]);
-		glm::mat4 translation_a = transform->to_matrix() * joint_a;
-		glm::vec3 position_a = { translation_a[3][0], translation_a[3][1], translation_a[3][2] };
+		const glm::mat4 joint_a = util::ozz_to_mat4(character_animation.models[hitbox->joint_target_a]);
+		glm::mat4 translation_a = model_transform->to_matrix() * joint_a;
+		hitbox->capsule.a = { translation_a[3][0], translation_a[3][1], translation_a[3][2] };
 
-		const glm::mat4 &joint_b = util::ozz_to_mat4(character_animation.models[hitbox->joint_target_b]);
-		glm::mat4 translation_b = transform->to_matrix() * joint_b;
-		glm::vec3 position_b = { translation_b[3][0], translation_b[3][1], translation_b[3][2] };
+		const glm::mat4 joint_b = util::ozz_to_mat4(character_animation.models[hitbox->joint_target_b]);
+		glm::mat4 translation_b = model_transform->to_matrix() * joint_b;
+		hitbox->capsule.b = { translation_b[3][0], translation_b[3][1], translation_b[3][2] };
 
-		glm::vec3 position = geom::midpoint(position_a, position_b);
-		glm::vec3 direction = glm::normalize(position_a - position_b);
+		glm::vec3 position = geom::midpoint(hitbox->capsule.a, hitbox->capsule.b);
+		glm::vec3 direction = glm::normalize(hitbox->capsule.a - hitbox->capsule.b);
 
 		glm::mat4 rotmat = glm::orientation(direction, glm::vec3(0.f, 1.f, 0.f));
 		glm::quat rotation = glm::quat(rotmat);
@@ -229,9 +273,27 @@ void Creature::set_scale(float scale)
 	transform->scale.y = scale;
 	transform->scale.z = scale;
 
+	model_transform->scale.x = FBX_SCALING_FACTOR * scale;
+	model_transform->scale.y = FBX_SCALING_FACTOR * scale;
+	model_transform->scale.z = FBX_SCALING_FACTOR * scale;
+
 	bumper->set_scale(scale);
 
+	/*
 	for (auto &hitbox : hitboxes) {
 		hitbox->set_scale(scale);
+	}
+	*/
+}
+
+void Creature::attack_request()
+{
+	if (!attacking) {
+		attacking = true;
+		current_animation = CA_ATTACK_SLASH;
+
+		character_animation.controller.set_looping(false);
+		character_animation.controller.set_time_ratio(0.f);
+		character_animation.controller.set_speed(1.5f);
 	}
 }
