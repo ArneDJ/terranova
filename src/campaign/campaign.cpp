@@ -405,6 +405,12 @@ uint32_t Campaign::spawn_town(const Tile *tile, uint32_t faction)
 		town->set_faction(faction);
 		town->set_tile(tile->index);
 
+		if (tile->flags & TILE_FLAG_RIVER) {
+			town->set_size(3);
+		} else {
+			town->set_size(1);
+		}
+
 		settlement_controller.towns[id] = std::move(town);
 
 		faction_controller.tile_owners[tile->index] = faction;
@@ -536,7 +542,7 @@ void Campaign::update_meeple_target(Meeple *meeple)
 				// add town event
 				if (meeple->id() == player_data.meeple_id) {
 					battle_data.tile = search->second->tile();
-					battle_data.town_size = 2;
+					battle_data.town_size = search->second->size();
 					state = CampaignState::BATTLE_REQUEST;
 				}
 			}

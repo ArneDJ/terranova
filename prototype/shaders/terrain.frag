@@ -17,6 +17,8 @@ void main(void)
 {
 	fcolor = texture(TILES, 100.0 * fragment.texcoord);
 
+	fcolor.rgb = mix(fcolor.rgb, vec3(0.5, 0.5, 0.5), 0.25);
+
 	vec3 normal = texture(NORMALMAP, fragment.texcoord).rgb;
 
 	// terrain lighting

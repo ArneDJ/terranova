@@ -46,6 +46,11 @@ uint32_t Town::fiefdom() const
 {
 	return m_fiefdom;
 }
+	
+uint8_t Town::size() const
+{
+	return m_size;
+}
 
 glm::vec2 Town::map_position() const
 {
@@ -78,6 +83,11 @@ void Town::set_tile(uint32_t tile)
 void Town::set_fiefdom(uint32_t fiefdom)
 {
 	m_fiefdom = fiefdom;
+}
+	
+void Town::set_size(uint8_t size)
+{
+	m_size = size;
 }
 
 void Town::set_position(const glm::vec3 &position)

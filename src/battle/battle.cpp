@@ -295,6 +295,11 @@ void Battle::display()
 	for (auto &hitbox : player->hitboxes) {
 		debugger->display_capsule(hitbox.capsule);
 	}
+	for (const auto &creature : creature_entities) {
+	for (auto &hitbox : creature->hitboxes) {
+		debugger->display_capsule(hitbox.capsule);
+	}
+	}
 
 	object_shader->use();
 	object_shader->uniform_bool("INDIRECT_DRAW", false);

@@ -893,6 +893,9 @@ void Atlas::assign_rivers()
 	for (auto &border : m_borders) { 
 		border.flags &= ~BORDER_FLAG_RIVER;
 	}
+	for (auto &tile : m_tiles) { 
+		tile.flags &= ~TILE_FLAG_RIVER;
+	}
 
 	// link the borders with the river corners
 	std::map<std::pair<uint32_t, uint32_t>, Border*> link;
@@ -926,6 +929,17 @@ void Atlas::assign_rivers()
 				}
 			}
 
+		}
+	}
+
+	for (auto &tile : m_tiles) {
+		const auto &cell = m_graph.cells[tile.index];
+		for (auto &edge : cell.edges) {
+			const auto &border = m_borders[edge->index];
+			if (border.flags & BORDER_FLAG_RIVER) { 
+				tile.flags |= TILE_FLAG_RIVER;
+				break;
+			}
 		}
 	}
 }

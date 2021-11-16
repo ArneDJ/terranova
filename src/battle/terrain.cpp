@@ -67,7 +67,7 @@ void Terrain::generate(int seed)
 			float x = i; float y = j;
 			fastnoise.GradientPerturbFractal(x, y);
 			float height = 0.5f * (fastnoise.GetNoise(x, y) + 1.f);
-			m_heightmap.plot(i, j, util::CHANNEL_RED, height);
+			m_heightmap.plot(i, j, util::CHANNEL_RED, 0.8f * height);
 		}
 	}
 
@@ -83,11 +83,16 @@ void Terrain::display(const util::Camera &camera) const
 {
 	m_shader->use();
 	m_shader->uniform_mat4("CAMERA_VP", camera.VP);
+	m_shader->uniform_vec3("CAMERA_POSITION", camera.position);
 	m_shader->uniform_vec3("MAP_SCALE", m_scale);
 
 	bind_textures();
 
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
 	m_mesh.draw();
+
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
 fysx::HeightField* Terrain::height_field()

@@ -63,15 +63,21 @@ void Landscaper::spawn_houses(bool walled, uint8_t town_size)
 	// no valid houses found early exit
 	if (pool.size() < 1) { return; }
 
+	// factor over of house overlap
+	// set this to 1 if you don't want houses to overlap
+	const float overlap = 1.2f;
+
 	// place the town houses
 	for (const auto &district : m_cadastre.districts) {
 		for (const auto &parcel : district.parcels) {
-			float front = glm::distance(parcel.quad.b, parcel.quad.a);
-			float back = glm::distance(parcel.quad.c, parcel.quad.d);
-			float left = glm::distance(parcel.quad.b, parcel.quad.c);
-			float right = glm::distance(parcel.quad.a, parcel.quad.d);
+			float front = overlap * glm::distance(parcel.quad.b, parcel.quad.a);
+			float back = overlap * glm::distance(parcel.quad.c, parcel.quad.d);
+			float left = overlap * glm::distance(parcel.quad.b, parcel.quad.c);
+			float right = overlap * glm::distance(parcel.quad.a, parcel.quad.d);
 
 			float angle = atan2(parcel.direction.x, parcel.direction.y);
+
+			bool found = false;
 
 			for (auto &house : pool) {
 				if ((front > house->bounds.x && back > house->bounds.x) && (left > house->bounds.z && right > house->bounds.z)) {
@@ -81,8 +87,19 @@ void Landscaper::spawn_houses(bool walled, uint8_t town_size)
 					};
 					house->transforms.push_back(transform);
 
+					found = true;
+
 					break;
 				}
+			}
+
+			// place smallest possible house
+			if (!found) {
+				LandscapeObjectTransform transform = {
+					parcel.centroid,
+					angle
+				};
+				pool.back()->transforms.push_back(transform);
 			}
 		}
 	}

@@ -20,7 +20,7 @@ uniform mat4 MODEL;
 uniform bool WIRED_MODE;
 uniform bool INDIRECT_DRAW;
 
-out vec3 color;
+out vec3 vcolor;
 
 void main()
 {
@@ -33,5 +33,7 @@ void main()
 		
 	gl_Position = camera.view_projection * translation * vec4(vposition, 1.0);
 
-	color = WIRED_MODE == true ? vec3(0.0) : vnormal;
+	vec3 normal = normalize(mat3(transpose(inverse(translation))) * normalize(vnormal));
+
+	vcolor = WIRED_MODE == true ? vec3(0.0) : normal;
 }
