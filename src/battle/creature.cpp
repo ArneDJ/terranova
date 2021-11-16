@@ -9,7 +9,6 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <glm/gtx/matrix_decompose.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtx/rotate_vector.hpp>
 
@@ -35,16 +34,16 @@ static const float STANDARD_CAPSULE_HEIGHT = 2.F;
 float FBX_SCALING_FACTOR = 0.01F; // fbx models downloaded from mixamo scales to 100 for some dumb reason
 
 static const std::vector<HitBoxInput> input_hitboxes = {
-	{ "mixamorig:Hips", "mixamorig:Neck", 0.2f, 0.4f },
-	{ "mixamorig:Neck", "mixamorig:Head", 0.1f, 0.3f },
-	{ "mixamorig:RightArm", "mixamorig:RightForeArm", 0.08f, 0.3f },
-	{ "mixamorig:LeftArm", "mixamorig:LeftForeArm", 0.08f, 0.3f },
-	{ "mixamorig:RightForeArm", "mixamorig:RightHand", 0.08f, 0.3f },
-	{ "mixamorig:LeftForeArm", "mixamorig:LeftHand", 0.08f, 0.3f },
-	{ "mixamorig:RightUpLeg", "mixamorig:RightLeg", 0.1f, 0.3f },
-	{ "mixamorig:LeftUpLeg", "mixamorig:LeftLeg", 0.1f, 0.3f },
-	{ "mixamorig:RightLeg", "mixamorig:RightFoot", 0.1f, 0.4f },
-	{ "mixamorig:LeftLeg", "mixamorig:LeftFoot", 0.1f, 0.4f }
+	{ "mixamorig:Hips", "mixamorig:Neck", 0.2f },
+	{ "mixamorig:Spine2", "mixamorig:HeadTop_End", 0.15f },
+	{ "mixamorig:RightArm", "mixamorig:RightForeArm", 0.1f },
+	{ "mixamorig:LeftArm", "mixamorig:LeftForeArm", 0.1f },
+	{ "mixamorig:RightForeArm", "mixamorig:RightHand", 0.08f },
+	{ "mixamorig:LeftForeArm", "mixamorig:LeftHand", 0.08f },
+	{ "mixamorig:RightUpLeg", "mixamorig:RightLeg", 0.12f },
+	{ "mixamorig:LeftUpLeg", "mixamorig:LeftLeg", 0.12f },
+	{ "mixamorig:RightLeg", "mixamorig:RightFoot", 0.1f },
+	{ "mixamorig:LeftLeg", "mixamorig:LeftFoot", 0.1f }
 };
 
 static inline glm::quat direction_to_quat(glm::vec2 direction)
@@ -141,10 +140,11 @@ void Creature::set_animation(util::AnimationSet *set)
 		}	
 
 		if (joint_a >= 0 && joint_b >= 0) {
-			auto hitbox = std::make_unique<HitBox>(input.radius, input.half_height);
-			hitbox->joint_target_a = joint_a;
-			hitbox->joint_target_b = joint_b;
-			hitboxes.push_back(std::move(hitbox));
+			HitCapsule hitbox;
+			hitbox.capsule.radius = input.radius;
+			hitbox.joint_target_a = joint_a;
+			hitbox.joint_target_b = joint_b;
+			hitboxes.push_back(hitbox);
 		}
 	}
 }
@@ -244,21 +244,13 @@ void Creature::update_animation(float delta)
 void Creature::update_hitboxes()
 {
 	for (auto &hitbox : hitboxes) {
-		const glm::mat4 joint_a = util::ozz_to_mat4(character_animation.models[hitbox->joint_target_a]);
+		const glm::mat4 joint_a = util::ozz_to_mat4(character_animation.models[hitbox.joint_target_a]);
 		glm::mat4 translation_a = model_transform->to_matrix() * joint_a;
-		hitbox->capsule.a = { translation_a[3][0], translation_a[3][1], translation_a[3][2] };
+		hitbox.capsule.a = { translation_a[3][0], translation_a[3][1], translation_a[3][2] };
 
-		const glm::mat4 joint_b = util::ozz_to_mat4(character_animation.models[hitbox->joint_target_b]);
+		const glm::mat4 joint_b = util::ozz_to_mat4(character_animation.models[hitbox.joint_target_b]);
 		glm::mat4 translation_b = model_transform->to_matrix() * joint_b;
-		hitbox->capsule.b = { translation_b[3][0], translation_b[3][1], translation_b[3][2] };
-
-		glm::vec3 position = geom::midpoint(hitbox->capsule.a, hitbox->capsule.b);
-		glm::vec3 direction = glm::normalize(hitbox->capsule.a - hitbox->capsule.b);
-
-		glm::mat4 rotmat = glm::orientation(direction, glm::vec3(0.f, 1.f, 0.f));
-		glm::quat rotation = glm::quat(rotmat);
-
-		hitbox->set_transform(position, rotation);
+		hitbox.capsule.b = { translation_b[3][0], translation_b[3][1], translation_b[3][2] };
 	}
 }
 	

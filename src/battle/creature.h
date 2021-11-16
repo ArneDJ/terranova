@@ -22,7 +22,6 @@ struct HitBoxInput {
 	std::string joint_a = "";
 	std::string joint_b = "";
 	float radius = 1.f;
-	float half_height = 1.f;
 };
 
 class HitBoxRoot {
@@ -67,33 +66,10 @@ public:
 	}
 };
 
-class HitBox {
-public:
+struct HitCapsule {
 	geom::Capsule capsule = {};
-	std::unique_ptr<geom::Transform> transform;
 	int joint_target_a = -1; // follows the animation
 	int joint_target_b = -1; // follows the animation
-	float height = 0.f;
-public:
-	HitBox(float radius, float half_height)
-	{
-		capsule.radius = radius;
-
-		height = half_height;
-
-		transform = std::make_unique<geom::Transform>();
-	}
-	void set_transform(const glm::vec3 &position, const glm::quat &rotation) 
-	{
-		transform->position = position;
-		transform->rotation = rotation;
-	}
-	/*
-	void set_scale(float scale)
-	{
-		shape->setLocalScaling(btVector3(scale, scale, scale));
-	}
-	*/
 };
 
 class Creature {
@@ -112,7 +88,7 @@ public: // animation stuff
 	util::CharacterAnimation character_animation;
 	CreatureAnimation current_animation = CA_IDLE;
 public:
-	std::vector<std::unique_ptr<HitBox>> hitboxes;
+	std::vector<HitCapsule> hitboxes;
 	// the root hitbox, this encompasses all the other hitboxes
 	// when checking for a ray hitbox collision it first has to hit the root hitbox
 	// before iterating over the individual hitboxes

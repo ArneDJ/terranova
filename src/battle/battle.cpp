@@ -292,6 +292,10 @@ void Battle::display()
 	scene->cull_frustum();
 	scene->display();
 
+	for (auto &hitbox : player->hitboxes) {
+		debugger->display_capsule(hitbox.capsule);
+	}
+
 	object_shader->use();
 	object_shader->uniform_bool("INDIRECT_DRAW", false);
 	object_shader->uniform_mat4("CAMERA_VP", camera.VP);
@@ -389,9 +393,6 @@ void Battle::add_creatures()
 	//debugger->add_capsule(player->bumper->shape->getRadius(), 2.f * player->bumper->shape->getHalfHeight(), player->bumper->transform.get());
 	// add hitboxes to collision world
 	physics.add_object(player->root_hitbox->ghost_object.get(), COLLISION_GROUP_HITBOX, COLLISION_GROUP_RAY | COLLISION_GROUP_WEAPON);
-	for (auto &hitbox : player->hitboxes) {
-		//debugger->add_capsule(hitbox->capsule.radius, hitbox->height, hitbox->transform.get());
-	}
 
 	for (int i = 0; i < 16; i++) {
 		for (int j = 0; j < 4; j++) {
@@ -403,9 +404,6 @@ void Battle::add_creatures()
 			creature->set_animation(anim_set.get());
 			physics.add_object(creature->bumper->ghost_object.get(), group, mask);
 			physics.add_object(creature->root_hitbox->ghost_object.get(), COLLISION_GROUP_HITBOX, COLLISION_GROUP_RAY | COLLISION_GROUP_WEAPON);
-			for (auto &hitbox : creature->hitboxes) {
-				//debugger->add_capsule(hitbox->capsule.radius, hitbox->height, hitbox->transform.get());
-			}
 			//debugger->add_capsule(creature->bumper->shape->getRadius(), 2.f * creature->bumper->shape->getHalfHeight(), creature->bumper->transform.get());
 			creature_entities.push_back(std::move(creature));
 		}

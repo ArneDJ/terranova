@@ -31,6 +31,8 @@ public:
 	void display() const;
 	void display_wireframe() const;
 	void display_navmeshes() const;
+public:
+	void display_capsule(const geom::Capsule &capsule) const;
 private:
 	std::shared_ptr<gfx::Shader> m_shader;
 	gfx::SceneGroup m_scene;
