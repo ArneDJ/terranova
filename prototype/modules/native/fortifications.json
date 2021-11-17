@@ -1,0 +1,11 @@
+{
+    "fortifications": {
+	    "segment_even": "modules/native/media/models/buildings/walls/segment.glb",
+	    "segment_both": "modules/native/media/models/buildings/walls/segment_both.glb",
+	    "segment_left": "modules/native/media/models/buildings/walls/segment_left.glb",
+	    "segment_right": "modules/native/media/models/buildings/walls/segment_right.glb",
+	    "tower": "modules/native/media/models/buildings/walls/tower.glb",
+	    "ramp": "modules/native/media/models/buildings/walls/ramp.glb",
+	    "gate": "modules/native/media/models/buildings/walls/gate.glb"
+    }
+}

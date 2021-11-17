@@ -180,9 +180,17 @@ void Engine::load_module()
 			cereal::JSONInputArchive archive(stream);
 			archive(module.houses);
 		}
-	
-		battle.load_molds(module);
 	}
+
+	{
+		std::ifstream stream("modules/native/fortifications.json");
+		if (stream.is_open()) {
+			cereal::JSONInputArchive archive(stream);
+			archive(module.fortification);
+		}
+	}
+		
+	battle.load_molds(module);
 
 	{
 		std::ifstream stream("modules/native/board.json");
@@ -190,9 +198,9 @@ void Engine::load_module()
 			cereal::JSONInputArchive archive(stream);
 			archive(module.board_module);
 		}
-
-		campaign.load_blueprints(module);
 	}
+		
+	campaign.load_blueprints(module);
 }
 	
 void Engine::init_imgui()

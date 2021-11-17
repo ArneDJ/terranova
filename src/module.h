@@ -15,6 +15,30 @@ struct HousingModule {
 	}
 };
 
+struct FortificationModule {
+	std::string segment_even;
+	std::string segment_both;
+	std::string segment_left;
+	std::string segment_right;
+	std::string tower;
+	std::string ramp;
+	std::string gate;
+
+	template <class Archive>
+	void serialize(Archive &archive)
+	{
+		archive(
+			CEREAL_NVP(segment_even),
+			CEREAL_NVP(segment_both),
+			CEREAL_NVP(segment_left),
+			CEREAL_NVP(segment_right),
+			CEREAL_NVP(tower),
+			CEREAL_NVP(ramp),
+			CEREAL_NVP(gate)
+		);
+	}
+};
+
 struct BoardModule {
 	std::string marker = {};
 	std::string town = {};
@@ -31,4 +55,5 @@ class Module {
 public:
 	BoardModule board_module;
 	std::vector<HousingModule> houses;
+	FortificationModule fortification;
 };

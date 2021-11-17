@@ -6,6 +6,7 @@ public:
 	void generate(int seed);
 	void display(const util::Camera &camera) const;
 	void add_material(const std::string &name, const gfx::Texture *texture);
+	const util::Image<float>& heightmap() const;
 public:
 	fysx::HeightField* height_field();
 private:

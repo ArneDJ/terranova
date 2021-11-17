@@ -141,7 +141,7 @@ void Battle::load_molds(const Module &module)
 
 	for (const auto &module_house : module.houses) {
 		for (const auto &model_path : module_house.models) {
-			house_molds[id] = std::make_unique<HouseMold>(id, MediaManager::load_model(model_path));
+			house_molds[id] = std::make_unique<BuildingMold>(id, MediaManager::load_model(model_path));
 
 			id++;
 		}
@@ -152,6 +152,22 @@ void Battle::load_molds(const Module &module)
 		const auto &mold = bucket.second;
 		landscaper.add_house(mold->id, mold->model->bounds());
 	}
+
+	// load fortifications like walls and towers
+	fort_molds[id] = std::make_unique<BuildingMold>(id, MediaManager::load_model(module.fortification.segment_even));
+	landscaper.fortification.wall_even.mold_id = id++;
+	fort_molds[id] = std::make_unique<BuildingMold>(id, MediaManager::load_model(module.fortification.segment_both));
+	landscaper.fortification.wall_both.mold_id = id++;
+	fort_molds[id] = std::make_unique<BuildingMold>(id, MediaManager::load_model(module.fortification.segment_left));
+	landscaper.fortification.wall_left.mold_id = id++;
+	fort_molds[id] = std::make_unique<BuildingMold>(id, MediaManager::load_model(module.fortification.segment_right));
+	landscaper.fortification.wall_right.mold_id = id++;
+	fort_molds[id] = std::make_unique<BuildingMold>(id, MediaManager::load_model(module.fortification.tower));
+	landscaper.fortification.tower.mold_id = id++;
+	fort_molds[id] = std::make_unique<BuildingMold>(id, MediaManager::load_model(module.fortification.ramp));
+	landscaper.fortification.ramp.mold_id = id++;
+	fort_molds[id] = std::make_unique<BuildingMold>(id, MediaManager::load_model(module.fortification.gate));
+	landscaper.fortification.gate.mold_id = id++;
 
 	// load skeletons and animations
 	// TODO import from module
@@ -179,13 +195,20 @@ void Battle::prepare(const BattleParameters &params)
 	std::uniform_int_distribution<int> distrib;
 	terrain->generate(distrib(gen));
 
-	landscaper.generate(parameters.seed, parameters.tile, parameters.town_size);
+	landscaper.generate(parameters.seed, parameters.tile, parameters.town_size, terrain->heightmap());
 	
 	int group = COLLISION_GROUP_LANDSCAPE;
 	int mask = COLLISION_GROUP_RAY | COLLISION_GROUP_BUMPER;
 	physics.add_object(terrain->height_field()->object(), group, mask);
 
 	add_houses();
+
+	add_walls();
+
+	// building add collision
+	for (const auto &building : building_entities) {
+		physics.add_body(building->body.get(), group, mask);
+	}
 
 	add_creatures();
 
@@ -373,12 +396,37 @@ void Battle::add_houses()
 			}
 		}
 	}
+}
+	
+void Battle::add_walls()
+{
+	// add gates
+	place_fort_part(landscaper.fortification.gate);
+	// add towers
+	place_fort_part(landscaper.fortification.tower);
+	// the wall segments
+	place_fort_part(landscaper.fortification.wall_even);
+	place_fort_part(landscaper.fortification.wall_both);
+	place_fort_part(landscaper.fortification.wall_left);
+	place_fort_part(landscaper.fortification.wall_right);
+	place_fort_part(landscaper.fortification.ramp);
+}
+	
+void Battle::place_fort_part(const carto::LandscapeObject &part)
+{
+	auto search = fort_molds.find(part.mold_id);
+	if (search != fort_molds.end()) {
+		auto object = scene->find_object(search->second->model);
+		for (const auto &transform : part.transforms) {
+			glm::vec3 position = { transform.position.x, 0.f, transform.position.y };
+			position.y = vertical_offset(transform.position.x, transform.position.y);
+			glm::quat rotation = glm::angleAxis(transform.angle, glm::vec3(0.f, 1.f, 0.f));
+			auto building = std::make_unique<BuildingEntity>(position, rotation, search->second->collision->shape.get());
 
-	// add collision
-	int group = COLLISION_GROUP_LANDSCAPE;
-	int mask = COLLISION_GROUP_RAY | COLLISION_GROUP_BUMPER;
-	for (const auto &building : building_entities) {
-		physics.add_body(building->body.get(), group, mask);
+			object->add_transform(building->transform.get());
+
+			building_entities.push_back(std::move(building));
+		}
 	}
 }
 

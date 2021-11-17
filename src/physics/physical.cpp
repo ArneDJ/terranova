@@ -7,6 +7,8 @@
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "../extern/loguru/loguru.hpp"
+
 #include "physical.h"
 
 namespace fysx {
@@ -110,17 +112,22 @@ CollisionMesh::CollisionMesh(const std::vector<glm::vec3> &positions, const std:
 {
 	mesh = std::make_unique<btTriangleMesh>();
 
-	for (int i = 0; i < indices.size(); i += 3) {
-		uint16_t index = indices[i];
-		btVector3 v0 = vec3_to_bt(positions[index]);
-		index = indices[i + 1];
-		btVector3 v1 = vec3_to_bt(positions[index]);
-		index = indices[i + 2];
-		btVector3 v2 = vec3_to_bt(positions[index]);
-		mesh->addTriangle(v0, v1, v2, false);
-	}
+	if (indices.size() < 3 || positions.size() < 3) {
+		LOG_F(ERROR, "Collision mesh shape error: no triangle data found, using a sphere instead");
+		shape = std::make_unique<btSphereShape>(5.f);
+	} else {
+		for (int i = 0; i < indices.size(); i += 3) {
+			uint16_t index = indices[i];
+			btVector3 v0 = vec3_to_bt(positions[index]);
+			index = indices[i + 1];
+			btVector3 v1 = vec3_to_bt(positions[index]);
+			index = indices[i + 2];
+			btVector3 v2 = vec3_to_bt(positions[index]);
+			mesh->addTriangle(v0, v1, v2, false);
+		}
 
-	shape = std::make_unique<btBvhTriangleMeshShape>(mesh.get(), false);
+		shape = std::make_unique<btBvhTriangleMeshShape>(mesh.get(), false);
+	}
 }
 
 };

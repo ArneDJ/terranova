@@ -39,7 +39,8 @@ public:
 	std::unique_ptr<Creature> player;
 	bool mousegrab = true;
 public:
-	std::unordered_map<uint32_t, std::unique_ptr<HouseMold>> house_molds;
+	std::unordered_map<uint32_t, std::unique_ptr<BuildingMold>> house_molds;
+	std::unordered_map<uint32_t, std::unique_ptr<BuildingMold>> fort_molds;
 	std::unique_ptr<util::AnimationSet> anim_set;
 public:
 	void init(const gfx::ShaderGroup *shaders);
@@ -55,5 +56,7 @@ private:
 	void position_camera(float delta);
 private:
 	void add_houses();
+	void add_walls();
 	void add_creatures();
+	void place_fort_part(const carto::LandscapeObject &part);
 };

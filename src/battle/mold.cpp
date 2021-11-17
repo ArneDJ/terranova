@@ -18,7 +18,7 @@
 
 #include "mold.h"
 	
-HouseMold::HouseMold(uint32_t id, const gfx::Model *model)
+BuildingMold::BuildingMold(uint32_t id, const gfx::Model *model)
 	: id(id), model(model)
 {
 	// make collision shape

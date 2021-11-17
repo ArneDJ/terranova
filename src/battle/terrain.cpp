@@ -105,6 +105,11 @@ void Terrain::add_material(const std::string &name, const gfx::Texture *texture)
 	m_materials[name] = texture;
 }
 	
+const util::Image<float>& Terrain::heightmap() const
+{
+	return m_heightmap;
+}
+
 void Terrain::bind_textures() const
 {
 	int location = 0;
