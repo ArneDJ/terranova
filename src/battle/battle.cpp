@@ -181,6 +181,32 @@ void Battle::load_molds(const Module &module)
 	anim_set->find_max_tracks();
 
 	sword_model = MediaManager::load_model("modules/native/media/models/sword.glb");
+
+	// load hitboxes
+	for (const auto &input : module.hitboxes) {
+		int joint_a = -1;
+		int joint_b = -1;
+		for (int i = 0; i < anim_set->skeleton->num_joints(); i++) {
+			if (std::strstr(anim_set->skeleton->joint_names()[i], input.joint_a.c_str())) {
+				joint_a = i;
+				break;
+			}
+		}	
+		for (int i = 0; i < anim_set->skeleton->num_joints(); i++) {
+			if (std::strstr(anim_set->skeleton->joint_names()[i], input.joint_b.c_str())) {
+				joint_b = i;
+				break;
+			}
+		}	
+
+		if (joint_a >= 0 && joint_b >= 0) {
+			HitCapsule hitbox;
+			hitbox.capsule.radius = input.radius;
+			hitbox.joint_target_a = joint_a;
+			hitbox.joint_target_b = joint_b;
+			creature_hitboxes.push_back(hitbox);
+		}
+	}
 }
 
 void Battle::prepare(const BattleParameters &params)
@@ -316,12 +342,16 @@ void Battle::display()
 	scene->display();
 
 	for (auto &hitbox : player->hitboxes) {
-		debugger->display_capsule(hitbox.capsule);
+		geom::Capsule scaled_capsule = hitbox.capsule;
+		scaled_capsule.radius *= player->unit_scale;
+		debugger->display_capsule(scaled_capsule);
 	}
 	for (const auto &creature : creature_entities) {
-	for (auto &hitbox : creature->hitboxes) {
-		debugger->display_capsule(hitbox.capsule);
-	}
+		for (auto &hitbox : creature->hitboxes) {
+			geom::Capsule scaled_capsule = hitbox.capsule;
+			scaled_capsule.radius *= creature->unit_scale;
+			debugger->display_capsule(scaled_capsule);
+		}
 	}
 
 	object_shader->use();
@@ -439,6 +469,8 @@ void Battle::add_creatures()
 	player->model = MediaManager::load_model("modules/native/media/models/human.glb");
 	player->set_animation(anim_set.get());
 
+	player->set_hitbox(creature_hitboxes);
+
 	int group = COLLISION_GROUP_BUMPER;
 	int mask = COLLISION_GROUP_RAY | COLLISION_GROUP_BUMPER | COLLISION_GROUP_LANDSCAPE;
 
@@ -455,6 +487,7 @@ void Battle::add_creatures()
 			creature->teleport(position);
 			creature->model = MediaManager::load_model("modules/native/media/models/human.glb");
 			creature->set_animation(anim_set.get());
+			creature->set_hitbox(creature_hitboxes);
 			physics.add_object(creature->bumper->ghost_object.get(), group, mask);
 			physics.add_object(creature->root_hitbox->ghost_object.get(), COLLISION_GROUP_HITBOX, COLLISION_GROUP_RAY | COLLISION_GROUP_WEAPON);
 			//debugger->add_capsule(creature->bumper->shape->getRadius(), 2.f * creature->bumper->shape->getHalfHeight(), creature->bumper->transform.get());

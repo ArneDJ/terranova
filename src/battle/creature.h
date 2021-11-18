@@ -8,20 +8,8 @@ enum CreatureAnimation : uint8_t {
 
 struct CreatureSkeletonAttachments {
 	int eyes = -1;
-	int head = -1;
-	int spine = -1;
-	int upper_right_arm = -1;
-	int upper_left_arm = -1;
-	int lower_right_arm = -1;
-	int lower_left_arm = -1;
 	int left_hand = -1;
 	int right_hand = -1;
-};
-
-struct HitBoxInput {
-	std::string joint_a = "";
-	std::string joint_b = "";
-	float radius = 1.f;
 };
 
 class HitBoxRoot {
@@ -80,6 +68,7 @@ public:
 	glm::vec3 eye_position = {};
 	//glm::vec3 right_hand_position = {};
 	glm::mat4 right_hand_transform = {};
+	float unit_scale = 1.f;
 public: // animation stuff
 	const gfx::Model *model = nullptr;
 	util::AnimationSet *anim_set = nullptr;
@@ -99,9 +88,11 @@ public: // maybe use flags instead of bools for this?
 public:
 	Creature();
 public:
-	void teleport(const glm::vec3 &position);
 	void set_animation(util::AnimationSet *set);
+	void set_hitbox(const std::vector<HitCapsule> &capsules);
+public:
 	void set_movement(const glm::vec3 &direction, bool jump_request);
+	void teleport(const glm::vec3 &position);
 	void update_collision(const btDynamicsWorld *world, float delta);
 	void update_transform();
 	void update_animation(float delta);

@@ -189,6 +189,14 @@ void Engine::load_module()
 			archive(module.fortification);
 		}
 	}
+
+	{
+		std::ifstream stream("modules/native/hitboxes.json");
+		if (stream.is_open()) {
+			cereal::JSONInputArchive archive(stream);
+			archive(module.hitboxes);
+		}
+	}
 		
 	battle.load_molds(module);
 

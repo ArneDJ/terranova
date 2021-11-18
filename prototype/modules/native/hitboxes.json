@@ -1,0 +1,54 @@
+{
+    "value0": [
+        {
+            "joint_a": "mixamorig:Hips",
+            "joint_b": "mixamorig:Neck",
+            "radius": 0.2
+        },
+        {
+            "joint_a": "mixamorig:Spine2",
+            "joint_b": "mixamorig:HeadTop_End",
+            "radius": 0.15
+        },
+        {
+            "joint_a": "mixamorig:RightArm",
+            "joint_b": "mixamorig:RightForeArm",
+            "radius": 0.1
+        },
+        {
+            "joint_a": "mixamorig:LeftArm",
+            "joint_b": "mixamorig:LeftForeArm",
+            "radius": 0.1
+        },
+        {
+            "joint_a": "mixamorig:RightForeArm",
+            "joint_b": "mixamorig:RightHand",
+            "radius": 0.08
+        },
+        {
+            "joint_a": "mixamorig:LeftForeArm",
+            "joint_b": "mixamorig:LeftHand",
+            "radius": 0.08
+        },
+        {
+            "joint_a": "mixamorig:RightUpLeg",
+            "joint_b": "mixamorig:RightLeg",
+            "radius": 0.12
+        },
+        {
+            "joint_a": "mixamorig:LeftUpLeg",
+            "joint_b": "mixamorig:LeftLeg",
+            "radius": 0.12
+        },
+        {
+            "joint_a": "mixamorig:RightLeg",
+            "joint_b": "mixamorig:RightFoot",
+            "radius": 0.1
+        },
+        {
+            "joint_a": "mixamorig:LeftLeg",
+            "joint_b": "mixamorig:LeftFoot",
+            "radius": 0.1
+        }
+    ]
+}

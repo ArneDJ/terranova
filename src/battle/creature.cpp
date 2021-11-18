@@ -33,19 +33,6 @@ static const float STANDARD_CAPSULE_HEIGHT = 2.F;
 
 float FBX_SCALING_FACTOR = 0.01F; // fbx models downloaded from mixamo scales to 100 for some dumb reason
 
-static const std::vector<HitBoxInput> input_hitboxes = {
-	{ "mixamorig:Hips", "mixamorig:Neck", 0.2f },
-	{ "mixamorig:Spine2", "mixamorig:HeadTop_End", 0.15f },
-	{ "mixamorig:RightArm", "mixamorig:RightForeArm", 0.1f },
-	{ "mixamorig:LeftArm", "mixamorig:LeftForeArm", 0.1f },
-	{ "mixamorig:RightForeArm", "mixamorig:RightHand", 0.08f },
-	{ "mixamorig:LeftForeArm", "mixamorig:LeftHand", 0.08f },
-	{ "mixamorig:RightUpLeg", "mixamorig:RightLeg", 0.12f },
-	{ "mixamorig:LeftUpLeg", "mixamorig:LeftLeg", 0.12f },
-	{ "mixamorig:RightLeg", "mixamorig:RightFoot", 0.1f },
-	{ "mixamorig:LeftLeg", "mixamorig:LeftFoot", 0.1f }
-};
-
 static inline glm::quat direction_to_quat(glm::vec2 direction)
 {
 	float angle = atan2(direction.x, direction.y);
@@ -87,30 +74,6 @@ void Creature::set_animation(util::AnimationSet *set)
 		}
 	}	
 	for (int i = 0; i < set->skeleton->num_joints(); i++) {
-		if (std::strstr(set->skeleton->joint_names()[i], "spine.002")) {
-			skeleton_attachments.spine = i;
-			break;
-		}
-	}	
-	for (int i = 0; i < set->skeleton->num_joints(); i++) {
-		if (std::strstr(set->skeleton->joint_names()[i], "spine.005")) {
-			skeleton_attachments.head = i;
-			break;
-		}
-	}	
-	for (int i = 0; i < set->skeleton->num_joints(); i++) {
-		if (std::strstr(set->skeleton->joint_names()[i], "upper_arm.R")) {
-			skeleton_attachments.upper_right_arm = i;
-			break;
-		}
-	}	
-	for (int i = 0; i < set->skeleton->num_joints(); i++) {
-		if (std::strstr(set->skeleton->joint_names()[i], "forearm.R")) {
-			skeleton_attachments.lower_right_arm = i;
-			break;
-		}
-	}	
-	for (int i = 0; i < set->skeleton->num_joints(); i++) {
 		if (std::strstr(set->skeleton->joint_names()[i], "RightHandIndex1")) {
 			skeleton_attachments.right_hand = i;
 			break;
@@ -122,31 +85,12 @@ void Creature::set_animation(util::AnimationSet *set)
 			break;
 		}
 	}	
-
-	for (const auto &input : input_hitboxes) {
-		int joint_a = -1;
-		int joint_b = -1;
-		for (int i = 0; i < set->skeleton->num_joints(); i++) {
-			if (std::strstr(set->skeleton->joint_names()[i], input.joint_a.c_str())) {
-				joint_a = i;
-				break;
-			}
-		}	
-		for (int i = 0; i < set->skeleton->num_joints(); i++) {
-			if (std::strstr(set->skeleton->joint_names()[i], input.joint_b.c_str())) {
-				joint_b = i;
-				break;
-			}
-		}	
-
-		if (joint_a >= 0 && joint_b >= 0) {
-			HitCapsule hitbox;
-			hitbox.capsule.radius = input.radius;
-			hitbox.joint_target_a = joint_a;
-			hitbox.joint_target_b = joint_b;
-			hitboxes.push_back(hitbox);
-		}
-	}
+}
+	
+// add a copy of a hit capsule so this unique creature entity can scale it to its unique scale 
+void Creature::set_hitbox(const std::vector<HitCapsule> &capsules)
+{
+	hitboxes = capsules;
 }
 	
 void Creature::set_movement(const glm::vec3 &direction, bool jump_request)
@@ -261,6 +205,8 @@ void Creature::update_collision(const btDynamicsWorld *world, float delta)
 
 void Creature::set_scale(float scale)
 {
+	unit_scale = scale;
+
 	transform->scale.x = scale;
 	transform->scale.y = scale;
 	transform->scale.z = scale;
@@ -271,11 +217,7 @@ void Creature::set_scale(float scale)
 
 	bumper->set_scale(scale);
 
-	/*
-	for (auto &hitbox : hitboxes) {
-		hitbox->set_scale(scale);
-	}
-	*/
+	root_hitbox->set_scale(scale);
 }
 
 void Creature::attack_request()

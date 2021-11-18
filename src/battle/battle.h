@@ -42,6 +42,7 @@ public:
 	std::unordered_map<uint32_t, std::unique_ptr<BuildingMold>> house_molds;
 	std::unordered_map<uint32_t, std::unique_ptr<BuildingMold>> fort_molds;
 	std::unique_ptr<util::AnimationSet> anim_set;
+	std::vector<HitCapsule> creature_hitboxes;
 public:
 	void init(const gfx::ShaderGroup *shaders);
 	void load_molds(const Module &module);

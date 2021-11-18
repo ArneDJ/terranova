@@ -39,6 +39,22 @@ struct FortificationModule {
 	}
 };
 
+struct HitCapsuleModule {
+	std::string joint_a = "";
+	std::string joint_b = "";
+	float radius = 1.f;
+
+	template <class Archive>
+	void serialize(Archive &archive)
+	{
+		archive(
+			CEREAL_NVP(joint_a),
+			CEREAL_NVP(joint_b),
+			CEREAL_NVP(radius)
+		);
+	}
+};
+
 struct BoardModule {
 	std::string marker = {};
 	std::string town = {};
@@ -56,4 +72,5 @@ public:
 	BoardModule board_module;
 	std::vector<HousingModule> houses;
 	FortificationModule fortification;
+	std::vector<HitCapsuleModule> hitboxes;
 };
