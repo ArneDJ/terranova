@@ -93,7 +93,7 @@ void Creature::set_hitbox(const std::vector<HitCapsule> &capsules)
 	hitboxes = capsules;
 }
 	
-void Creature::set_movement(const glm::vec3 &direction, bool jump_request)
+void Creature::set_movement(const glm::vec3 &direction)
 {
 	if (direction != glm::vec3(0, 0, 0)) {
 		bumper->walk_direction = glm::normalize(direction);

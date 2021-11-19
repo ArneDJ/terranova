@@ -1,8 +1,19 @@
 
-struct HousingModule {
+struct BuildingModule {
+	std::string id;
+	std::string model;
+
+	template <class Archive>
+	void serialize(Archive &archive)
+	{
+		archive(CEREAL_NVP(id), CEREAL_NVP(model));
+	}
+};
+
+struct ArchitectureStyleModule {
 	geom::Bounding<uint8_t> precipitation;
 	geom::Bounding<uint8_t> temperature;
-	std::vector<std::string> models;
+	std::vector<BuildingModule> houses;
 
 	template <class Archive>
 	void serialize(Archive &archive)
@@ -10,19 +21,19 @@ struct HousingModule {
 		archive(
 			CEREAL_NVP(precipitation),
 			CEREAL_NVP(temperature),
-			CEREAL_NVP(models)
+			CEREAL_NVP(houses)
 		);
 	}
 };
 
 struct FortificationModule {
-	std::string segment_even;
-	std::string segment_both;
-	std::string segment_left;
-	std::string segment_right;
-	std::string tower;
-	std::string ramp;
-	std::string gate;
+	BuildingModule segment_even;
+	BuildingModule segment_both;
+	BuildingModule segment_left;
+	BuildingModule segment_right;
+	BuildingModule tower;
+	BuildingModule ramp;
+	BuildingModule gate;
 
 	template <class Archive>
 	void serialize(Archive &archive)
@@ -70,7 +81,7 @@ struct BoardModule {
 class Module {
 public:
 	BoardModule board_module;
-	std::vector<HousingModule> houses;
+	std::vector<ArchitectureStyleModule> architectures;
 	FortificationModule fortification;
 	std::vector<HitCapsuleModule> hitboxes;
 };

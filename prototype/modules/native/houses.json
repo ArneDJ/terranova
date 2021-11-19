@@ -9,11 +9,11 @@
                 "min": 100,
                 "max": 200
             },
-            "models": [
-		"modules/native/media/models/buildings/houses/small.glb",
-            	"modules/native/media/models/buildings/houses/medium.glb",
-            	"modules/native/media/models/buildings/houses/medium_wide.glb",
-            	"modules/native/media/models/buildings/houses/large.glb"
+            "houses": [
+		{ "id": "HOUSEA", "model": "modules/native/media/models/buildings/houses/small.glb" },
+        	{ "id": "HOUSEB", "model": "modules/native/media/models/buildings/houses/medium.glb" },
+        	{ "id": "HOUSEC", "model": "modules/native/media/models/buildings/houses/medium_wide.glb" },
+        	{ "id": "HOUSED", "model": "modules/native/media/models/buildings/houses/large.glb" }
 	    ]
         }
     ]

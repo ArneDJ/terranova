@@ -136,14 +136,13 @@ void Battle::init(const gfx::ShaderGroup *shaders)
 void Battle::load_molds(const Module &module)
 {
 	house_molds.clear();
+	fort_molds.clear();
 
-	uint32_t id = 1; // TODO import ids from module
+	for (const auto &architecture : module.architectures) {
+		for (const auto &house : architecture.houses) {
+			uint32_t id = std::hash<std::string>()(house.id);
+			house_molds[id] = std::make_unique<BuildingMold>(id, MediaManager::load_model(house.model));
 
-	for (const auto &module_house : module.houses) {
-		for (const auto &model_path : module_house.models) {
-			house_molds[id] = std::make_unique<BuildingMold>(id, MediaManager::load_model(model_path));
-
-			id++;
 		}
 	}
 
@@ -152,22 +151,9 @@ void Battle::load_molds(const Module &module)
 		const auto &mold = bucket.second;
 		landscaper.add_house(mold->id, mold->model->bounds());
 	}
-
+	
 	// load fortifications like walls and towers
-	fort_molds[id] = std::make_unique<BuildingMold>(id, MediaManager::load_model(module.fortification.segment_even));
-	landscaper.fortification.wall_even.mold_id = id++;
-	fort_molds[id] = std::make_unique<BuildingMold>(id, MediaManager::load_model(module.fortification.segment_both));
-	landscaper.fortification.wall_both.mold_id = id++;
-	fort_molds[id] = std::make_unique<BuildingMold>(id, MediaManager::load_model(module.fortification.segment_left));
-	landscaper.fortification.wall_left.mold_id = id++;
-	fort_molds[id] = std::make_unique<BuildingMold>(id, MediaManager::load_model(module.fortification.segment_right));
-	landscaper.fortification.wall_right.mold_id = id++;
-	fort_molds[id] = std::make_unique<BuildingMold>(id, MediaManager::load_model(module.fortification.tower));
-	landscaper.fortification.tower.mold_id = id++;
-	fort_molds[id] = std::make_unique<BuildingMold>(id, MediaManager::load_model(module.fortification.ramp));
-	landscaper.fortification.ramp.mold_id = id++;
-	fort_molds[id] = std::make_unique<BuildingMold>(id, MediaManager::load_model(module.fortification.gate));
-	landscaper.fortification.gate.mold_id = id++;
+	load_fort_mold(module.fortification);
 
 	// load skeletons and animations
 	// TODO import from module
@@ -303,13 +289,12 @@ void Battle::update(float delta)
 	glm::vec3 direction = { dir.x, 0.f, dir.y };
 
 	if (camera_mode == BattleCamMode::FIRST_PERSON || camera_mode == BattleCamMode::THIRD_PERSON) {
-		player->set_movement(direction, util::InputManager::key_down(SDLK_SPACE));
+		player->set_movement(direction);
 	}
 	player->update_collision(physics.world(), delta);
 
 	auto world = physics.world();
 	for (auto &creature : creature_entities) {
-		////creature->set_movement(direction, util::InputManager::key_down(SDLK_SPACE));
 		creature->update_collision(physics.world(), delta);
 	}
 
@@ -524,4 +509,37 @@ void Battle::position_camera(float delta)
 	}
 
 	camera.update_viewing();
+}
+	
+void Battle::load_fort_mold(const FortificationModule &fort)
+{
+	uint32_t id = 0;
+
+	id = std::hash<std::string>()(fort.segment_even.id);
+	fort_molds[id] = std::make_unique<BuildingMold>(id, MediaManager::load_model(fort.segment_even.model));
+	landscaper.fortification.wall_even.mold_id = id;
+
+	id = std::hash<std::string>()(fort.segment_both.id);
+	fort_molds[id] = std::make_unique<BuildingMold>(id, MediaManager::load_model(fort.segment_both.model));
+	landscaper.fortification.wall_both.mold_id = id;
+
+	id = std::hash<std::string>()(fort.segment_left.id);
+	fort_molds[id] = std::make_unique<BuildingMold>(id, MediaManager::load_model(fort.segment_left.model));
+	landscaper.fortification.wall_left.mold_id = id;
+
+	id = std::hash<std::string>()(fort.segment_right.id);
+	fort_molds[id] = std::make_unique<BuildingMold>(id, MediaManager::load_model(fort.segment_right.model));
+	landscaper.fortification.wall_right.mold_id = id;
+
+	id = std::hash<std::string>()(fort.tower.id);
+	fort_molds[id] = std::make_unique<BuildingMold>(id, MediaManager::load_model(fort.tower.model));
+	landscaper.fortification.tower.mold_id = id;
+
+	id = std::hash<std::string>()(fort.ramp.id);
+	fort_molds[id] = std::make_unique<BuildingMold>(id, MediaManager::load_model(fort.ramp.model));
+	landscaper.fortification.ramp.mold_id = id;
+
+	id = std::hash<std::string>()(fort.gate.id);
+	fort_molds[id] = std::make_unique<BuildingMold>(id, MediaManager::load_model(fort.gate.model));
+	landscaper.fortification.gate.mold_id = id;
 }

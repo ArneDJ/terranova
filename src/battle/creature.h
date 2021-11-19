@@ -91,7 +91,7 @@ public:
 	void set_animation(util::AnimationSet *set);
 	void set_hitbox(const std::vector<HitCapsule> &capsules);
 public:
-	void set_movement(const glm::vec3 &direction, bool jump_request);
+	void set_movement(const glm::vec3 &direction);
 	void teleport(const glm::vec3 &position);
 	void update_collision(const btDynamicsWorld *world, float delta);
 	void update_transform();

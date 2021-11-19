@@ -45,7 +45,10 @@ public:
 	std::vector<HitCapsule> creature_hitboxes;
 public:
 	void init(const gfx::ShaderGroup *shaders);
+public:
 	void load_molds(const Module &module);
+	void load_fort_mold(const FortificationModule &fort);
+public:
 	void prepare(const BattleParameters &params);
 	void update(float delta);
 	void display();

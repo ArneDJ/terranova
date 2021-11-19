@@ -178,7 +178,7 @@ void Engine::load_module()
 		std::ifstream stream("modules/native/houses.json");
 		if (stream.is_open()) {
 			cereal::JSONInputArchive archive(stream);
-			archive(module.houses);
+			archive(module.architectures);
 		}
 	}
 
