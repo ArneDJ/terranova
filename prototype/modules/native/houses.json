@@ -13,7 +13,9 @@
 		{ "id": "HOUSEA", "model": "modules/native/media/models/buildings/houses/small.glb" },
         	{ "id": "HOUSEB", "model": "modules/native/media/models/buildings/houses/medium.glb" },
         	{ "id": "HOUSEC", "model": "modules/native/media/models/buildings/houses/medium_wide.glb" },
-        	{ "id": "HOUSED", "model": "modules/native/media/models/buildings/houses/large.glb" }
+        	{ "id": "HOUSED", "model": "modules/native/media/models/buildings/houses/large.glb" },
+        	{ "id": "TEMPLEA", "model": "modules/native/media/models/buildings/houses/temple.glb" },
+        	{ "id": "TEMPLEB", "model": "modules/native/media/models/buildings/houses/temple_small.glb" }
 	    ]
         }
     ]

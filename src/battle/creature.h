@@ -3,13 +3,17 @@ enum CreatureAnimation : uint8_t {
 	CA_IDLE = 1,
 	CA_RUN,
 	CA_FALLING,
+	CA_ATTACK_PUNCH,
 	CA_ATTACK_SLASH,
+	CA_DYING,
+	CA_DANCING
 };
 
 struct CreatureSkeletonAttachments {
 	int eyes = -1;
 	int left_hand = -1;
 	int right_hand = -1;
+	int spine = -1;
 };
 
 class HitBoxRoot {
@@ -75,16 +79,20 @@ public: // animation stuff
 	CreatureSkeletonAttachments skeleton_attachments;
 	gfx::BufferDataPair<glm::mat4> joint_matrices;
 	util::CharacterAnimation character_animation;
-	CreatureAnimation current_animation = CA_IDLE;
+	CreatureAnimation upper_body_animation = CA_IDLE;
+	CreatureAnimation lower_body_animation = CA_IDLE;
 public:
 	std::vector<HitCapsule> hitboxes;
 	// the root hitbox, this encompasses all the other hitboxes
 	// when checking for a ray hitbox collision it first has to hit the root hitbox
 	// before iterating over the individual hitboxes
 	std::unique_ptr<HitBoxRoot> root_hitbox;
+	// fist hitboxes
+	std::unique_ptr<HitBoxRoot> left_fist;
 public: // maybe use flags instead of bools for this?
 	bool attacking = false;
 	bool running = false;
+	bool dead = false;
 public:
 	Creature();
 public:
@@ -99,6 +107,7 @@ public:
 	void update_hitboxes();
 public:
 	void attack_request();
+	void kill();
 public:
 	void set_scale(float scale);
 };

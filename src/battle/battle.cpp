@@ -57,7 +57,7 @@ enum BattleCollisionGroup {
 
 const geom::AABB SCENE_BOUNDS = {
 	{ 0.F, 0.F, 0.F },
-	{ 1024.F, 255.F, 1024.F }
+	{ 2048.F, 255.F, 2048.F }
 };
   
 // TODO remove
@@ -115,9 +115,9 @@ glm::vec2 creature_direction(const glm::vec3 &view, bool forward, bool backward,
 
 void Battle::init(const gfx::ShaderGroup *shaders)
 {
-	debugger = std::make_unique<Debugger>(shaders->debug, shaders->debug, shaders->culling);
+	debugger = std::make_unique<Debugger>(shaders->debug);
 
-	scene = std::make_unique<gfx::SceneGroup>(shaders->debug, shaders->culling);
+	scene = std::make_unique<gfx::SceneGroup>(shaders->object, shaders->culling);
 	scene->set_scene_type(gfx::SceneType::FIXED);
 
 	terrain = std::make_unique<Terrain>(shaders->terrain, SCENE_BOUNDS);
@@ -147,8 +147,8 @@ void Battle::load_molds(const Module &module)
 	}
 
 	// add house info to landscape
-	for (const auto &bucket : house_molds) {
-		const auto &mold = bucket.second;
+	for (const auto &mapping : house_molds) {
+		const auto &mold = mapping.second;
 		landscaper.add_house(mold->id, mold->model->bounds());
 	}
 	
@@ -163,6 +163,9 @@ void Battle::load_molds(const Module &module)
 	anim_set->animations[CA_RUN] = MediaManager::load_animation("modules/native/media/animations/human/run.ozz");
 	anim_set->animations[CA_FALLING] = MediaManager::load_animation("modules/native/media/animations/human/fall.ozz");
 	anim_set->animations[CA_ATTACK_SLASH] = MediaManager::load_animation("modules/native/media/animations/human/slash.ozz");
+	anim_set->animations[CA_ATTACK_PUNCH] = MediaManager::load_animation("modules/native/media/animations/human/punch.ozz");
+	anim_set->animations[CA_DYING] = MediaManager::load_animation("modules/native/media/animations/human/dying.ozz");
+	anim_set->animations[CA_DANCING] = MediaManager::load_animation("modules/native/media/animations/human/dance.ozz");
 
 	anim_set->find_max_tracks();
 
@@ -315,9 +318,33 @@ void Battle::update(float delta)
 		creature->update_hitboxes();
 	}
 
+	if (player->attacking) {
+		auto &ghost_object = player->left_fist->ghost_object;
+		int count = ghost_object->getNumOverlappingObjects();
+		geom::Sphere sphere = { player->left_fist->transform->position, player->left_fist->shape->getRadius() };
+		for (int i = 0; i < count; i++) {
+			btCollisionObject *obj = ghost_object->getOverlappingObject(i);
+			Creature *target = static_cast<Creature*>(obj->getUserPointer());
+			if (target) {
+				if (target != player.get() && !target->dead) {
+					for (auto &hitbox : target->hitboxes) {
+						if (sphere_capsule_intersection(sphere, hitbox.capsule)) {
+							//target->dead = true;
+							target->kill();
+							//player->attacking = false;
+							//player->character_animation.controller.set_looping(true);
+							//player->character_animation.controller.set_speed(1.f);
+							//player->current_animation = CA_IDLE;
+							break;
+						}
+					}
+				}
+			}
+		}
+	}
 	position_camera(delta);
 
-	debugger->update(camera);
+	//debugger->update(camera);
 }
 
 void Battle::display()
@@ -326,11 +353,15 @@ void Battle::display()
 	scene->cull_frustum();
 	scene->display();
 
+	/*
 	for (auto &hitbox : player->hitboxes) {
 		geom::Capsule scaled_capsule = hitbox.capsule;
 		scaled_capsule.radius *= player->unit_scale;
 		debugger->display_capsule(scaled_capsule);
 	}
+	*/
+	debugger->update_camera(camera);
+	debugger->display_sphere(player->left_fist->transform->position, player->left_fist->shape->getRadius());
 	for (const auto &creature : creature_entities) {
 		for (auto &hitbox : creature->hitboxes) {
 			geom::Capsule scaled_capsule = hitbox.capsule;
@@ -361,7 +392,7 @@ void Battle::display()
 	terrain->display(camera);
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	
-	debugger->display();
+	//debugger->display();
 }
 
 float Battle::vertical_offset(float x, float z)
@@ -448,25 +479,25 @@ void Battle::place_fort_part(const carto::LandscapeObject &part)
 void Battle::add_creatures()
 {
 	player = std::make_unique<Creature>();
-	glm::vec3 location = { 500.f, 255.f, 512.f };
+	glm::vec3 location = { 790.f, 255.f, 800.f };
 	//location.y = vertical_offset(location.x, location.z) + 1.f;
 	player->teleport(location);
 	player->model = MediaManager::load_model("modules/native/media/models/human.glb");
 	player->set_animation(anim_set.get());
 
 	player->set_hitbox(creature_hitboxes);
-
+	
 	int group = COLLISION_GROUP_BUMPER;
 	int mask = COLLISION_GROUP_RAY | COLLISION_GROUP_BUMPER | COLLISION_GROUP_LANDSCAPE;
 
 	physics.add_object(player->bumper->ghost_object.get(), group, mask);
-	//debugger->add_capsule(player->bumper->shape->getRadius(), 2.f * player->bumper->shape->getHalfHeight(), player->bumper->transform.get());
 	// add hitboxes to collision world
 	physics.add_object(player->root_hitbox->ghost_object.get(), COLLISION_GROUP_HITBOX, COLLISION_GROUP_RAY | COLLISION_GROUP_WEAPON);
+	physics.add_object(player->left_fist->ghost_object.get(), COLLISION_GROUP_WEAPON, COLLISION_GROUP_RAY | COLLISION_GROUP_HITBOX);
 
 	for (int i = 0; i < 16; i++) {
 		for (int j = 0; j < 4; j++) {
-			glm::vec3 position = { 512.f + (i+i), 64.f, 512.f + (j+j) };
+			glm::vec3 position = { 800.f + (i+i), 64.f, 800.f + (j+j) };
 			position.y = vertical_offset(position.x, position.z) + 1.f;
 			auto creature = std::make_unique<Creature>();
 			creature->teleport(position);
@@ -475,7 +506,6 @@ void Battle::add_creatures()
 			creature->set_hitbox(creature_hitboxes);
 			physics.add_object(creature->bumper->ghost_object.get(), group, mask);
 			physics.add_object(creature->root_hitbox->ghost_object.get(), COLLISION_GROUP_HITBOX, COLLISION_GROUP_RAY | COLLISION_GROUP_WEAPON);
-			//debugger->add_capsule(creature->bumper->shape->getRadius(), 2.f * creature->bumper->shape->getHalfHeight(), creature->bumper->transform.get());
 			creature_entities.push_back(std::move(creature));
 		}
 	}

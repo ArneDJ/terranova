@@ -141,6 +141,11 @@ void Engine::load_shaders()
 	shaders->debug->compile("shaders/debug.frag", GL_FRAGMENT_SHADER);
 	shaders->debug->link();
 
+	shaders->object = std::make_shared<gfx::Shader>();
+	shaders->object->compile("shaders/object.vert", GL_VERTEX_SHADER);
+	shaders->object->compile("shaders/object.frag", GL_FRAGMENT_SHADER);
+	shaders->object->link();
+
 	shaders->tilemap = std::make_shared<gfx::Shader>();
 	shaders->tilemap->compile("shaders/tilemap.vert", GL_VERTEX_SHADER);
 	shaders->tilemap->compile("shaders/tilemap.tesc", GL_TESS_CONTROL_SHADER);

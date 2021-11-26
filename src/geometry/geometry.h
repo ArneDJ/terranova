@@ -263,4 +263,28 @@ inline glm::vec2 quadrilateral_centroid(const Quadrilateral &quad)
 	return intersection.point;
 }
 
+// Returns the squared distance between point c and segment ab
+inline float squared_distance_point_segment(const glm::vec3 &a, const glm::vec3 &b, const glm::vec3 &c)
+{
+	glm::vec3 ab = b - a, ac = c - a, bc = c - b;
+
+	float e = glm::dot(ac, ab);
+	// Handle cases where c projects outside ab
+	if (e <= 0.0f) { return glm::dot(ac, ac); }
+	float f = glm::dot(ab, ab);
+	if (e >= f) { return glm::dot(bc, bc); }
+	// Handle cases where c projects onto ab
+	return glm::dot(ac, ac) - e * e / f;
+}
+
+inline bool sphere_capsule_intersection(const Sphere &sphere, const Capsule &capsule)
+{
+	// Compute (squared) distance between sphere center and capsule line segment
+	float dist2 = squared_distance_point_segment(capsule.a, capsule.b, sphere.center);
+	float radius = sphere.radius + capsule.radius;
+
+	// If (squared) distance smaller than (squared) sum of radii, they collide
+	return (dist2 <= radius * radius);
+}
+
 };

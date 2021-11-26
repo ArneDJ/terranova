@@ -53,6 +53,9 @@ Creature::Creature()
 
 	root_hitbox = std::make_unique<HitBoxRoot>(1.1F * (STANDARD_CAPSULE_HEIGHT));
 	root_hitbox->ghost_object->setUserPointer(this);
+
+	left_fist = std::make_unique<HitBoxRoot>(0.1f);
+	left_fist->ghost_object->setUserPointer(this);
 }
 	
 void Creature::set_animation(util::AnimationSet *set)
@@ -80,8 +83,14 @@ void Creature::set_animation(util::AnimationSet *set)
 		}
 	}	
 	for (int i = 0; i < set->skeleton->num_joints(); i++) {
-		if (std::strstr(set->skeleton->joint_names()[i], "hand.L")) {
+		if (std::strstr(set->skeleton->joint_names()[i], "LeftHandIndex1")) {
 			skeleton_attachments.left_hand = i;
+			break;
+		}
+	}	
+	for (int i = 0; i < set->skeleton->num_joints(); i++) {
+		if (std::strstr(set->skeleton->joint_names()[i], "Spine")) {
+			skeleton_attachments.spine = i;
 			break;
 		}
 	}	
@@ -125,13 +134,13 @@ void Creature::update_transform()
 	}
 
 	// select animation
-	if (!attacking) {
+	if (!attacking && !dead) {
 		if (!bumper->on_ground) {
-			current_animation = CA_FALLING;
+			lower_body_animation = CA_FALLING;
 		} else if (bumper->walk_direction.x != 0.f || bumper->walk_direction.z != 0.f) {
-			current_animation = CA_RUN;
+			lower_body_animation = CA_RUN;
 		} else {
-			current_animation = CA_IDLE;
+			lower_body_animation = CA_IDLE;
 		}
 	}
 }
@@ -143,12 +152,12 @@ void Creature::update_animation(float delta)
 		if (character_animation.controller.time_ratio >= 1.f) {
 			character_animation.controller.set_looping(true);
 			character_animation.controller.set_speed(1.f);
-			current_animation = CA_IDLE;
+			lower_body_animation = CA_IDLE;
 			attacking = false;
 		}
 	}
-	
-	const ozz::animation::Animation *animation = anim_set->animations[current_animation];
+
+	const ozz::animation::Animation *animation = anim_set->animations[lower_body_animation];
 
 	if (update_character_animation(&character_animation, animation, anim_set->skeleton, delta)) {
 		for (const auto &skin : model->skins()) {
@@ -182,6 +191,14 @@ void Creature::update_animation(float delta)
 		//glm::vec4 transform = joint * offset;
 		//right_hand_transform = model_transform->to_matrix() * joint;
 		right_hand_transform = model_transform->to_matrix() * joint;
+	}
+	if (skeleton_attachments.left_hand >= 0) {
+		const glm::mat4 joint = util::ozz_to_mat4(character_animation.models[skeleton_attachments.left_hand]);
+
+		glm::mat4 translation = model_transform->to_matrix() * joint;
+
+		glm::vec3 position = { translation[3][0], translation[3][1], translation[3][2] };
+		left_fist->set_position(position);
 	}
 }
 	
@@ -218,16 +235,27 @@ void Creature::set_scale(float scale)
 	bumper->set_scale(scale);
 
 	root_hitbox->set_scale(scale);
+	left_fist->set_scale(scale);
 }
 
 void Creature::attack_request()
 {
 	if (!attacking) {
 		attacking = true;
-		current_animation = CA_ATTACK_SLASH;
+		lower_body_animation = CA_ATTACK_PUNCH;
 
 		character_animation.controller.set_looping(false);
 		character_animation.controller.set_time_ratio(0.f);
-		character_animation.controller.set_speed(1.5f);
+		character_animation.controller.set_speed(1.f);
 	}
+}
+	
+void Creature::kill()
+{
+	dead = true;
+	attacking = false;
+	character_animation.controller.set_looping(false);
+	character_animation.controller.set_time_ratio(0.f);
+	character_animation.controller.set_speed(1.f);
+	lower_body_animation = CA_DYING;
 }

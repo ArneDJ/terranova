@@ -105,7 +105,7 @@ void Landscaper::spawn_houses(bool walled, uint8_t town_size)
 
 	// factor over of house overlap
 	// set this to 1 if you don't want houses to overlap
-	const float overlap = 1.2f;
+	const float overlap = 1.4f;
 
 	// place the town houses
 	for (const auto &district : m_cadastre.districts) {

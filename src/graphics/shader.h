@@ -34,6 +34,7 @@ private:
 
 struct ShaderGroup {
 	std::shared_ptr<gfx::Shader> debug;
+	std::shared_ptr<gfx::Shader> object;
 	std::shared_ptr<gfx::Shader> tilemap;
 	std::shared_ptr<gfx::Shader> culling;
 	std::shared_ptr<gfx::Shader> terrain;

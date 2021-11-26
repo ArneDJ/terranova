@@ -69,11 +69,11 @@ enum class CampaignEntity : uint8_t {
 
 void Campaign::init(const gfx::ShaderGroup *shaders)
 {
-	debugger = std::make_unique<Debugger>(shaders->debug, shaders->debug, shaders->culling);
+	debugger = std::make_unique<Debugger>(shaders->debug);
 
 	labeler = std::make_unique<gfx::Labeler>("fonts/arial.ttf", 30, shaders->label);
 
-	scene = std::make_unique<gfx::SceneGroup>(shaders->debug, shaders->culling);
+	scene = std::make_unique<gfx::SceneGroup>(shaders->object, shaders->culling);
 	scene->set_scene_type(gfx::SceneType::DYNAMIC);
 	
 	board = std::make_unique<Board>(shaders->tilemap);
@@ -154,8 +154,8 @@ void Campaign::generate(int seedling)
 	meeple_controller.player->faction_id = player_data.faction_id;
 
 	// position meeples at faction capitals
-	for (auto &pair : meeple_controller.meeples) {
-		auto &meeple = pair.second;
+	for (auto &mapping : meeple_controller.meeples) {
+		auto &meeple = mapping.second;
 		auto faction_search = faction_controller.factions.find(meeple->faction_id);
 		if (faction_search != faction_controller.factions.end()) {
 			auto town_search = settlement_controller.towns.find(faction_search->second->capital_id);
@@ -269,8 +269,6 @@ void Campaign::update(float delta)
 	float offset = vertical_offset(meeple_controller.player->position());
 	meeple_controller.player->set_vertical_offset(offset);
 
-	debugger->update(camera);
-
 	// campaign map paint jobs
 	board->update();
 }
@@ -288,7 +286,7 @@ void Campaign::display()
 	}
 	
 	if (display_debug) {
-		debugger->display_wireframe();
+		//debugger->display_wireframe();
 		debugger->display_navmeshes();
 	}
 
@@ -323,8 +321,8 @@ void Campaign::place_meeple(Meeple *meeple)
 	duck_object->add_transform(meeple->transform());
 
 	// debug trigger volumes
-	debugger->add_sphere(trigger->form(), trigger->transform());
-	debugger->add_sphere(visibility->form(), visibility->transform());
+	//debugger->add_sphere(trigger->form(), trigger->transform());
+	//debugger->add_sphere(visibility->form(), visibility->transform());
 
 	// add label
 	//glm::vec3 color = faction_controller.factions[meeple->faction()]->color();
@@ -371,7 +369,7 @@ void Campaign::spawn_factions()
 		}
 	}
 
-	for (const auto &pair : faction_controller.factions) {
+	for (const auto &mapping : faction_controller.factions) {
 		if (targets.empty()) {
 			LOG_F(ERROR, "No more locations to spawn faction capital");
 			break;
@@ -379,7 +377,7 @@ void Campaign::spawn_factions()
 		// assign a random tile as capital start
 		uint32_t target = targets.front();
 		targets.pop();
-		auto &faction = pair.second;
+		auto &faction = mapping.second;
 		// place the town and assign it as faction capital
 		uint32_t id = spawn_town(&tiles[target], faction->id());
 		if (id) {
@@ -500,7 +498,7 @@ void Campaign::place_town(Town *town)
 	physics.add_object(trigger->ghost_object(), COLLISION_GROUP_TOWN, mask);
 
 	// debug collision
-	debugger->add_sphere(trigger->form(), trigger->transform());
+	//debugger->add_sphere(trigger->form(), trigger->transform());
 
 	// add label
 	glm::vec3 color = faction_controller.factions[town->faction()]->color();
