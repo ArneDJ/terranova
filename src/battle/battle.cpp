@@ -370,11 +370,11 @@ void Battle::display()
 		}
 	}
 
-	object_shader->use();
-	object_shader->uniform_bool("INDIRECT_DRAW", false);
-	object_shader->uniform_mat4("CAMERA_VP", camera.VP);
-	object_shader->uniform_mat4("MODEL", player->right_hand_transform);
-	sword_model->display();
+	//object_shader->use();
+	//object_shader->uniform_bool("INDIRECT_DRAW", false);
+	//object_shader->uniform_mat4("CAMERA_VP", camera.VP);
+	//object_shader->uniform_mat4("MODEL", player->right_hand_transform);
+	//sword_model->display();
 
 	creature_shader->use();
 	creature_shader->uniform_mat4("CAMERA_VP", camera.VP);

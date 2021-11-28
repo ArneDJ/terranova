@@ -70,7 +70,6 @@ public:
 	std::unique_ptr<geom::Transform> transform;
 	std::unique_ptr<geom::Transform> model_transform; // for the animated 3d model
 	glm::vec3 eye_position = {};
-	//glm::vec3 right_hand_position = {};
 	glm::mat4 right_hand_transform = {};
 	float unit_scale = 1.f;
 public: // animation stuff
@@ -78,9 +77,13 @@ public: // animation stuff
 	util::AnimationSet *anim_set = nullptr;
 	CreatureSkeletonAttachments skeleton_attachments;
 	gfx::BufferDataPair<glm::mat4> joint_matrices;
-	util::CharacterAnimation character_animation;
+	util::CharacterAnimation animation_sampler_a;
+	util::CharacterAnimation animation_sampler_b;
 	CreatureAnimation upper_body_animation = CA_IDLE;
 	CreatureAnimation lower_body_animation = CA_IDLE;
+	CreatureAnimation prev_lower_body_animation = CA_IDLE;
+	float animation_mix = 0.f;
+	float animation_blend_speed = 4.f;
 public:
 	std::vector<HitCapsule> hitboxes;
 	// the root hitbox, this encompasses all the other hitboxes
@@ -110,4 +113,6 @@ public:
 	void kill();
 public:
 	void set_scale(float scale);
+private:
+	void change_lower_body_animation(CreatureAnimation anim);
 };

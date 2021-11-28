@@ -47,6 +47,8 @@ private:
 // contains all the data required to sample and blend a character animation
 // this is unique for every animated character
 struct CharacterAnimation {
+	std::vector<ozz::math::SoaTransform> blended_locals; // TODO make unique blend output
+	float weight = 1.f; // blend weight
 	PlaybackController controller;
 	ozz::animation::SamplingCache cache;
 	ozz::vector<ozz::math::SoaTransform> locals; // Buffer of local transforms which stores the blending result.
@@ -54,6 +56,8 @@ struct CharacterAnimation {
 };
 
 bool update_character_animation(CharacterAnimation *character, const ozz::animation::Animation *animation, const ozz::animation::Skeleton *skeleton, float dt);
+
+bool update_blended_animation(CharacterAnimation *sampler_a, CharacterAnimation *sampler_b, const ozz::animation::Animation *animation_a, const ozz::animation::Animation *animation_b, const ozz::animation::Skeleton *skeleton, float dt);
 
 // this is shared among animated characters
 class AnimationSet {

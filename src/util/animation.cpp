@@ -75,6 +75,78 @@ bool update_character_animation(CharacterAnimation *character, const ozz::animat
 
 	return true;
 }
+
+bool update_blended_animation(CharacterAnimation *sampler_a, CharacterAnimation *sampler_b, const ozz::animation::Animation *animation_a, const ozz::animation::Animation *animation_b, const ozz::animation::Skeleton *skeleton, float dt)
+{
+	// Samples animation.
+	sampler_a->controller.update(animation_a, dt);
+	// Setup sampling job.
+	if (sampler_a->weight > 0.f) {
+		ozz::animation::SamplingJob sampling_job;
+		sampling_job.animation = animation_a;
+		sampling_job.cache = &sampler_a->cache;
+		sampling_job.ratio = sampler_a->controller.time_ratio;
+		sampling_job.output = ozz::make_span(sampler_a->locals);
+		// Samples animation.
+		if (!sampling_job.Run()) { return false; }
+	}
+	// Samples animation.
+	sampler_b->controller.update(animation_b, dt);
+	// Setup sampling job.
+	if (sampler_b->weight > 0.f) {
+		ozz::animation::SamplingJob sampling_job;
+		sampling_job.animation = animation_b;
+		sampling_job.cache = &sampler_b->cache;
+		sampling_job.ratio = sampler_b->controller.time_ratio;
+		sampling_job.output = ozz::make_span(sampler_b->locals);
+		// Samples animation.
+		if (!sampling_job.Run()) { return false; }
+	}
+
+	// Blends animations.
+	// Blends the local spaces transforms computed by sampling all animations
+	// (1st stage just above), and outputs the result to the local space
+	// transform buffer blended_locals_
+
+	// Prepares blending layers.
+	std::vector<ozz::animation::BlendingJob::Layer> layers;
+	//for (auto it = samplers.begin(); it != samplers.end(); it++) {
+	{
+		ozz::animation::BlendingJob::Layer layer;
+		layer.transform = ozz::make_span(sampler_a->locals);
+		layer.weight = sampler_a->weight;
+		layers.push_back(layer);
+	}
+	{
+		ozz::animation::BlendingJob::Layer layer;
+		layer.transform = ozz::make_span(sampler_b->locals);
+		layer.weight = sampler_b->weight;
+		layers.push_back(layer);
+	}
+	//}
+	// Blending job bind pose threshold.
+	float threshold = 0.1f;
+
+	// Setups blending job.
+	ozz::animation::BlendingJob blend_job;
+	blend_job.threshold = threshold;
+	blend_job.layers = ozz::make_span(layers);
+	blend_job.bind_pose = skeleton->joint_bind_poses();
+	blend_job.output = ozz::make_span(sampler_a->blended_locals);
+
+	// Blends.
+	if (!blend_job.Run()) { return false; }
+
+	// Converts from local space to model space matrices.
+	ozz::animation::LocalToModelJob ltm_job;
+	ltm_job.skeleton = skeleton;
+	ltm_job.input = ozz::make_span(sampler_a->blended_locals);
+	ltm_job.output = ozz::make_span(sampler_a->models);
+
+	if (!ltm_job.Run()) { return false; }
+
+	return true;
+}
 	
 void AnimationSet::find_max_tracks()
 {

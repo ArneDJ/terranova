@@ -62,9 +62,15 @@ void Creature::set_animation(util::AnimationSet *set)
 {
 	anim_set = set;
 
-	character_animation.locals.resize(set->skeleton->num_soa_joints());
-	character_animation.models.resize(set->skeleton->num_joints());
-	character_animation.cache.Resize(set->max_tracks);
+	animation_sampler_a.locals.resize(set->skeleton->num_soa_joints());
+	animation_sampler_a.blended_locals.resize(set->skeleton->num_joints());
+	animation_sampler_a.models.resize(set->skeleton->num_joints());
+	animation_sampler_a.cache.Resize(set->max_tracks);
+
+	animation_sampler_b.locals.resize(set->skeleton->num_soa_joints());
+	animation_sampler_b.blended_locals.resize(set->skeleton->num_joints());
+	animation_sampler_b.models.resize(set->skeleton->num_joints());
+	animation_sampler_b.cache.Resize(set->max_tracks);
 
 	joint_matrices.data.resize(set->skeleton->num_joints());
 	joint_matrices.update_present();
@@ -136,34 +142,43 @@ void Creature::update_transform()
 	// select animation
 	if (!attacking && !dead) {
 		if (!bumper->on_ground) {
-			lower_body_animation = CA_FALLING;
+			change_lower_body_animation(CA_FALLING);
 		} else if (bumper->walk_direction.x != 0.f || bumper->walk_direction.z != 0.f) {
-			lower_body_animation = CA_RUN;
+			change_lower_body_animation(CA_RUN);
 		} else {
-			lower_body_animation = CA_IDLE;
+			change_lower_body_animation(CA_IDLE);
 		}
 	}
 }
 	
 void Creature::update_animation(float delta)
 {
+	if (animation_mix < 1.f) {
+		animation_mix += animation_blend_speed * delta;
+	} else {
+		animation_mix = 1.f;
+	}
+	animation_sampler_a.weight = 1.f - animation_mix;
+	animation_sampler_b.weight = animation_mix;
+
 	// non looping animation is finished
 	if (attacking) {
-		if (character_animation.controller.time_ratio >= 1.f) {
-			character_animation.controller.set_looping(true);
-			character_animation.controller.set_speed(1.f);
-			lower_body_animation = CA_IDLE;
+		if (animation_sampler_b.controller.time_ratio >= 1.f) {
+			change_lower_body_animation(CA_IDLE);
 			attacking = false;
 		}
 	}
 
-	const ozz::animation::Animation *animation = anim_set->animations[lower_body_animation];
+	const ozz::animation::Animation *animation_a = anim_set->animations[prev_lower_body_animation];
+	const ozz::animation::Animation *animation_b = anim_set->animations[lower_body_animation];
 
-	if (update_character_animation(&character_animation, animation, anim_set->skeleton, delta)) {
+	// TODO skip blending if not necessary
+	//if (update_character_animation(&animation_sampler_a, animation, anim_set->skeleton, delta)) {
+	if (update_blended_animation(&animation_sampler_a, &animation_sampler_b, animation_a, animation_b, anim_set->skeleton, delta)) {
 		for (const auto &skin : model->skins()) {
-			if (skin->inverse_binds.size() == character_animation.models.size()) {
-				for (int i = 0; i < character_animation.models.size(); i++) {
-					joint_matrices.data[i] = util::ozz_to_mat4(character_animation.models[i]) * skin->inverse_binds[i];
+			if (skin->inverse_binds.size() == animation_sampler_a.models.size()) {
+				for (int i = 0; i < animation_sampler_a.models.size(); i++) {
+					joint_matrices.data[i] = util::ozz_to_mat4(animation_sampler_a.models[i]) * skin->inverse_binds[i];
 				}
 				break; // only animate first skin
 			}
@@ -175,7 +190,7 @@ void Creature::update_animation(float delta)
 	// Prepares attached object transformation.
 	// Gets model space transformation of the joint.
 	if (skeleton_attachments.eyes >= 0) {
-		const glm::mat4 joint = util::ozz_to_mat4(character_animation.models[skeleton_attachments.eyes]);
+		const glm::mat4 joint = util::ozz_to_mat4(animation_sampler_a.models[skeleton_attachments.eyes]);
 
 		glm::mat4 translation = model_transform->to_matrix() * joint;
 
@@ -185,7 +200,7 @@ void Creature::update_animation(float delta)
 	}
 	// find hand positions
 	if (skeleton_attachments.right_hand >= 0) {
-		glm::mat4 joint = util::ozz_to_mat4(character_animation.models[skeleton_attachments.right_hand]);
+		glm::mat4 joint = util::ozz_to_mat4(animation_sampler_a.models[skeleton_attachments.right_hand]);
 		glm::vec4 offset = { -0.02f, 0.03f, 0.05f, 1.f };
 
 		//glm::vec4 transform = joint * offset;
@@ -193,7 +208,7 @@ void Creature::update_animation(float delta)
 		right_hand_transform = model_transform->to_matrix() * joint;
 	}
 	if (skeleton_attachments.left_hand >= 0) {
-		const glm::mat4 joint = util::ozz_to_mat4(character_animation.models[skeleton_attachments.left_hand]);
+		const glm::mat4 joint = util::ozz_to_mat4(animation_sampler_a.models[skeleton_attachments.left_hand]);
 
 		glm::mat4 translation = model_transform->to_matrix() * joint;
 
@@ -205,11 +220,11 @@ void Creature::update_animation(float delta)
 void Creature::update_hitboxes()
 {
 	for (auto &hitbox : hitboxes) {
-		const glm::mat4 joint_a = util::ozz_to_mat4(character_animation.models[hitbox.joint_target_a]);
+		const glm::mat4 joint_a = util::ozz_to_mat4(animation_sampler_a.models[hitbox.joint_target_a]);
 		glm::mat4 translation_a = model_transform->to_matrix() * joint_a;
 		hitbox.capsule.a = { translation_a[3][0], translation_a[3][1], translation_a[3][2] };
 
-		const glm::mat4 joint_b = util::ozz_to_mat4(character_animation.models[hitbox.joint_target_b]);
+		const glm::mat4 joint_b = util::ozz_to_mat4(animation_sampler_a.models[hitbox.joint_target_b]);
 		glm::mat4 translation_b = model_transform->to_matrix() * joint_b;
 		hitbox.capsule.b = { translation_b[3][0], translation_b[3][1], translation_b[3][2] };
 	}
@@ -242,11 +257,7 @@ void Creature::attack_request()
 {
 	if (!attacking) {
 		attacking = true;
-		lower_body_animation = CA_ATTACK_PUNCH;
-
-		character_animation.controller.set_looping(false);
-		character_animation.controller.set_time_ratio(0.f);
-		character_animation.controller.set_speed(1.f);
+		change_lower_body_animation(CA_ATTACK_PUNCH);
 	}
 }
 	
@@ -254,8 +265,41 @@ void Creature::kill()
 {
 	dead = true;
 	attacking = false;
-	character_animation.controller.set_looping(false);
-	character_animation.controller.set_time_ratio(0.f);
-	character_animation.controller.set_speed(1.f);
-	lower_body_animation = CA_DYING;
+	animation_sampler_a.controller.set_looping(false);
+	animation_sampler_a.controller.set_time_ratio(0.f);
+	animation_sampler_a.controller.set_speed(1.f);
+	animation_sampler_b.controller.set_looping(false);
+	animation_sampler_b.controller.set_time_ratio(0.f);
+	animation_sampler_b.controller.set_speed(1.f);
+	change_lower_body_animation(CA_DYING);
+}
+	
+void Creature::change_lower_body_animation(CreatureAnimation anim)
+{
+	if (lower_body_animation != anim) {
+		prev_lower_body_animation = lower_body_animation;
+		lower_body_animation = anim;
+		animation_mix = 0.f;
+
+		// we hit the ground so we want the animation from falling to standing to blend as fast as possible
+		animation_blend_speed = 4.f;
+		if (prev_lower_body_animation == CA_FALLING) {
+			animation_blend_speed = 8.f;
+		}
+	}
+
+	// set looping
+	if (lower_body_animation == CA_ATTACK_PUNCH && prev_lower_body_animation != CA_ATTACK_PUNCH) {
+		animation_sampler_b.controller.set_looping(false);
+		animation_sampler_b.controller.set_time_ratio(0.f);
+		animation_sampler_b.controller.set_speed(1.f);
+	}
+	if (lower_body_animation != CA_ATTACK_PUNCH && prev_lower_body_animation == CA_ATTACK_PUNCH) {
+		//animation_sampler_a.controller.set_looping(false);
+		animation_sampler_a.controller.set_time_ratio(1.f);
+		//animation_sampler_a.controller.set_speed(1.f);
+		animation_sampler_b.controller.set_looping(true);
+		animation_sampler_b.controller.set_time_ratio(0.f);
+		animation_sampler_b.controller.set_speed(1.f);
+	}
 }
