@@ -83,13 +83,13 @@ void Creature::set_animation(util::AnimationSet *set)
 		}
 	}	
 	for (int i = 0; i < set->skeleton->num_joints(); i++) {
-		if (std::strstr(set->skeleton->joint_names()[i], "RightHandIndex1")) {
+		if (std::strstr(set->skeleton->joint_names()[i], "RightHandIndex2")) {
 			skeleton_attachments.right_hand = i;
 			break;
 		}
 	}	
 	for (int i = 0; i < set->skeleton->num_joints(); i++) {
-		if (std::strstr(set->skeleton->joint_names()[i], "LeftHandIndex1")) {
+		if (std::strstr(set->skeleton->joint_names()[i], "LeftHandIndex2")) {
 			skeleton_attachments.left_hand = i;
 			break;
 		}
@@ -153,6 +153,14 @@ void Creature::update_transform()
 	
 void Creature::update_animation(float delta)
 {
+	// non looping animation is finished
+	if (attacking) {
+		if (animation_sampler_b.controller.time_ratio >= 1.f) {
+			change_lower_body_animation(CA_IDLE);
+			attacking = false;
+		}
+	}
+
 	if (animation_mix < 1.f) {
 		animation_mix += animation_blend_speed * delta;
 	} else {
@@ -161,13 +169,6 @@ void Creature::update_animation(float delta)
 	animation_sampler_a.weight = 1.f - animation_mix;
 	animation_sampler_b.weight = animation_mix;
 
-	// non looping animation is finished
-	if (attacking) {
-		if (animation_sampler_b.controller.time_ratio >= 1.f) {
-			change_lower_body_animation(CA_IDLE);
-			attacking = false;
-		}
-	}
 
 	const ozz::animation::Animation *animation_a = anim_set->animations[prev_lower_body_animation];
 	const ozz::animation::Animation *animation_b = anim_set->animations[lower_body_animation];
@@ -265,9 +266,6 @@ void Creature::kill()
 {
 	dead = true;
 	attacking = false;
-	animation_sampler_a.controller.set_looping(false);
-	animation_sampler_a.controller.set_time_ratio(0.f);
-	animation_sampler_a.controller.set_speed(1.f);
 	animation_sampler_b.controller.set_looping(false);
 	animation_sampler_b.controller.set_time_ratio(0.f);
 	animation_sampler_b.controller.set_speed(1.f);
@@ -286,20 +284,23 @@ void Creature::change_lower_body_animation(CreatureAnimation anim)
 		if (prev_lower_body_animation == CA_FALLING) {
 			animation_blend_speed = 8.f;
 		}
-	}
 
-	// set looping
-	if (lower_body_animation == CA_ATTACK_PUNCH && prev_lower_body_animation != CA_ATTACK_PUNCH) {
-		animation_sampler_b.controller.set_looping(false);
-		animation_sampler_b.controller.set_time_ratio(0.f);
-		animation_sampler_b.controller.set_speed(1.f);
-	}
-	if (lower_body_animation != CA_ATTACK_PUNCH && prev_lower_body_animation == CA_ATTACK_PUNCH) {
-		//animation_sampler_a.controller.set_looping(false);
-		animation_sampler_a.controller.set_time_ratio(1.f);
-		//animation_sampler_a.controller.set_speed(1.f);
-		animation_sampler_b.controller.set_looping(true);
-		animation_sampler_b.controller.set_time_ratio(0.f);
-		animation_sampler_b.controller.set_speed(1.f);
+		// set looping
+		if (lower_body_animation == CA_ATTACK_PUNCH && prev_lower_body_animation != CA_ATTACK_PUNCH) {
+			animation_sampler_b.controller.set_looping(false);
+			animation_sampler_b.controller.set_time_ratio(0.f);
+			animation_sampler_b.controller.set_speed(1.5f);
+		}
+		if (lower_body_animation != CA_ATTACK_PUNCH && prev_lower_body_animation == CA_ATTACK_PUNCH) {
+			animation_blend_speed = 8.f;
+			// attack animation
+			animation_sampler_a.controller.set_looping(false);
+			animation_sampler_a.controller.set_time_ratio(animation_sampler_b.controller.time_ratio);
+			animation_sampler_a.controller.set_speed(1.f);
+			// next animation
+			animation_sampler_b.controller.set_looping(true);
+			animation_sampler_b.controller.set_time_ratio(0.f);
+			animation_sampler_b.controller.set_speed(1.f);
+		}
 	}
 }

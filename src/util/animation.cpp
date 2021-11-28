@@ -110,7 +110,6 @@ bool update_blended_animation(CharacterAnimation *sampler_a, CharacterAnimation 
 
 	// Prepares blending layers.
 	std::vector<ozz::animation::BlendingJob::Layer> layers;
-	//for (auto it = samplers.begin(); it != samplers.end(); it++) {
 	{
 		ozz::animation::BlendingJob::Layer layer;
 		layer.transform = ozz::make_span(sampler_a->locals);
@@ -123,7 +122,6 @@ bool update_blended_animation(CharacterAnimation *sampler_a, CharacterAnimation 
 		layer.weight = sampler_b->weight;
 		layers.push_back(layer);
 	}
-	//}
 	// Blending job bind pose threshold.
 	float threshold = 0.1f;
 
