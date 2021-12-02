@@ -2,9 +2,13 @@
 enum CreatureAnimation : uint8_t {
 	CA_IDLE = 1,
 	CA_RUN,
+	CA_BACKWARD_RUN,
+	CA_STRAFE_RIGHT,
+	CA_STRAFE_LEFT,
+	CA_DIAGONAL_RIGHT,
+	CA_DIAGONAL_LEFT,
 	CA_FALLING,
 	CA_ATTACK_PUNCH,
-	CA_ATTACK_SLASH,
 	CA_DYING,
 	CA_DANCING
 };
@@ -70,6 +74,7 @@ public:
 	std::unique_ptr<geom::Transform> transform;
 	std::unique_ptr<geom::Transform> model_transform; // for the animated 3d model
 	glm::vec3 eye_position = {};
+	glm::vec3 look_direction = {};
 	glm::mat4 right_hand_transform = {};
 	float unit_scale = 1.f;
 public: // animation stuff
@@ -103,6 +108,7 @@ public:
 	void set_hitbox(const std::vector<HitCapsule> &capsules);
 public:
 	void set_movement(const glm::vec3 &direction);
+	void set_leg_movement(bool forward, bool backward, bool left, bool right);
 	void teleport(const glm::vec3 &position);
 	void update_collision(const btDynamicsWorld *world, float delta);
 	void update_transform();

@@ -156,23 +156,19 @@ void Battle::load_molds(const Module &module)
 	load_fort_mold(module.fortification);
 
 	// load skeletons and animations
-	// TODO import from module
 	anim_set = std::make_unique<util::AnimationSet>();
-	anim_set->skeleton = MediaManager::load_skeleton("modules/native/media/skeletons/human.ozz");
-	anim_set->animations[CA_IDLE] = MediaManager::load_animation("modules/native/media/animations/human/idle.ozz");
-	anim_set->animations[CA_RUN] = MediaManager::load_animation("modules/native/media/animations/human/run.ozz");
-	anim_set->animations[CA_FALLING] = MediaManager::load_animation("modules/native/media/animations/human/fall.ozz");
-	anim_set->animations[CA_ATTACK_SLASH] = MediaManager::load_animation("modules/native/media/animations/human/slash.ozz");
-	anim_set->animations[CA_ATTACK_PUNCH] = MediaManager::load_animation("modules/native/media/animations/human/punch.ozz");
-	anim_set->animations[CA_DYING] = MediaManager::load_animation("modules/native/media/animations/human/dying.ozz");
-	anim_set->animations[CA_DANCING] = MediaManager::load_animation("modules/native/media/animations/human/dance.ozz");
+	anim_set->skeleton = MediaManager::load_skeleton(module.human_armature.skeleton);
+	for (const auto &input : module.human_armature.animations) {
+		CreatureAnimation action = CreatureAnimation(input.action_code);
+		anim_set->animations[action] = MediaManager::load_animation(input.animation);
+	}
 
 	anim_set->find_max_tracks();
 
 	sword_model = MediaManager::load_model("modules/native/media/models/sword.glb");
 
 	// load hitboxes
-	for (const auto &input : module.hitboxes) {
+	for (const auto &input : module.human_armature.hitboxes) {
 		int joint_a = -1;
 		int joint_b = -1;
 		for (int i = 0; i < anim_set->skeleton->num_joints(); i++) {
@@ -292,6 +288,7 @@ void Battle::update(float delta)
 	glm::vec3 direction = { dir.x, 0.f, dir.y };
 
 	if (camera_mode == BattleCamMode::FIRST_PERSON || camera_mode == BattleCamMode::THIRD_PERSON) {
+		player->look_direction = camera.direction;
 		player->set_movement(direction);
 	}
 	player->update_collision(physics.world(), delta);
@@ -304,6 +301,7 @@ void Battle::update(float delta)
 	physics.update(delta);
 		
 	player->update_transform();
+	player->set_leg_movement(util::InputManager::key_down(SDLK_w), util::InputManager::key_down(SDLK_s), util::InputManager::key_down(SDLK_a), util::InputManager::key_down(SDLK_d));
 
 	for (auto &creature : creature_entities) {
 		creature->update_transform();
@@ -486,7 +484,7 @@ void Battle::add_creatures()
 	player->set_animation(anim_set.get());
 
 	player->set_hitbox(creature_hitboxes);
-	
+
 	int group = COLLISION_GROUP_BUMPER;
 	int mask = COLLISION_GROUP_RAY | COLLISION_GROUP_BUMPER | COLLISION_GROUP_LANDSCAPE;
 

@@ -196,10 +196,10 @@ void Engine::load_module()
 	}
 
 	{
-		std::ifstream stream("modules/native/hitboxes.json");
+		std::ifstream stream("modules/native/creatures.json");
 		if (stream.is_open()) {
 			cereal::JSONInputArchive archive(stream);
-			archive(module.hitboxes);
+			archive(module.human_armature);
 		}
 	}
 		

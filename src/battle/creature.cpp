@@ -44,6 +44,7 @@ static inline glm::quat direction_to_quat(glm::vec2 direction)
 Creature::Creature()
 {
 	bumper = std::make_unique<fysx::Bumper>(glm::vec3(0.f), STANDARD_CAPSULE_RADIUS, STANDARD_CAPSULE_HEIGHT);
+	bumper->speed = 6.f;
 
 	transform = std::make_unique<geom::Transform>();
 	model_transform = std::make_unique<geom::Transform>();
@@ -117,6 +118,31 @@ void Creature::set_movement(const glm::vec3 &direction)
 	}
 }
 	
+void Creature::set_leg_movement(bool forward, bool backward, bool left, bool right)
+{
+	if (!attacking && !dead) {
+		if (!bumper->on_ground) {
+			change_lower_body_animation(CA_FALLING);
+		} else if (bumper->walk_direction.x != 0.f || bumper->walk_direction.z != 0.f) {
+			if (forward && right) {
+				change_lower_body_animation(CA_DIAGONAL_RIGHT);
+			} else if (forward && left) {
+				change_lower_body_animation(CA_DIAGONAL_LEFT);
+			} else if (forward) {
+				change_lower_body_animation(CA_RUN);
+			} else if (left) {
+				change_lower_body_animation(CA_STRAFE_LEFT);
+			} else if (right) {
+				change_lower_body_animation(CA_STRAFE_RIGHT);
+			} else if (backward) {
+				change_lower_body_animation(CA_BACKWARD_RUN);
+			}
+		} else {
+			change_lower_body_animation(CA_IDLE);
+		}
+	}
+}
+
 void Creature::teleport(const glm::vec3 &position)
 {
 	bumper->teleport(position);
@@ -134,21 +160,27 @@ void Creature::update_transform()
 	root_hitbox->set_position(bumper->transform->position);
 
 	// set rotation
-	if (bumper->walk_direction.x != 0.f || bumper->walk_direction.z != 0.f) {
-		glm::vec2 d = { bumper->walk_direction.x, bumper->walk_direction.z };
+	if (look_direction.x != 0.f || look_direction.z != 0.f) {
+		glm::vec2 d = { look_direction.x, look_direction.z };
 		model_transform->rotation = direction_to_quat(glm::normalize(d));
 	}
 
 	// select animation
+	/*
 	if (!attacking && !dead) {
 		if (!bumper->on_ground) {
 			change_lower_body_animation(CA_FALLING);
 		} else if (bumper->walk_direction.x != 0.f || bumper->walk_direction.z != 0.f) {
-			change_lower_body_animation(CA_RUN);
+			if (glm::dot(bumper->walk_direction, look_direction) > -0.1f) {
+				change_lower_body_animation(CA_RUN);
+			} else {
+				change_lower_body_animation(CA_BACKWARD_RUN);
+			}
 		} else {
 			change_lower_body_animation(CA_IDLE);
 		}
 	}
+	*/
 }
 	
 void Creature::update_animation(float delta)

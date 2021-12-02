@@ -1,0 +1,103 @@
+{
+    "value0": {
+	    "skeleton": "modules/native/media/skeletons/human.ozz",
+	    "animations": [
+		{
+		    "animation": "modules/native/media/animations/human/idle.ozz",
+		    "action_code": 1
+		},
+		{
+		    "animation": "modules/native/media/animations/human/run.ozz",
+		    "action_code": 2
+		},
+		{
+		    "animation": "modules/native/media/animations/human/backward.ozz",
+		    "action_code": 3
+		},
+		{
+		    "animation": "modules/native/media/animations/human/strafe_right.ozz",
+		    "action_code": 4
+		},
+		{
+		    "animation": "modules/native/media/animations/human/strafe_left.ozz",
+		    "action_code": 5
+		},
+		{
+		    "animation": "modules/native/media/animations/human/diagonal_right.ozz",
+		    "action_code": 6
+		},
+		{
+		    "animation": "modules/native/media/animations/human/diagonal_left.ozz",
+		    "action_code": 7
+		},
+		{
+		    "animation": "modules/native/media/animations/human/fall.ozz",
+		    "action_code": 8
+		},
+		{
+		    "animation": "modules/native/media/animations/human/punch.ozz",
+		    "action_code": 9
+		},
+		{
+		    "animation": "modules/native/media/animations/human/dying.ozz",
+		    "action_code": 10
+		},
+		{
+		    "animation": "modules/native/media/animations/human/dance.ozz",
+		    "action_code": 11
+		}
+	    ],
+	    "hitboxes": [
+		{
+		    "joint_a": "mixamorig:Hips",
+		    "joint_b": "mixamorig:Neck",
+		    "radius": 0.2
+		},
+		{
+		    "joint_a": "mixamorig:Spine2",
+		    "joint_b": "mixamorig:HeadTop_End",
+		    "radius": 0.15
+		},
+		{
+		    "joint_a": "mixamorig:RightArm",
+		    "joint_b": "mixamorig:RightForeArm",
+		    "radius": 0.1
+		},
+		{
+		    "joint_a": "mixamorig:LeftArm",
+		    "joint_b": "mixamorig:LeftForeArm",
+		    "radius": 0.1
+		},
+		{
+		    "joint_a": "mixamorig:RightForeArm",
+		    "joint_b": "mixamorig:RightHand",
+		    "radius": 0.08
+		},
+		{
+		    "joint_a": "mixamorig:LeftForeArm",
+		    "joint_b": "mixamorig:LeftHand",
+		    "radius": 0.08
+		},
+		{
+		    "joint_a": "mixamorig:RightUpLeg",
+		    "joint_b": "mixamorig:RightLeg",
+		    "radius": 0.12
+		},
+		{
+		    "joint_a": "mixamorig:LeftUpLeg",
+		    "joint_b": "mixamorig:LeftLeg",
+		    "radius": 0.12
+		},
+		{
+		    "joint_a": "mixamorig:RightLeg",
+		    "joint_b": "mixamorig:RightFoot",
+		    "radius": 0.1
+		},
+		{
+		    "joint_a": "mixamorig:LeftLeg",
+		    "joint_b": "mixamorig:LeftFoot",
+		    "radius": 0.1
+		}
+	    ]
+    }
+}

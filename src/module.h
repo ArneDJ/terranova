@@ -50,6 +50,18 @@ struct FortificationModule {
 	}
 };
 
+// binds an animation to an action code
+struct AnimationActionModule {
+	std::string animation = "";
+	uint8_t action_code = 0;
+
+	template <class Archive>
+	void serialize(Archive &archive)
+	{
+		archive(CEREAL_NVP(animation), CEREAL_NVP(action_code));
+	}
+};
+
 struct HitCapsuleModule {
 	std::string joint_a = "";
 	std::string joint_b = "";
@@ -62,6 +74,23 @@ struct HitCapsuleModule {
 			CEREAL_NVP(joint_a),
 			CEREAL_NVP(joint_b),
 			CEREAL_NVP(radius)
+		);
+	}
+};
+
+// contains animation, skeleton, hitbox and ragdoll data for a creature
+struct CreatureArmatureModule {
+	std::string skeleton = "";
+	std::vector<AnimationActionModule> animations;
+	std::vector<HitCapsuleModule> hitboxes;
+
+	template <class Archive>
+	void serialize(Archive &archive)
+	{
+		archive(
+			CEREAL_NVP(skeleton),
+			CEREAL_NVP(animations),
+			CEREAL_NVP(hitboxes)
 		);
 	}
 };
@@ -83,5 +112,5 @@ public:
 	BoardModule board_module;
 	std::vector<ArchitectureStyleModule> architectures;
 	FortificationModule fortification;
-	std::vector<HitCapsuleModule> hitboxes;
+	CreatureArmatureModule human_armature;
 };
