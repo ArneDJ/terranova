@@ -121,7 +121,7 @@ void Battle::init(const gfx::ShaderGroup *shaders)
 	scene->set_scene_type(gfx::SceneType::FIXED);
 
 	terrain = std::make_unique<Terrain>(shaders->terrain, SCENE_BOUNDS);
-	terrain->add_material("TILES", MediaManager::load_texture("modules/native/media/textures/terrain/tiles.dds"));
+	terrain->add_material("TILES", MediaManager::load_texture("data/media/textures/terrain/tiles.dds"));
 
 	landscaper.bounds = {
 		{ SCENE_BOUNDS.min.x, SCENE_BOUNDS.min.z },
@@ -164,8 +164,6 @@ void Battle::load_molds(const Module &module)
 	}
 
 	anim_set->find_max_tracks();
-
-	sword_model = MediaManager::load_model("modules/native/media/models/sword.glb");
 
 	// load hitboxes
 	for (const auto &input : module.human_armature.hitboxes) {
@@ -327,12 +325,8 @@ void Battle::update(float delta)
 				if (target != player.get() && !target->dead) {
 					for (auto &hitbox : target->hitboxes) {
 						if (sphere_capsule_intersection(sphere, hitbox.capsule)) {
-							//target->dead = true;
 							target->kill();
-							//player->attacking = false;
-							//player->character_animation.controller.set_looping(true);
-							//player->character_animation.controller.set_speed(1.f);
-							//player->current_animation = CA_IDLE;
+							player->attacking = false;
 							break;
 						}
 					}
@@ -367,12 +361,6 @@ void Battle::display()
 			debugger->display_capsule(scaled_capsule);
 		}
 	}
-
-	//object_shader->use();
-	//object_shader->uniform_bool("INDIRECT_DRAW", false);
-	//object_shader->uniform_mat4("CAMERA_VP", camera.VP);
-	//object_shader->uniform_mat4("MODEL", player->right_hand_transform);
-	//sword_model->display();
 
 	creature_shader->use();
 	creature_shader->uniform_mat4("CAMERA_VP", camera.VP);
@@ -480,7 +468,7 @@ void Battle::add_creatures()
 	glm::vec3 location = { 790.f, 255.f, 800.f };
 	//location.y = vertical_offset(location.x, location.z) + 1.f;
 	player->teleport(location);
-	player->model = MediaManager::load_model("modules/native/media/models/human.glb");
+	player->model = MediaManager::load_model("data/media/models/human.glb");
 	player->set_animation(anim_set.get());
 
 	player->set_hitbox(creature_hitboxes);
@@ -499,7 +487,7 @@ void Battle::add_creatures()
 			position.y = vertical_offset(position.x, position.z) + 1.f;
 			auto creature = std::make_unique<Creature>();
 			creature->teleport(position);
-			creature->model = MediaManager::load_model("modules/native/media/models/human.glb");
+			creature->model = MediaManager::load_model("data/media/models/human.glb");
 			creature->set_animation(anim_set.get());
 			creature->set_hitbox(creature_hitboxes);
 			physics.add_object(creature->bumper->ghost_object.get(), group, mask);

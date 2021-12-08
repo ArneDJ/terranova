@@ -1,49 +1,49 @@
 {
     "value0": {
-	    "skeleton": "modules/native/media/skeletons/human.ozz",
+	    "skeleton": "data/media/skeletons/human.ozz",
 	    "animations": [
 		{
-		    "animation": "modules/native/media/animations/human/idle.ozz",
+		    "animation": "data/media/animations/human/idle.ozz",
 		    "action_code": 1
 		},
 		{
-		    "animation": "modules/native/media/animations/human/run.ozz",
+		    "animation": "data/media/animations/human/run.ozz",
 		    "action_code": 2
 		},
 		{
-		    "animation": "modules/native/media/animations/human/backward.ozz",
+		    "animation": "data/media/animations/human/backward.ozz",
 		    "action_code": 3
 		},
 		{
-		    "animation": "modules/native/media/animations/human/strafe_right.ozz",
+		    "animation": "data/media/animations/human/strafe_right.ozz",
 		    "action_code": 4
 		},
 		{
-		    "animation": "modules/native/media/animations/human/strafe_left.ozz",
+		    "animation": "data/media/animations/human/strafe_left.ozz",
 		    "action_code": 5
 		},
 		{
-		    "animation": "modules/native/media/animations/human/diagonal_right.ozz",
+		    "animation": "data/media/animations/human/diagonal_right.ozz",
 		    "action_code": 6
 		},
 		{
-		    "animation": "modules/native/media/animations/human/diagonal_left.ozz",
+		    "animation": "data/media/animations/human/diagonal_left.ozz",
 		    "action_code": 7
 		},
 		{
-		    "animation": "modules/native/media/animations/human/fall.ozz",
+		    "animation": "data/media/animations/human/fall.ozz",
 		    "action_code": 8
 		},
 		{
-		    "animation": "modules/native/media/animations/human/punch.ozz",
+		    "animation": "data/media/animations/human/punch.ozz",
 		    "action_code": 9
 		},
 		{
-		    "animation": "modules/native/media/animations/human/dying.ozz",
+		    "animation": "data/media/animations/human/dying.ozz",
 		    "action_code": 10
 		},
 		{
-		    "animation": "modules/native/media/animations/human/dance.ozz",
+		    "animation": "data/media/animations/human/dance.ozz",
 		    "action_code": 11
 		}
 	    ],
@@ -98,6 +98,48 @@
 		    "joint_b": "mixamorig:LeftFoot",
 		    "radius": 0.1
 		}
+	    ],
+	    "bones": [
+		{
+		    "joint_a": "mixamorig:Hips",
+		    "joint_b": "mixamorig:Neck",
+		    "target_joints": [
+			"Hips",
+			"Spine",
+			"Neck",
+			"Shoulder",
+			"LeftUpLeg",
+			"LeftLeg",
+			"LeftFoot",
+			"LeftToe",
+			"RightUpLeg",
+			"RightLeg",
+			"RightFoot",
+			"RightToe",
+			"LeftArm",
+			"LeftForeArm",
+			"LeftHand",
+			"RightArm",
+			"RightForeArm",
+			"RightHand"
+		    ],
+		    "radius": 0.2
+		},
+		{
+		    "joint_a": "mixamorig:Spine2",
+		    "joint_b": "mixamorig:HeadTop_End",
+		    "target_joints": [
+		    	"Head"
+		    ],
+		    "radius": 0.15
+		}
+	    ],
+	    "hinges": [
+		    {
+			    "parent_bone": 0,
+			    "child_bone": 1,
+			    "limit": { "x": -1.5700000524520875, "y": 0.7799999713897705 }
+		    }
 	    ]
     }
 }

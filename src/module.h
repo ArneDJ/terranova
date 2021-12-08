@@ -78,11 +78,50 @@ struct HitCapsuleModule {
 	}
 };
 
+// joint_a and joint_b are needed to transition from an animation to an initial ragdoll
+struct RagdollBoneModule {
+	std::string joint_a = "";
+	std::string joint_b = "";
+	std::vector<std::string> target_joints;
+	float radius = 1.f;
+
+	template <class Archive>
+	void serialize(Archive &archive)
+	{
+		archive(
+			CEREAL_NVP(joint_a),
+			CEREAL_NVP(joint_b),
+			CEREAL_NVP(target_joints),
+			CEREAL_NVP(radius)
+		);
+	}
+};
+
+// hinge joint that connects two bones
+struct RagdollHingeModule {
+	uint32_t parent_bone = 0;
+	uint32_t child_bone = 0;
+	glm::vec2 limit;
+
+	template <class Archive>
+	void serialize(Archive &archive)
+	{
+		archive(
+			CEREAL_NVP(parent_bone),
+			CEREAL_NVP(child_bone),
+			CEREAL_NVP(limit)
+		);
+	}
+};
+
 // contains animation, skeleton, hitbox and ragdoll data for a creature
 struct CreatureArmatureModule {
 	std::string skeleton = "";
 	std::vector<AnimationActionModule> animations;
 	std::vector<HitCapsuleModule> hitboxes;
+	// ragdoll
+	std::vector<RagdollBoneModule> bones;
+	std::vector<RagdollHingeModule> hinges;
 
 	template <class Archive>
 	void serialize(Archive &archive)
@@ -90,7 +129,9 @@ struct CreatureArmatureModule {
 		archive(
 			CEREAL_NVP(skeleton),
 			CEREAL_NVP(animations),
-			CEREAL_NVP(hitboxes)
+			CEREAL_NVP(hitboxes),
+			CEREAL_NVP(bones),
+			CEREAL_NVP(hinges)
 		);
 	}
 };

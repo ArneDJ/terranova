@@ -67,4 +67,20 @@ inline btVector3 vec3_to_bt(const glm::vec3 &v)
 	return btVector3(v.x, v.y, v.z);
 }
 
+inline glm::vec3 body_position(const btRigidBody *body)
+{
+	btTransform t;
+	body->getMotionState()->getWorldTransform(t);
+
+	return glm::vec3(float(t.getOrigin().x()), float(t.getOrigin().y()), float(t.getOrigin().z()));
+}
+
+inline glm::quat body_rotation(const btRigidBody *body)
+{
+	btTransform t;
+	body->getMotionState()->getWorldTransform(t);
+
+	return glm::quat(float(t.getRotation().w()), float(t.getRotation().x()), float(t.getRotation().y()), float(t.getRotation().z()));
+}
+
 };

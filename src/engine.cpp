@@ -180,7 +180,7 @@ void Engine::load_module()
 	Module module;
 
 	{
-		std::ifstream stream("modules/native/houses.json");
+		std::ifstream stream("data/houses.json");
 		if (stream.is_open()) {
 			cereal::JSONInputArchive archive(stream);
 			archive(module.architectures);
@@ -188,7 +188,7 @@ void Engine::load_module()
 	}
 
 	{
-		std::ifstream stream("modules/native/fortifications.json");
+		std::ifstream stream("data/fortifications.json");
 		if (stream.is_open()) {
 			cereal::JSONInputArchive archive(stream);
 			archive(module.fortification);
@@ -196,7 +196,7 @@ void Engine::load_module()
 	}
 
 	{
-		std::ifstream stream("modules/native/creatures.json");
+		std::ifstream stream("data/creatures.json");
 		if (stream.is_open()) {
 			cereal::JSONInputArchive archive(stream);
 			archive(module.human_armature);
@@ -206,7 +206,7 @@ void Engine::load_module()
 	battle.load_molds(module);
 
 	{
-		std::ifstream stream("modules/native/board.json");
+		std::ifstream stream("data/board.json");
 		if (stream.is_open()) {
 			cereal::JSONInputArchive archive(stream);
 			archive(module.board_module);

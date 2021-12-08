@@ -2,7 +2,6 @@
 #include "atlas.h"
 #include "board.h"
 #include "meeple.h"
-#include "marker.h"
 #include "settlement.h"
 #include "faction.h"
 
@@ -27,6 +26,12 @@ struct CampaignPlayerData {
 	{
 		archive(faction_id, meeple_id);
 	}
+};
+
+struct ConstructionMarker {
+	geom::Transform transform;
+	const gfx::Model *model = nullptr;
+	bool visible = false;
 };
 
 struct CampaignBattleData {
@@ -54,13 +59,15 @@ public:
 	std::unique_ptr<Board> board;
 	std::unique_ptr<gfx::SceneGroup> scene;
 	std::unique_ptr<gfx::Labeler> labeler;
-	Marker marker;
 	MeepleController meeple_controller;
 	SettlementController settlement_controller;
 	FactionController faction_controller;
-public:
+public: // entities
+	ConstructionMarker con_marker;
 	CampaignPlayerData player_data = {};
 	PlayerMode player_mode = PlayerMode::ARMY_MOVEMENT;
+public:
+	std::shared_ptr<gfx::Shader> object_shader;
 public:
 	bool display_debug = false;
 	bool wireframe_worldmap = false;

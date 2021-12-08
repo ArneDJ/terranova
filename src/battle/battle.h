@@ -31,7 +31,6 @@ public:
 	std::vector<std::unique_ptr<Creature>> creature_entities;
 	std::shared_ptr<gfx::Shader> creature_shader;
 	std::shared_ptr<gfx::Shader> object_shader;
-	const gfx::Model *sword_model;
 public:
 	BattleCamMode camera_mode = BattleCamMode::FIRST_PERSON;
 	float camera_zoom = 1.f;

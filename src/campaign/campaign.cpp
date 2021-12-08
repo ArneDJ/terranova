@@ -77,14 +77,15 @@ void Campaign::init(const gfx::ShaderGroup *shaders)
 	scene->set_scene_type(gfx::SceneType::DYNAMIC);
 	
 	board = std::make_unique<Board>(shaders->tilemap);
+	
+	object_shader = shaders->debug;
 }
 	
 void Campaign::load_blueprints(const Module &module)
 {
-	marker.set_model(MediaManager::load_model(module.board_module.marker));
-
 	army_blueprint.model = MediaManager::load_model(module.board_module.meeple);
 	town_blueprint.model = MediaManager::load_model(module.board_module.town);
+	con_marker.model = MediaManager::load_model(module.board_module.town);
 }
 	
 void Campaign::load(const std::string &filepath)
@@ -170,9 +171,6 @@ void Campaign::generate(int seedling)
 void Campaign::prepare()
 {
 	board->reload();
-
-	auto cone_object = scene->find_object(marker.model());
-	cone_object->add_transform(marker.transform());
 
 	// add physical objects
 	int group = COLLISION_GROUP_HEIGHTMAP;
@@ -260,6 +258,8 @@ void Campaign::update(float delta)
 	if (player_mode == PlayerMode::TOWN_PLACEMENT) {
 		glm::vec3 ray = camera.ndc_to_ray(util::InputManager::abs_mouse_coords());
 		set_player_construction(ray);
+	} else {
+		con_marker.visible = false;
 	}
 
 	meeple_controller.update(delta);
@@ -275,6 +275,14 @@ void Campaign::update(float delta)
 	
 void Campaign::display()
 {
+	// display the construction markers
+	if (con_marker.visible) {
+		object_shader->use();
+		object_shader->uniform_mat4("CAMERA_VP", camera.VP);
+		object_shader->uniform_mat4("MODEL", con_marker.transform.to_matrix());
+		con_marker.model->display();
+	}
+
 	scene->update(camera);
 	scene->cull_frustum();
 	scene->display();
@@ -606,11 +614,6 @@ void Campaign::set_player_movement(const glm::vec3 &ray)
 			// update marker
 			board->set_marker(hitpoint);
 		}
-		/*
-		if (meeple_controller.player->target_type == uint8_t(CampaignEntity::LAND_SURFACE)) {
-			marker.teleport(result.point);
-		}
-		*/
 	}
 }
 	
@@ -621,7 +624,8 @@ void Campaign::set_player_construction(const glm::vec3 &ray)
 	if (tile) {
 		glm::vec2 center = board->tile_center(tile->index);
 		float offset = vertical_offset(center);
-		marker.teleport(glm::vec3(center.x, offset, center.y));
+		con_marker.transform.position = glm::vec3(center.x, offset, center.y);
+		con_marker.visible = true;
 		if (util::InputManager::key_pressed(SDL_BUTTON_LEFT)) {
 			uint32_t id = spawn_town(tile, player_data.faction_id);
 			if (id) {

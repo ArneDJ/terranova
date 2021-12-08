@@ -1,0 +1,22 @@
+{
+    "houses": [
+        {
+            "precipitation": {
+                "min": 0,
+                "max": 255
+            },
+            "temperature": {
+                "min": 100,
+                "max": 200
+            },
+            "houses": [
+		{ "id": "HOUSEA", "model": "data/media/models/buildings/houses/small.glb" },
+        	{ "id": "HOUSEB", "model": "data/media/models/buildings/houses/medium.glb" },
+        	{ "id": "HOUSEC", "model": "data/media/models/buildings/houses/medium_wide.glb" },
+        	{ "id": "HOUSED", "model": "data/media/models/buildings/houses/large.glb" },
+        	{ "id": "TEMPLEA", "model": "data/media/models/buildings/houses/temple.glb" },
+        	{ "id": "TEMPLEB", "model": "data/media/models/buildings/houses/temple_small.glb" }
+	    ]
+        }
+    ]
+}

@@ -1,0 +1,11 @@
+{
+    "fortifications": {
+	    "segment_even": { "id": "WALLSEGEVEN", "model": "data/media/models/buildings/walls/segment.glb" },
+	    "segment_both": { "id": "WALLSEGBOTH", "model": "data/media/models/buildings/walls/segment_both.glb" },
+	    "segment_left": { "id": "WALLSEGLEFT", "model": "data/media/models/buildings/walls/segment_left.glb" },
+	    "segment_right": { "id": "WALLSEGRIGHT", "model": "data/media/models/buildings/walls/segment_right.glb" },
+	    "tower": { "id": "WALLSEGTOWER", "model": "data/media/models/buildings/walls/tower.glb" },
+	    "ramp": { "id": "WALLSEGRAMP", "model": "data/media/models/buildings/walls/ramp.glb" },
+	    "gate": { "id": "WALLSEGGATE", "model": "data/media/models/buildings/walls/gate.glb" }
+    }
+}
