@@ -47,6 +47,7 @@ public:
 	void clear_path();
 	void clear_target();
 	void set_vertical_offset(float offset);
+	void set_model(const gfx::Model *model);
 public:
 	void add_troops(uint32_t troop_type, int count);
 public:
@@ -54,6 +55,7 @@ public:
 	const geom::Transform* transform() const;
 	const fysx::TriggerSphere* trigger() const;
 	const fysx::TriggerSphere* visibility() const;
+	const gfx::Model* model() const;
 	glm::vec2 position() const;
 public:
 	template <class Archive>
@@ -64,6 +66,7 @@ public:
 private:
 	uint32_t m_id = 0;
 	float m_speed = 10.f;
+	const gfx::Model *m_model = nullptr;
 	PathFinder m_path_finder;
 	std::unique_ptr<geom::Transform> m_transform;
 private:

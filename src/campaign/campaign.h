@@ -57,7 +57,6 @@ public:
 	util::Camera camera;
 	fysx::PhysicalSystem physics;
 	std::unique_ptr<Board> board;
-	std::unique_ptr<gfx::SceneGroup> scene;
 	std::unique_ptr<gfx::Labeler> labeler;
 	MeepleController meeple_controller;
 	SettlementController settlement_controller;

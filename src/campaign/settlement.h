@@ -14,6 +14,7 @@ public:
 	uint32_t fiefdom() const;
 	uint8_t size() const;
 	glm::vec2 map_position() const;
+	const gfx::Model* model() const;
 public:
 	const geom::Transform* transform() const;
 	const fysx::TriggerSphere* trigger() const;
@@ -24,6 +25,7 @@ public:
 	void set_tile(uint32_t tile);
 	void set_fiefdom(uint32_t fiefdom);
 	void set_size(uint8_t size);
+	void set_model(const gfx::Model *model);
 public:
 	template <class Archive>
 	void serialize(Archive &archive)
@@ -40,6 +42,7 @@ private:
 	uint32_t m_tile = 0; // the tile this town is placed on
 	uint32_t m_faction = 0; // the faction this town belongs to
 	uint32_t m_fiefdom = 0;
+	const gfx::Model *m_model = nullptr;
 private:
 	uint8_t m_size = 1;
 };

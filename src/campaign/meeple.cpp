@@ -4,6 +4,9 @@
 #include <string>
 #include <unordered_map>
 
+#include <GL/glew.h>
+#include <GL/gl.h>
+
 #include <glm/glm.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
@@ -14,6 +17,8 @@
 #include "../geometry/transform.h"
 #include "../physics/physical.h"
 #include "../physics/trigger.h"
+#include "../graphics/mesh.h"
+#include "../graphics/model.h"
 
 #include "meeple.h"
 
@@ -102,6 +107,13 @@ const geom::Transform* Meeple::transform() const { return m_transform.get(); }
 const fysx::TriggerSphere* Meeple::trigger() const { return m_trigger.get(); }
 
 const fysx::TriggerSphere* Meeple::visibility() const { return m_visibility.get(); }
+
+const gfx::Model* Meeple::model() const { return m_model; }
+	
+void Meeple::set_model(const gfx::Model *model)
+{
+	m_model = model;
+}
 
 glm::vec2 Meeple::position() const
 {

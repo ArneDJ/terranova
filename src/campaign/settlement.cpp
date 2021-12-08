@@ -4,6 +4,9 @@
 #include <memory>
 #include <unordered_map>
 
+#include <GL/glew.h>
+#include <GL/gl.h>
+
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
@@ -11,6 +14,8 @@
 #include "../geometry/transform.h"
 #include "../physics/physical.h"
 #include "../physics/trigger.h"
+#include "../graphics/mesh.h"
+#include "../graphics/model.h"
 
 #include "settlement.h"
 	
@@ -64,6 +69,11 @@ const geom::Transform* Town::transform() const
 	return m_transform.get();
 }
 
+const gfx::Model* Town::model() const
+{
+	return m_model;
+}
+
 void Town::set_id(uint32_t id)
 {
 	m_id = id;
@@ -94,6 +104,11 @@ void Town::set_position(const glm::vec3 &position)
 {
 	m_transform->position = position;
 	m_trigger->set_position(position);
+}
+
+void Town::set_model(const gfx::Model *model)
+{
+	m_model = model;
 }
 
 uint32_t Fiefdom::id() const

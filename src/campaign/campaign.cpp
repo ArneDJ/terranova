@@ -73,9 +73,6 @@ void Campaign::init(const gfx::ShaderGroup *shaders)
 
 	labeler = std::make_unique<gfx::Labeler>("fonts/arial.ttf", 30, shaders->label);
 
-	scene = std::make_unique<gfx::SceneGroup>(shaders->object, shaders->culling);
-	scene->set_scene_type(gfx::SceneType::DYNAMIC);
-	
 	board = std::make_unique<Board>(shaders->tilemap);
 	
 	object_shader = shaders->debug;
@@ -222,9 +219,6 @@ void Campaign::prepare()
 
 void Campaign::clear()
 {
-	// first clear the model instances
-	scene->clear_instances();
-
 	labeler->clear();
 
 	debugger->clear();
@@ -276,16 +270,26 @@ void Campaign::update(float delta)
 void Campaign::display()
 {
 	// display the construction markers
+	object_shader->use();
+	object_shader->uniform_mat4("CAMERA_VP", camera.VP);
 	if (con_marker.visible) {
-		object_shader->use();
-		object_shader->uniform_mat4("CAMERA_VP", camera.VP);
 		object_shader->uniform_mat4("MODEL", con_marker.transform.to_matrix());
 		con_marker.model->display();
 	}
 
-	scene->update(camera);
-	scene->cull_frustum();
-	scene->display();
+	// display army entities
+	for (auto &mapping : meeple_controller.meeples) {
+		auto &meeple = mapping.second;
+		object_shader->uniform_mat4("MODEL", meeple->transform()->to_matrix());
+		meeple->model()->display();
+	}
+
+	// display town entities
+	for (auto &mapping : settlement_controller.towns) {
+		auto &town = mapping.second;
+		object_shader->uniform_mat4("MODEL", town->transform()->to_matrix());
+		town->model()->display();
+	}
 
 	if (wireframe_worldmap) {
 		board->display_wireframe(camera);
@@ -325,12 +329,7 @@ void Campaign::place_meeple(Meeple *meeple)
 	auto visibility = meeple->visibility();
 	physics.add_object(visibility->ghost_object(), COLLISION_GROUP_VISIBILITY, COLLISION_GROUP_INTERACTION);
 
-	auto duck_object = scene->find_object(army_blueprint.model);
-	duck_object->add_transform(meeple->transform());
-
-	// debug trigger volumes
-	//debugger->add_sphere(trigger->form(), trigger->transform());
-	//debugger->add_sphere(visibility->form(), visibility->transform());
+	meeple->set_model(army_blueprint.model);
 
 	// add label
 	//glm::vec3 color = faction_controller.factions[meeple->faction()]->color();
@@ -495,8 +494,7 @@ void Campaign::place_town(Town *town)
 
 	town->set_position(glm::vec3(center.x, offset, center.y));
 
-	auto cylinder_object = scene->find_object(town_blueprint.model);
-	cylinder_object->add_transform(town->transform());
+	town->set_model(town_blueprint.model);
 
 	const int mask = COLLISION_GROUP_INTERACTION | COLLISION_GROUP_VISIBILITY | COLLISION_GROUP_RAY;
 
