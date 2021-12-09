@@ -25,6 +25,7 @@ int main(int argc, char *argv[])
 	loguru::init(argc, argv);
 	loguru::add_file("events.log", loguru::Append, loguru::Verbosity_MAX);
 
+	// start up the engine and run it
 	Engine engine;
 	engine.run();
 

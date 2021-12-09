@@ -154,4 +154,9 @@ public:
 	std::vector<ArchitectureStyleModule> architectures;
 	FortificationModule fortification;
 	CreatureArmatureModule human_armature;
+public:
+	void load();
+private:
+	template <class T>
+	void load_json(T &data, const std::string &filepath);
 };

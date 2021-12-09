@@ -51,13 +51,13 @@ Engine::Engine()
 {
 	SDL_Init(SDL_INIT_VIDEO);
 
-	// get user paths
+	// get user paths where the ini files are located
 	if (!user_dir.locate(GAME_NAME)) {
 		LOG_F(FATAL, "Could not find user settings directory");
 		exit(EXIT_FAILURE);
 	}
 	
-	// load user settings
+	// load our user settings
 	std::string settings_filepath = user_dir.settings + "config.ini";
 	if (!config.load(settings_filepath)) {
 		if (config.load("default.ini")) {
@@ -70,6 +70,7 @@ Engine::Engine()
 		}
 	}
 
+	// get video settings
 	video_settings.canvas.x = config.get_integer("video", "window_width", 640);
 	video_settings.canvas.y = config.get_integer("video", "window_height", 480);
 	video_settings.fov = config.get_real("video", "fov", 90.0);
@@ -111,12 +112,14 @@ void Engine::init_opengl()
 	// initialize the OpenGL context
 	glcontext = SDL_GL_CreateContext(window);
 
+	// initialize glew
 	GLenum error = glewInit();
 	if (error != GLEW_OK) {
 		LOG_F(FATAL, "Could not init GLEW: %s\n", glewGetErrorString(error));
 		exit(EXIT_FAILURE);
 	}
 
+	// set some opengl settings
 	glClearColor(0.5f, 0.5f, 0.8f, 1.f);
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
@@ -178,41 +181,12 @@ void Engine::load_shaders()
 void Engine::load_module()
 {
 	Module module;
+	module.load();
 
-	{
-		std::ifstream stream("data/houses.json");
-		if (stream.is_open()) {
-			cereal::JSONInputArchive archive(stream);
-			archive(module.architectures);
-		}
-	}
-
-	{
-		std::ifstream stream("data/fortifications.json");
-		if (stream.is_open()) {
-			cereal::JSONInputArchive archive(stream);
-			archive(module.fortification);
-		}
-	}
-
-	{
-		std::ifstream stream("data/creatures.json");
-		if (stream.is_open()) {
-			cereal::JSONInputArchive archive(stream);
-			archive(module.human_armature);
-		}
-	}
-		
+	// load battle molds from the module
 	battle.load_molds(module);
 
-	{
-		std::ifstream stream("data/board.json");
-		if (stream.is_open()) {
-			cereal::JSONInputArchive archive(stream);
-			archive(module.board_module);
-		}
-	}
-		
+	// load campaign blueprints from the module
 	campaign.load_blueprints(module);
 }
 	
@@ -302,6 +276,7 @@ void Engine::run()
 	state = EngineState::TITLE;
 
 	load_shaders();
+
 	load_module();
 
 	campaign.init(shaders.get());
