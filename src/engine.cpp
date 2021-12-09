@@ -28,11 +28,14 @@
 
 static const char *GAME_NAME = "terranova";
 
+// returns true if a user directory exists
 bool UserDirectory::locate(const char *base)
 {
 	return (locate_dir(base, "settings", settings) && locate_dir(base, "saves", saves));
 }
 
+// finds the user data directory 
+// returns true if found
 bool UserDirectory::locate_dir(const char *base, const char *target, std::string &output)
 {
 	char *pref_path = SDL_GetPrefPath(base, target);
@@ -234,22 +237,21 @@ void Engine::run_campaign()
 {
 	state = EngineState::RUNNING_CAMPAIGN;
 
-	std::random_device rd;
-	std::mt19937 gen(rd());
-	std::uniform_int_distribution<int> distrib;
-			
+	// the campaign loop
 	while (state == EngineState::RUNNING_CAMPAIGN) {
-		frame_timer.begin();
+		frame_timer.begin(); // begin a new frame
 	
+		// first update user keyboard and mouse input
 		util::InputManager::update();
 
 		update_campaign_menu();
 
+		// internal campaign update
 		campaign.update(frame_timer.delta_seconds());
 	
+		// after everything has updated render the frame
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glViewport(0, 0, video_settings.canvas.x, video_settings.canvas.y);
-
 		campaign.display();
 
 		ImGui::Render();
@@ -257,8 +259,7 @@ void Engine::run_campaign()
 
 		SDL_GL_SwapWindow(window);
 
-		frame_timer.finish();
-
+		// go into battle mode if requested
 		if (campaign.state == CampaignState::BATTLE_REQUEST) {
 			run_battle();
 			campaign.state = CampaignState::PAUSED;
@@ -266,6 +267,8 @@ void Engine::run_campaign()
 		if (util::InputManager::exit_request()) {
 			state = EngineState::EXIT;
 		}
+
+		frame_timer.finish(); //  end frame
 	}
 
 	campaign.clear();
@@ -279,18 +282,22 @@ void Engine::run()
 
 	load_module();
 
+	// initialize the campaign
 	campaign.init(shaders.get());
 	campaign.camera.set_projection(video_settings.fov, video_settings.canvas.x, video_settings.canvas.y, 0.1f, 900.f);
 	
+	// initialize the battle
 	battle.init(shaders.get());
 	battle.camera.set_projection(video_settings.fov, video_settings.canvas.x, video_settings.canvas.y, 0.1f, 900.f);
 
+	// random number for the world seed
 	std::random_device rd;
 	std::mt19937 gen(rd());
 	std::uniform_int_distribution<int> distrib;
 
+	// the main menu loop
 	while (state == EngineState::TITLE) {
-		util::InputManager::update();
+		util::InputManager::update(); // user keyboard and mouse input
 		if (util::InputManager::exit_request()) {
 			state = EngineState::EXIT;
 		}
@@ -304,6 +311,7 @@ void Engine::run()
 		
 		SDL_GL_SwapWindow(window);
 			
+		// start a new campaign
 		if (state == EngineState::NEW_CAMPAIGN) {
 			campaign.clear();
 			campaign.generate(distrib(gen));
@@ -311,12 +319,14 @@ void Engine::run()
 			campaign.reset_camera();
 			state = EngineState::RUNNING_CAMPAIGN;
 		}
+		// load a campaign from save file
 		if (state == EngineState::LOADING_CAMPAIGN) {
 			campaign.clear();
 			campaign.load(user_dir.saves + "test.save");
 			campaign.prepare();
 			state = EngineState::RUNNING_CAMPAIGN;
 		}
+		// run the selected campaign
 		if (state == EngineState::RUNNING_CAMPAIGN) {
 			run_campaign();
 		}
@@ -353,16 +363,20 @@ void Engine::run_battle()
 
 	state = EngineState::BATTLE; 
 
+	// import local battle settings from campaign
 	BattleParameters parameters;
 	parameters.seed = campaign.seed;
 	parameters.tile = campaign.battle_data.tile;
 	parameters.town_size = campaign.battle_data.town_size;
 
+	// prepare the battle based on selected parameters
 	battle.prepare(parameters);
 
+	// the battle loop
 	while (state == EngineState::BATTLE) {
-		frame_timer.begin();
+		frame_timer.begin(); // begin a new frame
 	
+		// first update keyboard and mouse input
 		util::InputManager::update();
 
 		if (util::InputManager::key_pressed(SDLK_BACKQUOTE)) {
@@ -371,11 +385,12 @@ void Engine::run_battle()
 		
 		update_battle_menu();
 		
+		// internal battle update
 		battle.update(frame_timer.delta_seconds());
 
+		// render the battle
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glViewport(0, 0, video_settings.canvas.x, video_settings.canvas.y);
-		
 		battle.display();
 
 		ImGui::Render();
@@ -383,13 +398,14 @@ void Engine::run_battle()
 
 		SDL_GL_SwapWindow(window);
 
-		frame_timer.finish();
-
 		if (util::InputManager::exit_request()) {
 			state = EngineState::EXIT;
 		}
+
+		frame_timer.finish(); // end the frame
 	}
 
+	// battle has ended so clean everything up
 	battle.clear();
 }
 
