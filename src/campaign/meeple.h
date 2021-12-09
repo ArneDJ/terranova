@@ -29,7 +29,7 @@ private:
 
 // moves on the campaign map
 // either controlled by the player or the AI
-class Meeple {
+class Meeple : public BaseEntity {
 public:
 	uint32_t target_id = 0; // id of target entity
 	uint8_t target_type = 0;
@@ -41,34 +41,26 @@ public:
 	void teleport(const glm::vec2 &position);
 	void sync();
 public:
-	void set_id(uint32_t id);
 	void set_speed(float speed);
 	void set_path(const std::list<glm::vec2> &nodes);
 	void clear_path();
 	void clear_target();
 	void set_vertical_offset(float offset);
-	void set_model(const gfx::Model *model);
 public:
 	void add_troops(uint32_t troop_type, int count);
 public:
-	uint32_t id() const;
-	const geom::Transform* transform() const;
 	const fysx::TriggerSphere* trigger() const;
 	const fysx::TriggerSphere* visibility() const;
-	const gfx::Model* model() const;
 	glm::vec2 position() const;
 public:
 	template <class Archive>
 	void serialize(Archive &archive)
 	{
-		archive(m_id, m_speed, m_transform->position, m_transform->rotation, m_transform->scale, target_id, target_type, faction_id);
+		archive(id, m_speed, transform.position, transform.rotation, transform.scale, target_id, target_type, faction_id);
 	}
 private:
-	uint32_t m_id = 0;
 	float m_speed = 10.f;
-	const gfx::Model *m_model = nullptr;
 	PathFinder m_path_finder;
-	std::unique_ptr<geom::Transform> m_transform;
 private:
 	std::unique_ptr<fysx::TriggerSphere> m_trigger;
 	std::unique_ptr<fysx::TriggerSphere> m_visibility;

@@ -1,6 +1,7 @@
 #pragma once
 #include "atlas.h"
 #include "board.h"
+#include "entity.h"
 #include "meeple.h"
 #include "settlement.h"
 #include "faction.h"

@@ -58,7 +58,7 @@ enum CampaignCollisionGroup {
 	COLLISION_GROUP_HEIGHTMAP = 1 << 4
 };
 
-enum class CampaignEntityType : uint8_t {
+enum class CampaignEntity : uint8_t {
 	INVALID,
 	LAND_SURFACE,
 	WATER_SURFACE,
@@ -134,34 +134,29 @@ void Campaign::generate(int seedling)
 {
 	seed = seedling;
 
-	// new IDs
 	id_generator.reset();
 
-	// generate the campaign map
 	board->generate(seed);
 
-	// reset owned tiles
 	const auto &atlas = board->atlas();	
 	const auto &tiles = atlas.tiles();	
 	for (const auto &tile : tiles) {
 		faction_controller.tile_owners[tile.index] = 0;
 	}
 
-	// finds ideal starting points for towns
 	faction_controller.find_town_targets(atlas, 4 + 1);
 
-	// spawn new factions for this campaign
 	spawn_factions();
 
-	// player init
 	player_data.meeple_id = id_generator.generate();
 	meeple_controller.meeples[player_data.meeple_id] = std::make_unique<Meeple>();
 	meeple_controller.player = meeple_controller.meeples[player_data.meeple_id].get();
-	meeple_controller.player->set_id(player_data.meeple_id);
+	meeple_controller.player->id = player_data.meeple_id;
 	meeple_controller.player->set_speed(5.f);
+
 	meeple_controller.player->faction_id = player_data.faction_id;
 
-	// position meeples at their faction capitals
+	// position meeples at faction capitals
 	for (auto &mapping : meeple_controller.meeples) {
 		auto &meeple = mapping.second;
 		auto faction_search = faction_controller.factions.find(meeple->faction_id);
@@ -183,7 +178,7 @@ void Campaign::prepare()
 	// add physical objects
 	int group = COLLISION_GROUP_HEIGHTMAP;
 	int mask = COLLISION_GROUP_RAY;
-	board->height_field()->object()->setUserIndex2(int(CampaignEntityType::LAND_SURFACE));
+	board->height_field()->object()->setUserIndex2(int(CampaignEntity::LAND_SURFACE));
 	physics.add_object(board->height_field()->object(), group, mask);
 
 	// place towns
@@ -199,13 +194,15 @@ void Campaign::prepare()
 		}
 	}
 
-	// paint rivers
 	const auto &atlas = board->atlas();	
 	const auto &graph = atlas.graph();	
 	const auto &tiles = atlas.tiles();	
 	const auto &borders = atlas.borders();	
 	for (const auto &tile : tiles) {
 		glm::vec3 color = tile.relief == ReliefType::SEABED ? glm::vec3(1.f, 0.f, 1.f) : glm::vec3(0.f, 0.f, 0.f);
+		if (tile.flags & TILE_FLAG_COAST) {
+			//board->paint_tile(tile.index, color);
+		}
 		const auto &cell = graph.cells[tile.index];
 		for (const auto &edge : cell.edges) {
 			const auto &border = borders[edge->index];
@@ -215,17 +212,14 @@ void Campaign::prepare()
 		}
 	}
 
-	// update the board once to do the actual painting
 	board->update();
 
-	// place the meeple entities on the campaign map
 	meeple_controller.player = meeple_controller.meeples[player_data.meeple_id].get();
 	for (auto &meeple : meeple_controller.meeples) {
 		meeple.second->sync();
 		place_meeple(meeple.second.get());
 	}
 	
-	// to visiualize the navigation mesh in debug mode
 	debugger->add_navmesh(board->navigation().navmesh());
 }
 
@@ -252,12 +246,10 @@ void Campaign::update(float delta)
 {
 	update_cheat_menu();
 
-	// no physics so we only need to update collision
 	physics.update_collision_only();
 
 	update_camera(delta);
 
-	// if the player requests a move 
 	if (player_mode == PlayerMode::ARMY_MOVEMENT) {
 		if (util::InputManager::key_pressed(SDL_BUTTON_RIGHT)) {
 			glm::vec3 ray = camera.ndc_to_ray(util::InputManager::abs_mouse_coords());
@@ -265,7 +257,6 @@ void Campaign::update(float delta)
 		}
 	}
 	
-	// place a new town if player wants to
 	if (player_mode == PlayerMode::TOWN_PLACEMENT) {
 		glm::vec3 ray = camera.ndc_to_ray(util::InputManager::abs_mouse_coords());
 		set_player_construction(ray);
@@ -273,12 +264,10 @@ void Campaign::update(float delta)
 		con_marker.visible = false;
 	}
 
-	// update meeples
 	meeple_controller.update(delta);
 
 	update_meeple_target(meeple_controller.player);
 
-	// correct vertical placement of dynamic entities on map
 	float offset = vertical_offset(meeple_controller.player->position());
 	meeple_controller.player->set_vertical_offset(offset);
 
@@ -300,8 +289,8 @@ void Campaign::display()
 	// display army entities
 	for (auto &mapping : meeple_controller.meeples) {
 		auto &meeple = mapping.second;
-		object_shader->uniform_mat4("MODEL", meeple->transform()->to_matrix());
-		meeple->model()->display();
+		object_shader->uniform_mat4("MODEL", meeple->transform.to_matrix());
+		meeple->model->display();
 	}
 
 	// display town entities
@@ -311,7 +300,6 @@ void Campaign::display()
 		town->model()->display();
 	}
 
-	// displays the campaign map board
 	if (wireframe_worldmap) {
 		board->display_wireframe(camera);
 	} else {
@@ -323,7 +311,6 @@ void Campaign::display()
 		debugger->display_navmeshes();
 	}
 
-	// display entity labels
 	labeler->display(camera);
 }
 	
@@ -341,27 +328,24 @@ float Campaign::vertical_offset(const glm::vec2 &position)
 // places a meeple entity on the campaign map
 void Campaign::place_meeple(Meeple *meeple)
 {
-	// find vertical offset on map
 	float offset = vertical_offset(meeple->position());
 	meeple->set_vertical_offset(offset);
 
 	int meeple_mask = COLLISION_GROUP_INTERACTION | COLLISION_GROUP_VISIBILITY | COLLISION_GROUP_RAY | COLLISION_GROUP_TOWN;
 
-	// add collision data
 	auto trigger = meeple->trigger();
-	trigger->ghost_object()->setUserIndex(meeple->id());
-	trigger->ghost_object()->setUserIndex2(int(CampaignEntityType::MEEPLE));
+	trigger->ghost_object()->setUserIndex(meeple->id);
+	trigger->ghost_object()->setUserIndex2(int(CampaignEntity::MEEPLE));
 	physics.add_object(trigger->ghost_object(), COLLISION_GROUP_INTERACTION, meeple_mask);
 	auto visibility = meeple->visibility();
 	physics.add_object(visibility->ghost_object(), COLLISION_GROUP_VISIBILITY, COLLISION_GROUP_INTERACTION);
 
-	// set visual model
-	meeple->set_model(army_blueprint.model);
+	meeple->model = army_blueprint.model;
 
 	// add label
 	//glm::vec3 color = faction_controller.factions[meeple->faction()]->color();
 	glm::vec3 color = glm::vec3(1.f);
-	labeler->add_label(meeple->transform(), 0.2f, glm::vec3(0.f, 2.f, 0.f), "Army " + std::to_string(meeple->id()), color);
+	labeler->add_label(&meeple->transform, 0.2f, glm::vec3(0.f, 2.f, 0.f), "Army " + std::to_string(meeple->id), color);
 }
 	
 // spawns a group of new factions
@@ -383,7 +367,6 @@ void Campaign::spawn_factions()
 		player_data.faction_id = id;
 	}
 
-	// spawn non playable factions
 	for (int i = 0; i < 24; i++) {
 		std::unique_ptr<Faction> faction = std::make_unique<Faction>();
 		auto id = id_generator.generate();
@@ -406,7 +389,6 @@ void Campaign::spawn_factions()
 		}
 	}
 
-	// assign factions to a random town location as capital
 	for (const auto &mapping : faction_controller.factions) {
 		if (targets.empty()) {
 			LOG_F(ERROR, "No more locations to spawn faction capital");
@@ -429,12 +411,10 @@ void Campaign::spawn_factions()
 // returns the id of the town if it could be added on an unoccupied tile
 uint32_t Campaign::spawn_town(const Tile *tile, uint32_t faction)
 {
-	// checks if the tile is a valid spawn location
 	if (tile->relief != ReliefType::LOWLAND && tile->relief != ReliefType::HILLS) {
 		return 0;
 	}
 
-	// only create new town if the tile is not already occupied
 	auto search = faction_controller.tile_owners.find(tile->index);
 	if (search == faction_controller.tile_owners.end() || search->second == 0) {
 		std::unique_ptr<Town> town = std::make_unique<Town>();
@@ -459,7 +439,7 @@ uint32_t Campaign::spawn_town(const Tile *tile, uint32_t faction)
 	return 0;
 }
 
-// spawns a new fiefdom around a town
+// spawns a new valid town entity
 void Campaign::spawn_fiefdom(Town *town)
 {
 	int radius = 4;
@@ -468,7 +448,6 @@ void Campaign::spawn_fiefdom(Town *town)
 
 	const auto id = id_generator.generate();
 
-	// new valid fiefdom
 	std::unique_ptr<Fiefdom> fiefdom = std::make_unique<Fiefdom>();
 	fiefdom->set_id(id);
 	fiefdom->set_faction(faction);
@@ -476,7 +455,7 @@ void Campaign::spawn_fiefdom(Town *town)
 
 	town->set_fiefdom(id);
 
-	// graph data for breadth first search
+	// breadth first search
 	const auto &atlas = board->atlas();	
 	const auto &cells = atlas.graph().cells;	
 	const auto &tiles = atlas.tiles();	
@@ -489,7 +468,6 @@ void Campaign::spawn_fiefdom(Town *town)
 	depth[town->tile()] = 0;
 	faction_controller.tile_owners[town->tile()] = faction;
 
-	// based on a radius of tiles around a starting tile finds valid tiles to occupy using breadth first search
 	while (!nodes.empty()) {
 		auto node = nodes.front();
 		nodes.pop();
@@ -525,21 +503,18 @@ void Campaign::spawn_fiefdom(Town *town)
 // place the town entity on the campaign map
 void Campaign::place_town(Town *town)
 {
-	// vertical offset on map
 	glm::vec2 center = board->tile_center(town->tile());
 	float offset = vertical_offset(center);
 
 	town->set_position(glm::vec3(center.x, offset, center.y));
 
-	// set the visual model
 	town->set_model(town_blueprint.model);
 
-	// add collision data
 	const int mask = COLLISION_GROUP_INTERACTION | COLLISION_GROUP_VISIBILITY | COLLISION_GROUP_RAY;
 
 	auto trigger = town->trigger();
 	trigger->ghost_object()->setUserIndex(town->id());
-	trigger->ghost_object()->setUserIndex2(int(CampaignEntityType::TOWN));
+	trigger->ghost_object()->setUserIndex2(int(CampaignEntity::TOWN));
 	physics.add_object(trigger->ghost_object(), COLLISION_GROUP_TOWN, mask);
 
 	// debug collision
@@ -553,40 +528,40 @@ void Campaign::place_town(Town *town)
 // teleports the camera to the player position
 void Campaign::reset_camera()
 {
-	camera.position = meeple_controller.player->transform()->position + glm::vec3(0.f, 10.f, -10.f);
-	camera.target(meeple_controller.player->transform()->position);
+	camera.position = meeple_controller.player->transform.position + glm::vec3(0.f, 10.f, -10.f);
+	camera.target(meeple_controller.player->transform.position);
 }
 	
 // changes the target entity of a meeple
+// checks if it is a valid entity
 void Campaign::set_meeple_target(Meeple *meeple, uint32_t target_id, uint8_t target_type)
 {
 	meeple->target_type = 0;
 	meeple->target_id = 0;
 
-	CampaignEntityType entity_type = CampaignEntityType(target_type);
-	if (entity_type == CampaignEntityType::TOWN) {
+	CampaignEntity entity_type = CampaignEntity(target_type);
+	if (entity_type == CampaignEntity::TOWN) {
 		auto search = settlement_controller.towns.find(target_id);
 		if (search != settlement_controller.towns.end()) {
 			meeple->target_type = target_type;
 			meeple->target_id = target_id;
 		}
-	} else if (entity_type == CampaignEntityType::LAND_SURFACE) {
+	} else if (entity_type == CampaignEntity::LAND_SURFACE) {
 		meeple->target_type = target_type;
 	}
 }
 
-// checks if the meeple arrived at target
 void Campaign::update_meeple_target(Meeple *meeple)
 {
-	CampaignEntityType entity_type = CampaignEntityType(meeple->target_type);
-	if (entity_type == CampaignEntityType::TOWN) {
+	CampaignEntity entity_type = CampaignEntity(meeple->target_type);
+	if (entity_type == CampaignEntity::TOWN) {
 		auto search = settlement_controller.towns.find(meeple->target_id);
 		if (search != settlement_controller.towns.end()) {
 			float distance = glm::distance(meeple->position(), search->second->map_position());
 			if (distance < 1.F) {
 				meeple->clear_target();
 				// add town event
-				if (meeple->id() == player_data.meeple_id) {
+				if (meeple->id == player_data.meeple_id) {
 					battle_data.tile = search->second->tile();
 					battle_data.town_size = search->second->size();
 					state = CampaignState::BATTLE_REQUEST;
@@ -616,7 +591,6 @@ void Campaign::update_cheat_menu()
 	ImGui::End();
 }
 	
-// updates the campaign camera in a time frame
 void Campaign::update_camera(float delta)
 {
 	float modifier = 10.f * delta;
@@ -639,7 +613,6 @@ void Campaign::update_camera(float delta)
 	camera.update_viewing();
 }
 	
-// based on user input change player movement
 void Campaign::set_player_movement(const glm::vec3 &ray)
 {
 	auto result = physics.cast_ray(camera.position, camera.position + (1000.f * ray), COLLISION_GROUP_HEIGHTMAP | COLLISION_GROUP_TOWN);
@@ -659,7 +632,6 @@ void Campaign::set_player_movement(const glm::vec3 &ray)
 	}
 }
 	
-// based on player input place a new town entity 
 void Campaign::set_player_construction(const glm::vec3 &ray)
 {
 	auto result = physics.cast_ray(camera.position, camera.position + (1000.f * ray), COLLISION_GROUP_HEIGHTMAP);
@@ -682,7 +654,6 @@ void Campaign::set_player_construction(const glm::vec3 &ray)
 	}
 }
 
-// transfers town from one faction to the other
 void Campaign::transfer_town(Town *town, uint32_t faction)
 {
 	auto &fiefdom = settlement_controller.fiefdoms[town->fiefdom()];

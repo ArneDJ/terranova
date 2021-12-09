@@ -20,6 +20,7 @@
 #include "../graphics/mesh.h"
 #include "../graphics/model.h"
 
+#include "entity.h"
 #include "meeple.h"
 
 static const float MEEPLE_VISIBILITY_RADIUS = 50.F;
@@ -87,10 +88,8 @@ PathState PathFinder::state() const { return m_state; }
 
 Meeple::Meeple()
 {
-	m_transform = std::make_unique<geom::Transform>();
-
 	geom::Sphere sphere = {
-		m_transform->position,
+		transform.position,
 		1.5f
 	};
 	m_trigger = std::make_unique<fysx::TriggerSphere>(sphere);
@@ -102,27 +101,14 @@ Meeple::Meeple()
 	m_trigger->ghost_object()->setUserPointer(this);
 }
 
-const geom::Transform* Meeple::transform() const { return m_transform.get(); }
-	
 const fysx::TriggerSphere* Meeple::trigger() const { return m_trigger.get(); }
 
 const fysx::TriggerSphere* Meeple::visibility() const { return m_visibility.get(); }
 
-const gfx::Model* Meeple::model() const { return m_model; }
-	
-void Meeple::set_model(const gfx::Model *model)
-{
-	m_model = model;
-}
-
 glm::vec2 Meeple::position() const
 {
-	return glm::vec2(m_transform->position.x, m_transform->position.z);
+	return glm::vec2(transform.position.x, transform.position.z);
 }
-
-uint32_t Meeple::id() const { return m_id; };
-
-void Meeple::set_id(uint32_t id) { m_id = id; };
 
 void Meeple::set_speed(float speed) { m_speed = speed; }
 	
@@ -133,9 +119,9 @@ void Meeple::set_path(const std::list<glm::vec2> &nodes)
 
 void Meeple::set_vertical_offset(float offset)
 {
-	m_transform->position.y = offset;
+	transform.position.y = offset;
 
-	glm::vec3 trigger_position = m_transform->position;
+	glm::vec3 trigger_position = transform.position;
 	trigger_position.y += 1.f;
 	m_trigger->set_position(trigger_position);
 	m_visibility->set_position(trigger_position);
@@ -146,10 +132,10 @@ void Meeple::update(float delta)
 	m_path_finder.update(delta, m_speed);
 
 	glm::vec2 location = m_path_finder.location();
-	m_transform->position.x = location.x;
-	m_transform->position.z = location.y;
+	transform.position.x = location.x;
+	transform.position.z = location.y;
 
-	glm::vec3 trigger_position = m_transform->position;
+	glm::vec3 trigger_position = transform.position;
 	trigger_position.y += 1.f;
 	m_trigger->set_position(trigger_position);
 	m_visibility->set_position(trigger_position);
@@ -159,14 +145,14 @@ void Meeple::update(float delta)
 		glm::vec2 direction = glm::normalize(m_path_finder.velocity());
 		float angle = atan2(direction.x, direction.y);
 		glm::mat4 R = glm::rotate(glm::mat4(1.f), angle, glm::vec3(0.f, 1.f, 0.f));
-		m_transform->rotation = glm::quat(R);
+		transform.rotation = glm::quat(R);
 	}
 }
 
 void Meeple::teleport(const glm::vec2 &position)
 {
-	m_transform->position.x = position.x;
-	m_transform->position.z = position.y;
+	transform.position.x = position.x;
+	transform.position.z = position.y;
 
 	m_path_finder.teleport(position);
 }
@@ -186,7 +172,7 @@ void Meeple::clear_target()
 
 void Meeple::sync()
 {
-	m_path_finder.teleport(glm::vec2(m_transform->position.x, m_transform->position.z));
+	m_path_finder.teleport(glm::vec2(transform.position.x, transform.position.z));
 }
 	
 void MeepleController::update(float delta)
