@@ -105,6 +105,8 @@ void Campaign::load(const std::string &filepath)
 		archive(faction_controller);
 		archive(settlement_controller);
 		archive(player_data);
+		archive(game_ticks);
+		archive(faction_ticks);
 	} else {
 		LOG_F(ERROR, "Game loading error: could not open save file %s", filepath.c_str());
 	}
@@ -126,6 +128,8 @@ void Campaign::save(const std::string &filepath)
 		archive(faction_controller);
 		archive(settlement_controller);
 		archive(player_data);
+		archive(game_ticks);
+		archive(faction_ticks);
 	} else {
 		LOG_F(ERROR, "Game saving error: could not open save file %s", filepath.c_str());
 	}
@@ -134,6 +138,10 @@ void Campaign::save(const std::string &filepath)
 // generates a new campaign world based on a seed
 void Campaign::generate(int seedling)
 {
+	// reset game ticks
+	game_ticks = 0;
+	faction_ticks = 0;
+	
 	seed = seedling;
 
 	id_generator.reset();
@@ -291,6 +299,14 @@ void Campaign::update(float delta)
 
 	// if the game isn't paused update gameplay
 	if (state == CampaignState::RUNNING) {
+		// update faction gold after an elapsed game time period
+		// in game this means every month
+		if (game_ticks % 60 == 0) {
+			if (game_ticks > faction_ticks) {
+				update_faction_taxes();
+				faction_ticks = game_ticks;
+			}
+		}
 		meeple_controller.update(delta);
 		update_meeple_target(meeple_controller.player);
 	}
@@ -426,7 +442,7 @@ void Campaign::spawn_factions()
 		targets.pop();
 		auto &faction = mapping.second;
 		// place the town and assign it as faction capital
-		uint32_t id = spawn_town(&tiles[target], faction->id());
+		uint32_t id = spawn_town(&tiles[target], faction.get());
 		if (id) {
 			faction->capital_id = id;
 			Town *town = settlement_controller.towns[id].get();
@@ -436,7 +452,7 @@ void Campaign::spawn_factions()
 }
 	
 // returns the id of the town if it could be added on an unoccupied tile
-uint32_t Campaign::spawn_town(const Tile *tile, uint32_t faction)
+uint32_t Campaign::spawn_town(const Tile *tile, Faction *faction)
 {
 	if (tile->relief != ReliefType::LOWLAND && tile->relief != ReliefType::HILLS) {
 		return 0;
@@ -447,7 +463,7 @@ uint32_t Campaign::spawn_town(const Tile *tile, uint32_t faction)
 		std::unique_ptr<Town> town = std::make_unique<Town>();
 		auto id = id_generator.generate();
 		town->set_id(id);
-		town->set_faction(faction);
+		town->set_faction(faction->id());
 		town->set_tile(tile->index);
 
 		if (tile->flags & TILE_FLAG_RIVER) {
@@ -458,7 +474,10 @@ uint32_t Campaign::spawn_town(const Tile *tile, uint32_t faction)
 
 		settlement_controller.towns[id] = std::move(town);
 
-		faction_controller.tile_owners[tile->index] = faction;
+		faction_controller.tile_owners[tile->index] = faction->id();
+
+		// add town to faction
+		faction->towns.push_back(id);
 
 		return id;
 	}
@@ -623,6 +642,13 @@ void Campaign::update_debug_menu()
 		ImGui::SetWindowSize(ImVec2(150, 100));
 		ImGui::End();
 	}
+
+	// game stats
+	ImGui::Begin("Game stats");
+	ImGui::SetWindowSize(ImVec2(300, 200));
+	ImGui::Text("Faction gold: %d", faction_controller.factions[player_data.faction_id]->gold());
+	ImGui::Text("Total Faction towns: %d", faction_controller.factions[player_data.faction_id]->towns.size());
+	ImGui::End();
 }
 	
 void Campaign::update_camera(float delta)
@@ -670,19 +696,25 @@ void Campaign::set_player_construction(const glm::vec3 &ray)
 {
 	auto result = physics.cast_ray(camera.position, camera.position + (1000.f * ray), COLLISION_GROUP_HEIGHTMAP);
 	const Tile *tile = board->atlas().tile_at(glm::vec2(result.point.x, result.point.z));
+	const int town_cost = 100;
+
 	if (tile) {
 		glm::vec2 center = board->tile_center(tile->index);
 		float offset = vertical_offset(center);
 		con_marker.transform.position = glm::vec3(center.x, offset, center.y);
 		con_marker.visible = true;
 		if (util::InputManager::key_pressed(SDL_BUTTON_LEFT)) {
-			uint32_t id = spawn_town(tile, player_data.faction_id);
-			if (id) {
-				Town *town = settlement_controller.towns[id].get();
-				place_town(town);
-				spawn_fiefdom(town);
-				// change mode
-				player_mode = PlayerMode::ARMY_MOVEMENT;
+			if (faction_controller.factions[player_data.faction_id]->gold() >= town_cost) {
+				uint32_t id = spawn_town(tile, faction_controller.factions[player_data.faction_id].get());
+				if (id) {
+					Town *town = settlement_controller.towns[id].get();
+					place_town(town);
+					spawn_fiefdom(town);
+					// change mode
+					player_mode = PlayerMode::ARMY_MOVEMENT;
+					// town costs money
+					faction_controller.factions[player_data.faction_id]->add_gold(-town_cost);
+				}
 			}
 		}
 	}
@@ -714,5 +746,15 @@ void Campaign::visit_current_tile()
 		battle_data.tile = tile->index;
 		battle_data.town_size = 0;
 		state = CampaignState::BATTLE_REQUEST;
+	}
+}
+	
+// updates faction treasuries based on their holdings
+void Campaign::update_faction_taxes()
+{
+	for (const auto &mapping : faction_controller.factions) {
+		auto &faction = mapping.second;
+		auto profit = 100 * faction->towns.size();
+		faction->add_gold(profit);
 	}
 }

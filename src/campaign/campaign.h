@@ -69,6 +69,7 @@ public: // entities
 public: // to keep track of game time
 	float hourglass_sand = 0.f;
 	uint64_t game_ticks = 0; // for every n seconds a new game tick is added
+	uint64_t faction_ticks = 0;
 public:
 	std::shared_ptr<gfx::Shader> object_shader;
 public:
@@ -92,8 +93,7 @@ private:
 	void update_camera(float delta);
 	void visit_current_tile();
 private:
-	void spawn_factions();
-	uint32_t spawn_town(const Tile *tile, uint32_t faction);
+	uint32_t spawn_town(const Tile *tile, Faction *faction);
 	void spawn_fiefdom(Town *town);
 	void place_town(Town *town);
 	void place_meeple(Meeple *meeple);
@@ -102,6 +102,9 @@ private:
 	void set_player_movement(const glm::vec3 &ray);
 	void set_player_construction(const glm::vec3 &ray);
 	void transfer_town(Town *town, uint32_t faction);
+public:
+	void spawn_factions();
+	void update_faction_taxes();
 private:
 	float vertical_offset(const glm::vec2 &position);
 };

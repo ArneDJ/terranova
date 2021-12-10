@@ -2,6 +2,7 @@
 class Faction {
 public:
 	uint32_t capital_id = 0; // capital town
+	std::list<uint32_t> towns; // towns owned by this faction
 public:
 	uint32_t id() const;
 	glm::vec3 color() const;
@@ -15,7 +16,7 @@ public:
 	template <class Archive>
 	void serialize(Archive &archive)
 	{
-		archive(m_id, m_color, capital_id, m_gold);
+		archive(m_id, m_color, capital_id, m_gold, towns);
 	}
 private:
 	int m_gold = 100; // faction treasury

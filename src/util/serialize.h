@@ -11,6 +11,7 @@
 #include "../extern/cereal/types/utility.hpp"
 #include "../extern/cereal/types/queue.hpp"
 #include "../extern/cereal/types/set.hpp"
+#include "../extern/cereal/types/list.hpp"
 
 namespace glm {
 
