@@ -66,6 +66,9 @@ public: // entities
 	ConstructionMarker con_marker;
 	CampaignPlayerData player_data = {};
 	PlayerMode player_mode = PlayerMode::ARMY_MOVEMENT;
+public: // to keep track of game time
+	float hourglass_sand = 0.f;
+	uint64_t game_ticks = 0; // for every n seconds a new game tick is added
 public:
 	std::shared_ptr<gfx::Shader> object_shader;
 public:

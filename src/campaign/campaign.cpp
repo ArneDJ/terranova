@@ -67,6 +67,8 @@ enum class CampaignEntity : uint8_t {
 	TOWN
 };
 
+static const float GAME_TIME_SLICE = 1.f; // in seconds time needed to update game tick
+
 // initializes the campaign
 void Campaign::init(const gfx::ShaderGroup *shaders)
 {
@@ -250,6 +252,16 @@ void Campaign::update(float delta)
 			state = CampaignState::PAUSED;
 		} else if (state == CampaignState::PAUSED) {
 			state = CampaignState::RUNNING;
+		}
+	}
+
+	// accumulate time for game tick if not paused
+	if (state == CampaignState::RUNNING) {
+		hourglass_sand += delta;
+		if (hourglass_sand > GAME_TIME_SLICE) {
+			float integral = floorf(hourglass_sand);
+			game_ticks += integral;
+			hourglass_sand -= integral; // reset plus fractional part
 		}
 	}
 
