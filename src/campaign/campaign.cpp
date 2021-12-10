@@ -244,16 +244,29 @@ void Campaign::clear()
 // the campaign game update in a frame
 void Campaign::update(float delta)
 {
-	update_cheat_menu();
+	// check if player wants to pause the game
+	if (util::InputManager::key_pressed(SDLK_p)) {
+		if (state == CampaignState::RUNNING) {
+			state = CampaignState::PAUSED;
+		} else if (state == CampaignState::PAUSED) {
+			state = CampaignState::RUNNING;
+		}
+	}
 
-	physics.update_collision_only();
+	update_debug_menu();
 
 	update_camera(delta);
+
+	physics.update_collision_only();
 
 	if (player_mode == PlayerMode::ARMY_MOVEMENT) {
 		if (util::InputManager::key_pressed(SDL_BUTTON_RIGHT)) {
 			glm::vec3 ray = camera.ndc_to_ray(util::InputManager::abs_mouse_coords());
 			set_player_movement(ray);
+			// if in pause mode unpause game
+			if (state == CampaignState::PAUSED) {
+				state = CampaignState::RUNNING;
+			}
 		}
 	}
 	
@@ -264,9 +277,11 @@ void Campaign::update(float delta)
 		con_marker.visible = false;
 	}
 
-	meeple_controller.update(delta);
-
-	update_meeple_target(meeple_controller.player);
+	// if the game isn't paused update gameplay
+	if (state == CampaignState::RUNNING) {
+		meeple_controller.update(delta);
+		update_meeple_target(meeple_controller.player);
+	}
 
 	float offset = vertical_offset(meeple_controller.player->position());
 	meeple_controller.player->set_vertical_offset(offset);
@@ -574,7 +589,7 @@ void Campaign::update_meeple_target(Meeple *meeple)
 	}
 }
 	
-void Campaign::update_cheat_menu()
+void Campaign::update_debug_menu()
 {
 	ImGui::Begin("Cheat Menu");
 	ImGui::SetWindowSize(ImVec2(300, 200));
@@ -589,6 +604,13 @@ void Campaign::update_cheat_menu()
 		visit_current_tile();
 	}
 	ImGui::End();
+
+	// tell player if game is paused
+	if (state == CampaignState::PAUSED) {
+		ImGui::Begin("Game is paused");
+		ImGui::SetWindowSize(ImVec2(150, 100));
+		ImGui::End();
+	}
 }
 	
 void Campaign::update_camera(float delta)

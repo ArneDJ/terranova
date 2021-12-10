@@ -85,7 +85,7 @@ public:
 	void display();
 	void reset_camera();
 private:
-	void update_cheat_menu();
+	void update_debug_menu();
 	void update_camera(float delta);
 	void visit_current_tile();
 private:

@@ -20,6 +20,8 @@ uint32_t Faction::id() const { return m_id; };
 
 glm::vec3 Faction::color() const { return m_color; };
 
+int Faction::gold() const { return m_gold; };
+
 void Faction::set_color(const glm::vec3 &color)
 {
 	m_color = color;
@@ -30,6 +32,11 @@ void Faction::set_id(uint32_t id)
 	m_id = id; 
 };
 	
+void Faction::add_gold(int amount)
+{
+	m_gold += amount;
+}
+
 void FactionController::clear()
 {
 	tile_owners.clear();

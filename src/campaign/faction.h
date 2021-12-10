@@ -5,16 +5,20 @@ public:
 public:
 	uint32_t id() const;
 	glm::vec3 color() const;
+	int gold() const;
 public:
 	void set_color(const glm::vec3 &color);
 	void set_id(uint32_t id);
 public:
+	void add_gold(int amount);
+public:
 	template <class Archive>
 	void serialize(Archive &archive)
 	{
-		archive(m_id, m_color, capital_id);
+		archive(m_id, m_color, capital_id, m_gold);
 	}
 private:
+	int m_gold = 100; // faction treasury
 	uint32_t m_id = 0;
 	glm::vec3 m_color = {};
 };
