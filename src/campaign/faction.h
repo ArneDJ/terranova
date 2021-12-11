@@ -33,9 +33,14 @@ public:
 	template <class Archive>
 	void serialize(Archive &archive)
 	{
-		archive(factions,  tile_owners, town_targets);
+		archive(factions,  tile_owners, town_targets, m_desirable_tiles);
 	}
 public:
 	void clear();
 	void find_town_targets(const Atlas &atlas, int radius);
+	uint32_t find_closest_town_target(const Atlas &atlas, Faction *faction, uint32_t origin_tile);
+private:
+	std::unordered_map<uint32_t, bool> m_desirable_tiles;
+	std::queue<uint32_t> m_expansion_requests; // queue with ids of factions that request expansion
+	uint64_t m_internal_ticks = 0;
 };

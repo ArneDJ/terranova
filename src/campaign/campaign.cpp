@@ -291,8 +291,26 @@ void Campaign::update(float delta)
 	}
 	
 	if (player_mode == PlayerMode::TOWN_PLACEMENT) {
-		glm::vec3 ray = camera.ndc_to_ray(util::InputManager::abs_mouse_coords());
-		set_player_construction(ray);
+		//glm::vec3 ray = camera.ndc_to_ray(util::InputManager::abs_mouse_coords());
+		//set_player_construction(ray);
+		Faction *faction = faction_controller.factions[player_data.faction_id].get();
+		uint32_t capital_tile = settlement_controller.towns[faction->capital_id]->tile();
+		if (faction->gold() >= 100) {
+			const auto &atlas = board->atlas();	
+			uint32_t tile = faction_controller.find_closest_town_target(atlas, faction, capital_tile);
+			if (tile) {
+				uint32_t id = spawn_town(&atlas.tiles()[tile], faction);
+				if (id) {
+					Town *town = settlement_controller.towns[id].get();
+					place_town(town);
+					spawn_fiefdom(town);
+					// change mode
+					player_mode = PlayerMode::ARMY_MOVEMENT;
+					// town costs money
+					faction->add_gold(-100);
+				}
+			}
+		}
 	} else {
 		con_marker.visible = false;
 	}

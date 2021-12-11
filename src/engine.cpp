@@ -224,7 +224,7 @@ void Engine::update_campaign_menu()
 	ImGui::Checkbox("Show debug objects", &campaign.display_debug);
 	ImGui::Checkbox("Show world wireframe", &campaign.wireframe_worldmap);
 	ImGui::Separator();
-	if (ImGui::Button("Save World")) { 
+	if (ImGui::Button("Save Game")) { 
 		campaign.save(user_dir.saves + "test.save");
 	}
 	ImGui::Separator();
