@@ -134,3 +134,27 @@ uint32_t FactionController::find_closest_town_target(const Atlas &atlas, Faction
 
 	return 0;
 }
+	
+void FactionController::add_expand_request(uint32_t faction_id)
+{
+	m_expansion_requests.push(faction_id);
+}
+	
+// finds the faction at the top of request queue and returns its id
+// returns 0 if nothing found
+uint32_t FactionController::top_request()
+{
+	if (m_expansion_requests.empty()) { return 0; }
+
+	auto id = m_expansion_requests.front();
+	m_expansion_requests.pop();
+
+	// find out if it is valid faction
+	auto search = factions.find(id);
+	if (search != factions.end()) {
+		// found a faction
+		return search->second->id();
+	}
+
+	return 0;
+}

@@ -3,6 +3,7 @@ class Faction {
 public:
 	uint32_t capital_id = 0; // capital town
 	std::list<uint32_t> towns; // towns owned by this faction
+	bool expanding = false;
 public:
 	uint32_t id() const;
 	glm::vec3 color() const;
@@ -39,6 +40,8 @@ public:
 	void clear();
 	void find_town_targets(const Atlas &atlas, int radius);
 	uint32_t find_closest_town_target(const Atlas &atlas, Faction *faction, uint32_t origin_tile);
+	void add_expand_request(uint32_t faction_id);
+	uint32_t top_request();
 private:
 	std::unordered_map<uint32_t, bool> m_desirable_tiles;
 	std::queue<uint32_t> m_expansion_requests; // queue with ids of factions that request expansion

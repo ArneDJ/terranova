@@ -291,40 +291,15 @@ void Campaign::update(float delta)
 	}
 	
 	if (player_mode == PlayerMode::TOWN_PLACEMENT) {
-		//glm::vec3 ray = camera.ndc_to_ray(util::InputManager::abs_mouse_coords());
-		//set_player_construction(ray);
-		Faction *faction = faction_controller.factions[player_data.faction_id].get();
-		uint32_t capital_tile = settlement_controller.towns[faction->capital_id]->tile();
-		if (faction->gold() >= 100) {
-			const auto &atlas = board->atlas();	
-			uint32_t tile = faction_controller.find_closest_town_target(atlas, faction, capital_tile);
-			if (tile) {
-				uint32_t id = spawn_town(&atlas.tiles()[tile], faction);
-				if (id) {
-					Town *town = settlement_controller.towns[id].get();
-					place_town(town);
-					spawn_fiefdom(town);
-					// change mode
-					player_mode = PlayerMode::ARMY_MOVEMENT;
-					// town costs money
-					faction->add_gold(-100);
-				}
-			}
-		}
+		glm::vec3 ray = camera.ndc_to_ray(util::InputManager::abs_mouse_coords());
+		set_player_construction(ray);
 	} else {
 		con_marker.visible = false;
 	}
 
 	// if the game isn't paused update gameplay
 	if (state == CampaignState::RUNNING) {
-		// update faction gold after an elapsed game time period
-		// in game this means every month
-		if (game_ticks % 60 == 0) {
-			if (game_ticks > faction_ticks) {
-				update_faction_taxes();
-				faction_ticks = game_ticks;
-			}
-		}
+		update_factions();
 		meeple_controller.update(delta);
 		update_meeple_target(meeple_controller.player);
 	}
@@ -774,5 +749,59 @@ void Campaign::update_faction_taxes()
 		auto &faction = mapping.second;
 		auto profit = 100 * faction->towns.size();
 		faction->add_gold(profit);
+	}
+}
+	
+// update faction behavior
+void Campaign::update_factions()
+{
+	// update faction gold after an elapsed game time period
+	// in game this means every month
+	if (game_ticks % 60 == 0) {
+		if (game_ticks > faction_ticks) {
+			update_faction_taxes();
+			faction_ticks = game_ticks;
+		}
+	}
+
+	// factions will look for new tiles to settle
+	for (const auto &mapping : faction_controller.factions) {
+		auto &faction = mapping.second;
+		// if the faction is not already expanding 
+		if (!faction->expanding) {
+			// has enough gold it will look for a new tile to settle
+			// is not overextended by having too many towns too
+			if (faction->towns.size() < 32 && faction->gold() >= 100) {
+				faction->expanding = true;
+				// add a request to expand
+				faction_controller.add_expand_request(faction->id());
+			}
+		}
+	}
+
+	// fill out expansion request 
+	auto faction_id = faction_controller.top_request();
+	if (faction_id) {
+		Faction *faction = faction_controller.factions[faction_id].get();
+		auto town_search = settlement_controller.towns.find(faction->capital_id);
+		if (town_search != settlement_controller.towns.end()) {
+			uint32_t capital_tile = town_search->second->tile();
+			if (faction->gold() >= 100) {
+				const auto &atlas = board->atlas();	
+				uint32_t tile = faction_controller.find_closest_town_target(atlas, faction, capital_tile);
+				if (tile) {
+					uint32_t id = spawn_town(&atlas.tiles()[tile], faction);
+					if (id) {
+						Town *town = settlement_controller.towns[id].get();
+						place_town(town);
+						spawn_fiefdom(town);
+						// town costs money
+						faction->add_gold(-100);
+						// expansion done so change mode
+						faction->expanding = false;
+					}
+				}
+			}
+		}
 	}
 }

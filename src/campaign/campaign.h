@@ -105,6 +105,7 @@ private:
 public:
 	void spawn_factions();
 	void update_faction_taxes();
+	void update_factions();
 private:
 	float vertical_offset(const glm::vec2 &position);
 };
