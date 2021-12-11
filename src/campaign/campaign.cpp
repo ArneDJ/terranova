@@ -162,7 +162,7 @@ void Campaign::generate(int seedling)
 	meeple_controller.meeples[player_data.meeple_id] = std::make_unique<Meeple>();
 	meeple_controller.player = meeple_controller.meeples[player_data.meeple_id].get();
 	meeple_controller.player->id = player_data.meeple_id;
-	meeple_controller.player->set_speed(5.f);
+	meeple_controller.player->set_speed(4.f);
 
 	meeple_controller.player->faction_id = player_data.faction_id;
 
@@ -302,6 +302,11 @@ void Campaign::update(float delta)
 		update_factions();
 		meeple_controller.update(delta);
 		update_meeple_target(meeple_controller.player);
+	}
+
+	// if player reached the target hide marker
+	if (meeple_controller.player->target_type == 0) {
+		board->hide_marker();
 	}
 
 	float offset = vertical_offset(meeple_controller.player->position());
@@ -590,6 +595,33 @@ void Campaign::set_meeple_target(Meeple *meeple, uint32_t target_id, uint8_t tar
 	}
 }
 
+BoardMarker Campaign::marker_data(const glm::vec2 &hitpoint, uint32_t target_id, uint8_t target_type)
+{
+	BoardMarker marker = { hitpoint, glm::vec3(0.f), 2.f, 1.f };
+
+	// if target is an entity change marker position to target center
+
+	CampaignEntity type = CampaignEntity(target_type);
+	if (type == CampaignEntity::LAND_SURFACE) {
+		marker.color = glm::vec3(0.8f, 0.8f, 1.f);
+	} else if (type == CampaignEntity::TOWN) {
+		auto search = settlement_controller.towns.find(target_id);
+		if (search != settlement_controller.towns.end()) {
+			auto &town = search->second;
+			marker.position = town->map_position();
+			marker.radius = 5.f;
+			if (town->faction() == player_data.faction_id) {
+				marker.color = glm::vec3(0.f, 1.f, 0.f);
+			} else {
+				marker.color = glm::vec3(1.f, 1.f, 0.f);
+			}
+		}
+	} else if (type == CampaignEntity::MEEPLE) {
+	}
+
+	return marker;
+}
+
 void Campaign::update_meeple_target(Meeple *meeple)
 {
 	CampaignEntity entity_type = CampaignEntity(meeple->target_type);
@@ -677,10 +709,14 @@ void Campaign::set_player_movement(const glm::vec3 &ray)
 			std::list<glm::vec2> nodes;
 			
 			board->find_path(meeple_controller.player->position(), hitpoint, nodes);
+			// update visual marker
+			// marker color is based on entity type
+			auto marker = marker_data(hitpoint, result.object->getUserIndex(), result.object->getUserIndex2());
+			board->set_marker(marker);
+
+			nodes.pop_back();
+			nodes.push_back(marker.position);
 			meeple_controller.player->set_path(nodes);
-			
-			// update marker
-			board->set_marker(hitpoint);
 		}
 	}
 }

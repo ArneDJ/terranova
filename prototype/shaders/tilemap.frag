@@ -12,11 +12,13 @@ in TESSEVAL {
 out vec4 fcolor;
 
 uniform vec2 MARKER_POS;
+uniform vec3 MARKER_COLOR;
 uniform float MARKER_RADIUS;
+uniform float MARKER_FADE;
 
 void main(void)
 {
-	vec3 marker_color = vec3(1.0, 1.0, 0.0);
+	vec3 marker_color = MARKER_COLOR;
 
 	vec3 final_color = fragment.tile_color;
 
@@ -27,11 +29,14 @@ void main(void)
 	}
 	}
 
-	float dist = distance(fragment.position.xz, MARKER_POS);
-	if (dist < MARKER_RADIUS) {
-		float transparency = dist / MARKER_RADIUS;
-		transparency = 1.0 - pow(transparency, 4);
-		final_color = mix(marker_color, final_color, transparency);
+	if (MARKER_FADE > 0.f) {
+		float dist = distance(fragment.position.xz, MARKER_POS);
+		if (dist < MARKER_RADIUS) {
+			float transparency = dist / MARKER_RADIUS;
+			transparency = 1.0 - pow(transparency, 4);
+			marker_color = mix(marker_color, final_color, transparency);
+			final_color = mix(final_color, marker_color, MARKER_FADE);
+		}
 	}
 
 	fcolor = vec4(final_color, 1.0);

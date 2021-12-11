@@ -190,17 +190,24 @@ void BoardModel::display(const util::Camera &camera) const
 	m_shader->uniform_mat4("CAMERA_VP", camera.VP);
 	m_shader->uniform_vec3("MAP_SCALE", m_scale);
 	// marker
-	m_shader->uniform_vec2("MARKER_POS", m_marker_position);
-	m_shader->uniform_float("MARKER_RADIUS", m_marker_radius);
+	m_shader->uniform_vec2("MARKER_POS", m_marker.position);
+	m_shader->uniform_vec3("MARKER_COLOR", m_marker.color);
+	m_shader->uniform_float("MARKER_RADIUS", m_marker.radius);
+	m_shader->uniform_float("MARKER_FADE", m_marker.fade);
 	
 	m_texture.bind(GL_TEXTURE0);
 
 	m_mesh.draw();
 }
 	
-void BoardModel::set_marker(const glm::vec2 &position)
+void BoardModel::set_marker(const BoardMarker &marker)
 {
-	m_marker_position = position;
+	m_marker = marker;
+}
+	
+void BoardModel::hide_marker()
+{
+	m_marker.fade = 0.f;
 }
 	
 Board::Board(std::shared_ptr<gfx::Shader> tilemap)
@@ -359,8 +366,13 @@ void Board::build_navigation()
 	m_land_navigation.build(vertices, indices);
 }
 
-void Board::set_marker(const glm::vec2 &position)
+void Board::set_marker(const BoardMarker &marker)
 {
-	m_model.set_marker(position);
+	m_model.set_marker(marker);
+}
+
+void Board::hide_marker()
+{
+	m_model.hide_marker();
 }
 	

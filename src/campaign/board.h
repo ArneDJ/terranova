@@ -8,6 +8,13 @@ struct BoardMeshVertex {
 using TriangleKey = std::pair<uint32_t, uint32_t>; // left tile index, right border index
 using VertexPair = std::pair<uint32_t, uint32_t>;
 
+struct BoardMarker {
+	glm::vec2 position = {};
+	glm::vec3 color = {};
+	float radius = 3.f;
+	float fade = 1.f; // transparancy, keep this between 0 and 1
+};
+
 class BoardMesh {
 public:
 	void add_cell(const geom::VoronoiCell &cell, const glm::vec3 &color);
@@ -39,7 +46,8 @@ public:
 	void color_border(uint32_t tile, uint32_t border, const glm::vec3 &color);
 	void update_mesh();
 public:
-	void set_marker(const glm::vec2 &position);
+	void set_marker(const BoardMarker &marker);
+	void hide_marker();
 public:
 	void display(const util::Camera &camera) const;
 private:
@@ -48,8 +56,8 @@ private:
 	BoardMesh m_mesh;
 	gfx::Texture m_texture;
 private:
-	glm::vec2 m_marker_position = {};
-	float m_marker_radius = 3.f;
+	BoardMarker m_marker = {};
+	bool m_marker_visible = false;
 };
 
 struct TilePaintJob {
@@ -75,7 +83,9 @@ public:
 	void update();
 	void paint_tile(uint32_t tile, const glm::vec3 &color);
 	void paint_border(uint32_t tile, uint32_t border, const glm::vec3 &color);
-	void set_marker(const glm::vec2 &position);
+public:
+	void set_marker(const BoardMarker &marker);
+	void hide_marker();
 public:
 	fysx::HeightField* height_field();
 	const util::Navigation& navigation() const;

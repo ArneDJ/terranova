@@ -129,7 +129,14 @@ void Meeple::set_vertical_offset(float offset)
 
 void Meeple::update(float delta)
 {
+	auto prev_path_state = m_path_finder.state();
+
 	m_path_finder.update(delta, m_speed);
+
+	// check if path finished
+	if (prev_path_state != PathState::FINISHED && m_path_finder.state() == PathState::FINISHED) {
+		clear_target();
+	}
 
 	glm::vec2 location = m_path_finder.location();
 	transform.position.x = location.x;

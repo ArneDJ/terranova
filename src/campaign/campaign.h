@@ -108,4 +108,5 @@ public:
 	void update_factions();
 private:
 	float vertical_offset(const glm::vec2 &position);
+	BoardMarker marker_data(const glm::vec2 &hitpoint, uint32_t target_id, uint8_t target_type);
 };

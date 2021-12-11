@@ -59,7 +59,7 @@ public:
 		archive(id, m_speed, transform.position, transform.rotation, transform.scale, target_id, target_type, faction_id);
 	}
 private:
-	float m_speed = 10.f;
+	float m_speed = 5.f;
 	PathFinder m_path_finder;
 private:
 	std::unique_ptr<fysx::TriggerSphere> m_trigger;
