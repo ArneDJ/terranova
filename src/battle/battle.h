@@ -40,6 +40,7 @@ public:
 public:
 	std::unordered_map<uint32_t, std::unique_ptr<BuildingMold>> house_molds;
 	std::unordered_map<uint32_t, std::unique_ptr<BuildingMold>> fort_molds;
+	// TODO put these in creature molds
 	std::unique_ptr<util::AnimationSet> anim_set;
 	std::vector<HitCapsule> creature_hitboxes;
 public:

@@ -140,11 +140,16 @@ struct BoardModule {
 	std::string marker = {};
 	std::string town = {};
 	std::string meeple = {};
+	std::string meeple_skeleton = {};
+	std::string meeple_anim_idle = {};
+	std::string meeple_anim_run = {};
 
 	template <class Archive>
 	void serialize(Archive &archive)
 	{
-		archive(CEREAL_NVP(marker), CEREAL_NVP(town), CEREAL_NVP(meeple));
+		archive(CEREAL_NVP(marker), CEREAL_NVP(town), 
+			CEREAL_NVP(meeple), CEREAL_NVP(meeple_skeleton), CEREAL_NVP(meeple_anim_idle), CEREAL_NVP(meeple_anim_run)
+		);
 	}
 };
 

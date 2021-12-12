@@ -157,5 +157,44 @@ void AnimationSet::find_max_tracks()
 		}
 	}
 }
+	
+AnimationController::AnimationController(const AnimationSet *set)
+	: m_set(set)
+{
+	// find max tracks
+	locals.resize(set->skeleton->num_soa_joints());
+	models.resize(set->skeleton->num_joints());
+	cache.Resize(set->max_tracks);
+}
+	
+void AnimationController::update(uint8_t animation_id, float delta)
+{
+	// find if animation exist
+	// TODO keep track of prev animation so we don't need to a search every time
+	auto search = m_set->animations.find(animation_id);
+	if (search != m_set->animations.end()) {
+		auto &animation = search->second;
+		// Samples animation.
+		playback.update(animation, delta);
+
+		// Setup sampling job.
+		ozz::animation::SamplingJob sampling_job;
+		sampling_job.animation = animation;
+		sampling_job.cache = &cache;
+		sampling_job.ratio = playback.time_ratio;
+		sampling_job.output = ozz::make_span(locals);
+
+		// Samples animation.
+		if (!sampling_job.Run()) { return; }
+
+		// Converts from local space to model space matrices.
+		ozz::animation::LocalToModelJob ltm_job;
+		ltm_job.skeleton = m_set->skeleton;
+		ltm_job.input = ozz::make_span(locals);
+		ltm_job.output = ozz::make_span(models);
+
+		ltm_job.Run();
+	}
+}
 
 };

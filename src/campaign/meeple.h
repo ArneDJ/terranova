@@ -27,6 +27,11 @@ private:
 	PathState m_state = PathState::FINISHED;
 };
 
+enum MeepleAnimation : uint8_t {
+	MA_IDLE = 1,
+	MA_RUN
+};
+
 // moves on the campaign map
 // either controlled by the player or the AI
 class Meeple : public BaseEntity {
@@ -36,10 +41,14 @@ public:
 	uint32_t faction_id = 0;
 public:
 	Meeple();
+	void set_animation(const util::AnimationSet *set);
 public:
 	void update(float delta);
+	void update_animation(float delta);
 	void teleport(const glm::vec2 &position);
 	void sync();
+public:
+	void display() const;
 public:
 	void set_speed(float speed);
 	void set_path(const std::list<glm::vec2> &nodes);
@@ -53,6 +62,7 @@ public:
 	const fysx::TriggerSphere* visibility() const;
 	glm::vec2 position() const;
 public:
+	// TODO remove this and create seperate save record from entity
 	template <class Archive>
 	void serialize(Archive &archive)
 	{
@@ -61,6 +71,10 @@ public:
 private:
 	float m_speed = 5.f;
 	PathFinder m_path_finder;
+private:
+	MeepleAnimation m_animation = MA_IDLE;
+	std::unique_ptr<util::AnimationController> m_animation_controller;
+	gfx::BufferDataPair<glm::mat4> m_joint_matrices;
 private:
 	std::unique_ptr<fysx::TriggerSphere> m_trigger;
 	std::unique_ptr<fysx::TriggerSphere> m_visibility;

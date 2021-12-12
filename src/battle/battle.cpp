@@ -162,7 +162,6 @@ void Battle::load_molds(const Module &module)
 		CreatureAnimation action = CreatureAnimation(input.action_code);
 		anim_set->animations[action] = MediaManager::load_animation(input.animation);
 	}
-
 	anim_set->find_max_tracks();
 
 	// load hitboxes

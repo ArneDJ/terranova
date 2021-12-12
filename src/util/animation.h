@@ -69,6 +69,20 @@ public:
 	void find_max_tracks();
 };
 
+class AnimationController {
+public:
+	PlaybackController playback;
+	ozz::animation::SamplingCache cache;
+	ozz::vector<ozz::math::SoaTransform> locals; // Buffer of local transforms which stores the blending result.
+ 	ozz::vector<ozz::math::Float4x4> models; // Buffer of model space matrices. These are computed by the local-to-model // job after the blending stage.
+public:
+	AnimationController(const AnimationSet *set);
+public:
+	void update(uint8_t animation_id, float delta);
+private:
+	const AnimationSet *m_set = nullptr;
+};
+
 inline glm::mat4 ozz_to_mat4(const ozz::math::Float4x4 &matrix)
 {
 	glm::mat4 out;

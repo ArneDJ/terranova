@@ -14,7 +14,6 @@ layout (std430) readonly buffer JointMatricesBlock
 uniform mat4 MODEL;
 uniform mat4 CAMERA_VP;
 uniform bool WIRED_MODE;
-uniform bool INDIRECT_DRAW;
 
 out vec3 color;
 

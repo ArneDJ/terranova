@@ -44,6 +44,11 @@ struct Blueprint {
 	const gfx::Model *model = nullptr;
 };
 
+struct MeepleBlueprint {
+	const gfx::Model *model = nullptr;
+	std::unique_ptr<util::AnimationSet> anim_set;
+};
+
 class Campaign {
 public:
 	std::string name = {};
@@ -51,7 +56,7 @@ public:
 	CampaignBattleData battle_data;
 	int seed;
 public:
-	Blueprint army_blueprint;
+	MeepleBlueprint army_blueprint;
 	Blueprint town_blueprint;
 public:
 	util::IdGenerator id_generator;
@@ -72,6 +77,7 @@ public: // to keep track of game time
 	uint64_t faction_ticks = 0;
 public:
 	std::shared_ptr<gfx::Shader> object_shader;
+	std::shared_ptr<gfx::Shader> meeple_shader;
 public:
 	bool display_debug = false;
 	bool wireframe_worldmap = false;

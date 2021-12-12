@@ -79,14 +79,22 @@ void Campaign::init(const gfx::ShaderGroup *shaders)
 	board = std::make_unique<Board>(shaders->tilemap);
 	
 	object_shader = shaders->debug;
+	meeple_shader = shaders->creature;
 }
 	
 // load campaign bueprints from the module
 void Campaign::load_blueprints(const Module &module)
 {
-	army_blueprint.model = MediaManager::load_model(module.board_module.meeple);
 	town_blueprint.model = MediaManager::load_model(module.board_module.town);
 	con_marker.model = MediaManager::load_model(module.board_module.town);
+
+	army_blueprint.model = MediaManager::load_model(module.board_module.meeple);
+	// load skeletons and animations for miniatures
+	army_blueprint.anim_set = std::make_unique<util::AnimationSet>();
+	army_blueprint.anim_set->skeleton = MediaManager::load_skeleton(module.board_module.meeple_skeleton);
+	army_blueprint.anim_set->animations[MA_IDLE] = MediaManager::load_animation(module.board_module.meeple_anim_idle);
+	army_blueprint.anim_set->animations[MA_RUN] = MediaManager::load_animation(module.board_module.meeple_anim_run);
+	army_blueprint.anim_set->find_max_tracks();
 }
 	
 // loads a campaign save game
@@ -225,9 +233,13 @@ void Campaign::prepare()
 	board->update();
 
 	meeple_controller.player = meeple_controller.meeples[player_data.meeple_id].get();
-	for (auto &meeple : meeple_controller.meeples) {
-		meeple.second->sync();
-		place_meeple(meeple.second.get());
+	for (auto &mapping : meeple_controller.meeples) {
+		auto &meeple = mapping.second;
+		// set animations TODO should be done earlier during object construction
+		meeple->set_animation(army_blueprint.anim_set.get());
+		meeple->sync();
+		place_meeple(meeple.get());
+		meeple->update_animation(0.01f); // initial pose
 	}
 	
 	debugger->add_navmesh(board->navigation().navmesh());
@@ -327,18 +339,21 @@ void Campaign::display()
 		con_marker.model->display();
 	}
 
-	// display army entities
-	for (auto &mapping : meeple_controller.meeples) {
-		auto &meeple = mapping.second;
-		object_shader->uniform_mat4("MODEL", meeple->transform.to_matrix());
-		meeple->model->display();
-	}
-
 	// display town entities
 	for (auto &mapping : settlement_controller.towns) {
 		auto &town = mapping.second;
 		object_shader->uniform_mat4("MODEL", town->transform()->to_matrix());
 		town->model()->display();
+	}
+
+	// display army entities
+	meeple_shader->use();
+	meeple_shader->uniform_mat4("CAMERA_VP", camera.VP);
+	for (auto &mapping : meeple_controller.meeples) {
+		auto &meeple = mapping.second;
+		meeple_shader->uniform_mat4("MODEL", meeple->transform.to_matrix());
+		//meeple->model->display();
+		meeple->display();
 	}
 
 	if (wireframe_worldmap) {
@@ -704,19 +719,20 @@ void Campaign::set_player_movement(const glm::vec3 &ray)
 	if (result.hit) {
 		if (result.object) {
 			set_meeple_target(meeple_controller.player, result.object->getUserIndex(), result.object->getUserIndex2());
-			// set initial path
+			// find initial path
 			glm::vec2 hitpoint = glm::vec2(result.point.x, result.point.z);
 			std::list<glm::vec2> nodes;
-			
 			board->find_path(meeple_controller.player->position(), hitpoint, nodes);
 			// update visual marker
 			// marker color is based on entity type
-			auto marker = marker_data(hitpoint, result.object->getUserIndex(), result.object->getUserIndex2());
-			board->set_marker(marker);
+			if (nodes.size()) {
+				auto marker = marker_data(hitpoint, result.object->getUserIndex(), result.object->getUserIndex2());
+				board->set_marker(marker);
 
-			nodes.pop_back();
-			nodes.push_back(marker.position);
-			meeple_controller.player->set_path(nodes);
+				nodes.pop_back();
+				nodes.push_back(marker.position);
+				meeple_controller.player->set_path(nodes);
+			}
 		}
 	}
 }

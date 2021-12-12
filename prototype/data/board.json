@@ -2,6 +2,9 @@
     "value0": {
         "marker": "data/media/models/primitives/cone.glb",
         "town": "data/media/models/primitives/cylinder.glb",
-        "meeple": "data/media/models/duck.glb"
+        "meeple": "data/media/models/miniature/human.glb",
+        "meeple_skeleton": "data/media/skeletons/miniature/human.ozz",
+        "meeple_anim_idle": "data/media/animations/miniature/idle.ozz",
+        "meeple_anim_run": "data/media/animations/miniature/run.ozz"
     }
 }

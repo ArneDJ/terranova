@@ -15,6 +15,7 @@
 
 #include "../geometry/geometry.h"
 #include "../geometry/transform.h"
+#include "../util/animation.h"
 #include "../physics/physical.h"
 #include "../physics/trigger.h"
 #include "../graphics/mesh.h"
@@ -99,6 +100,10 @@ Meeple::Meeple()
 
 	m_visibility->ghost_object()->setUserPointer(this);
 	m_trigger->ghost_object()->setUserPointer(this);
+
+	transform.scale = glm::vec3(0.01f);
+	
+	m_joint_matrices.buffer.set_target(GL_SHADER_STORAGE_BUFFER);
 }
 
 const fysx::TriggerSphere* Meeple::trigger() const { return m_trigger.get(); }
@@ -155,6 +160,26 @@ void Meeple::update(float delta)
 		transform.rotation = glm::quat(R);
 	}
 }
+	
+void Meeple::update_animation(float delta)
+{
+	if (m_path_finder.state() == PathState::MOVING) {
+		m_animation = MA_RUN;
+	} else {
+		m_animation = MA_IDLE;
+	}
+	m_animation_controller->update(m_animation, delta);
+
+	for (const auto &skin : model->skins()) {
+		if (skin->inverse_binds.size() == m_animation_controller->models.size()) {
+			for (int i = 0; i < m_animation_controller->models.size(); i++) {
+				m_joint_matrices.data[i] = util::ozz_to_mat4(m_animation_controller->models[i]) * skin->inverse_binds[i];
+			}
+			break; // only animate first skin
+		}
+	}
+	m_joint_matrices.update_present();
+}
 
 void Meeple::teleport(const glm::vec2 &position)
 {
@@ -181,12 +206,27 @@ void Meeple::sync()
 {
 	m_path_finder.teleport(glm::vec2(transform.position.x, transform.position.z));
 }
+
+void Meeple::set_animation(const util::AnimationSet *set)
+{
+	m_animation_controller = std::make_unique<util::AnimationController>(set);
+	m_joint_matrices.data.resize(set->skeleton->num_joints());
+	m_joint_matrices.update_present();
+}
+		
+void Meeple::display() const
+{
+	m_joint_matrices.buffer.bind_base(0);
+		
+	model->display();
+}
 	
 void MeepleController::update(float delta)
 {
 	player->update(delta);
 	for (auto &meeple : meeples) {
 		meeple.second->update(delta);
+		meeple.second->update_animation(delta);
 	}
 }
 	
@@ -194,3 +234,4 @@ void MeepleController::clear()
 {
 	meeples.clear();
 }
+	
