@@ -727,11 +727,20 @@ void Campaign::set_player_movement(const glm::vec3 &ray)
 			// marker color is based on entity type
 			if (nodes.size()) {
 				auto marker = marker_data(hitpoint, result.object->getUserIndex(), result.object->getUserIndex2());
-				board->set_marker(marker);
-
-				nodes.pop_back();
-				nodes.push_back(marker.position);
-				meeple_controller.player->set_path(nodes);
+				// is marker on a valid land tile
+				const auto &tile = board->atlas().tile_at(marker.position);
+				if (tile) {
+					// if passable tile last path node is at marker
+					// if not a passable tile marker will be positioned at last node
+					if (walkable_tile(tile)) {
+						nodes.pop_back();
+						nodes.push_back(marker.position);
+					} else {
+						marker.position = nodes.back();
+					}
+					board->set_marker(marker);
+					meeple_controller.player->set_path(nodes);
+				}
 			}
 		}
 	}
