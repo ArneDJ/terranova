@@ -38,9 +38,10 @@ private:
 
 class BoardModel {
 public:
-	BoardModel(std::shared_ptr<gfx::Shader> shader, const util::Image<uint8_t> &heightmap);
+	BoardModel(std::shared_ptr<gfx::Shader> shader, const util::Image<uint8_t> &heightmap, const util::Image<uint8_t> &normalmap);
 public:
 	void set_scale(const glm::vec3 &scale);
+	void add_material(const std::string &name, const gfx::Texture *texture);
 	void reload(const Atlas &atlas);
 	void color_tile(uint32_t tile, const glm::vec3 &color);
 	void color_border(uint32_t tile, uint32_t border, const glm::vec3 &color);
@@ -50,11 +51,14 @@ public:
 	void hide_marker();
 public:
 	void display(const util::Camera &camera) const;
+	void bind_textures() const;
 private:
 	std::shared_ptr<gfx::Shader> m_shader;
 	glm::vec3 m_scale = { 1.f, 1.f, 1.f };
 	BoardMesh m_mesh;
-	gfx::Texture m_texture;
+	gfx::Texture m_heightmap;
+	gfx::Texture m_normalmap;
+	std::unordered_map<std::string, const gfx::Texture*> m_materials;
 private:
 	BoardMarker m_marker = {};
 	bool m_marker_visible = false;

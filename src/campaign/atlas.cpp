@@ -154,8 +154,10 @@ static bool prunable(const RiverBranch *node, uint8_t min_stream)
 
 Atlas::Atlas()
 {
-	m_heightmap.resize(1024, 1024, util::COLORSPACE_GRAYSCALE);
-	m_mask.resize(1024, 1024, util::COLORSPACE_GRAYSCALE);
+	const uint16_t size = 1024;
+	m_heightmap.resize(size, size, util::COLORSPACE_GRAYSCALE);
+	m_normalmap.resize(size, size, util::COLORSPACE_RGB);
+	m_mask.resize(size, size, util::COLORSPACE_GRAYSCALE);
 }
 	
 Atlas::~Atlas()
@@ -274,6 +276,9 @@ void Atlas::generate(int seed, const geom::Rectangle &bounds, const AtlasParamet
 
 	// alter height map
 	river_cut_relief();
+
+	// the last step is to create the normalmap of the heightmap
+	create_normalmap();
 }
 	
 void Atlas::clear()
@@ -313,6 +318,11 @@ const std::vector<Border>& Atlas::borders() const
 const util::Image<uint8_t>& Atlas::heightmap() const
 {
 	return m_heightmap;
+}
+
+const util::Image<uint8_t>& Atlas::normalmap() const
+{
+	return m_normalmap;
 }
 
 const Tile* Atlas::tile_at(const glm::vec2 &position) const
@@ -965,6 +975,7 @@ void Atlas::river_cut_relief()
 		}
 	}
 
+	// blur the mask a bit so we have smooth transition
 	m_mask.blur(0.6f);
 
 	// now alter the heightmap based on the river mask
@@ -977,6 +988,21 @@ void Atlas::river_cut_relief()
 				float erosion = glm::clamp(1.f - (masker / 255.f), 0.6f, 1.f);
 				m_heightmap.plot(x, y, util::CHANNEL_RED, erosion * height);
 			}
+		}
+	}
+}
+	
+void Atlas::create_normalmap()
+{
+	float strength = 16.f;
+
+	#pragma omp parallel for
+	for (int x = 0; x < m_heightmap.width(); x++) {
+		for (int y = 0; y < m_heightmap.height(); y++) {
+			const glm::vec3 normal = util::filter_normal(x, y, util::CHANNEL_RED, strength, m_heightmap);
+			m_normalmap.plot(x, y, util::CHANNEL_RED, 255 * normal.x);
+			m_normalmap.plot(x, y, util::CHANNEL_GREEN, 255 * normal.y);
+			m_normalmap.plot(x, y, util::CHANNEL_BLUE, 255 * normal.z);
 		}
 	}
 }

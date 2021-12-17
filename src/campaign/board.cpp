@@ -131,15 +131,34 @@ void BoardMesh::color_border(uint32_t tile, uint32_t border, const glm::vec3 &co
 	}
 }
 
-BoardModel::BoardModel(std::shared_ptr<gfx::Shader> shader, const util::Image<uint8_t> &heightmap)
+BoardModel::BoardModel(std::shared_ptr<gfx::Shader> shader, const util::Image<uint8_t> &heightmap, const util::Image<uint8_t> &normalmap)
 	: m_shader(shader)
 {
-	m_texture.create(heightmap);
+	m_heightmap.create(heightmap);
+	m_normalmap.create(normalmap);
+
+	add_material("DISPLACEMENT", &m_heightmap);
+	add_material("NORMALMAP", &m_normalmap);
 }
 	
 void BoardModel::set_scale(const glm::vec3 &scale)
 {
 	m_scale = scale;
+}
+
+void BoardModel::add_material(const std::string &name, const gfx::Texture *texture)
+{
+	m_materials[name] = texture;
+}
+
+void BoardModel::bind_textures() const
+{
+	int location = 0;
+	for (const auto &bucket : m_materials) {
+		m_shader->uniform_int(bucket.first.c_str(), location);
+		bucket.second->bind(GL_TEXTURE0 + location);
+		location++;
+    	}
 }
 
 void BoardModel::reload(const Atlas &atlas)
@@ -166,7 +185,8 @@ void BoardModel::reload(const Atlas &atlas)
 
 	m_mesh.create();
 	
-	m_texture.reload(atlas.heightmap());
+	m_heightmap.reload(atlas.heightmap());
+	m_normalmap.reload(atlas.normalmap());
 }
 	
 void BoardModel::color_tile(uint32_t tile, const glm::vec3 &color)
@@ -196,7 +216,7 @@ void BoardModel::display(const util::Camera &camera) const
 	m_shader->uniform_float("MARKER_RADIUS", m_marker.radius);
 	m_shader->uniform_float("MARKER_FADE", m_marker.fade);
 	
-	m_texture.bind(GL_TEXTURE0);
+	bind_textures();
 
 	m_mesh.draw();
 }
@@ -212,7 +232,7 @@ void BoardModel::hide_marker()
 }
 	
 Board::Board(std::shared_ptr<gfx::Shader> tilemap)
-	: m_model(tilemap, m_atlas.heightmap())
+	: m_model(tilemap, m_atlas.heightmap(), m_atlas.normalmap())
 {
 	m_height_field = std::make_unique<fysx::HeightField>(m_atlas.heightmap(), SCALE);
 }

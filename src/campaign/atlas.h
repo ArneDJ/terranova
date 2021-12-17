@@ -103,13 +103,14 @@ public:
 	const std::vector<Corner>& corners() const;
 	const std::vector<Border>& borders() const;
 	const util::Image<uint8_t>& heightmap() const;
+	const util::Image<uint8_t>& normalmap() const;
 	const Tile* tile_at(const glm::vec2 &position) const;
 	glm::vec2 tile_center(uint32_t index) const;
 public:
 	template <class Archive>
 	void serialize(Archive &archive)
 	{
-		archive(m_graph, m_tiles, m_corners, m_borders, m_heightmap);
+		archive(m_graph, m_tiles, m_corners, m_borders, m_heightmap, m_normalmap);
 	}
 private:
 	geom::Rectangle m_bounds;
@@ -118,6 +119,7 @@ private:
 	std::vector<Corner> m_corners;
 	std::vector<Border> m_borders;
 	util::Image<uint8_t> m_heightmap;
+	util::Image<uint8_t> m_normalmap;
 	util::Image<uint8_t> m_mask;
 private:
 	std::list<DrainageBasin> basins;
@@ -138,8 +140,9 @@ private: // river stuff
 	void trim_rivers();
 	void prune_stubby_rivers(uint8_t min_branch, uint8_t min_basin);
 	void assign_rivers();
-private: // heightmap adjustments
+private: // image maps adjustments
 	void river_cut_relief();
+	void create_normalmap();
 };
 
 bool walkable_tile(const Tile *tile);

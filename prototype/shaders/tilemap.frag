@@ -17,10 +17,23 @@ uniform float MARKER_RADIUS;
 uniform float MARKER_FADE;
 
 uniform sampler2D DISPLACEMENT;
+uniform sampler2D NORMALMAP;
+
+vec3 apply_light(vec3 color, vec3 normal)
+{
+	const vec3 lightdirection = vec3(0.5, 0.93, 0.1);
+	const vec3 lightcolor = vec3(1.0, 1.0, 1.0);
+	float diffuse = max(0.0, dot(normal, lightdirection));
+	vec3 scatteredlight = lightcolor * diffuse;
+
+	return mix(min(color * scatteredlight, vec3(1.0)), color, 0.5);
+}
 
 void main(void)
 {
 	vec3 marker_color = MARKER_COLOR;
+
+	vec3 normal = texture(NORMALMAP, fragment.texcoord).rgb;
 
 	vec3 final_color = fragment.tile_color;
 
@@ -33,6 +46,9 @@ void main(void)
 
 	float height = texture(DISPLACEMENT, fragment.texcoord).r;
 	final_color = mix(final_color, vec3(height), 0.5f);
+
+	// terrain lighting
+	final_color = apply_light(final_color, normal);
 
 	if (MARKER_FADE > 0.f) {
 		float dist = distance(fragment.position.xz, MARKER_POS);
