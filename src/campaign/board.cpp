@@ -188,6 +188,7 @@ void BoardModel::display(const util::Camera &camera) const
 {
 	m_shader->use();
 	m_shader->uniform_mat4("CAMERA_VP", camera.VP);
+	m_shader->uniform_vec3("CAMERA_POSITION", camera.position);
 	m_shader->uniform_vec3("MAP_SCALE", m_scale);
 	// marker
 	m_shader->uniform_vec2("MARKER_POS", m_marker.position);

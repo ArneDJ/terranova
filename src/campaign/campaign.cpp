@@ -716,32 +716,19 @@ void Campaign::update_camera(float delta)
 void Campaign::set_player_movement(const glm::vec3 &ray)
 {
 	auto result = physics.cast_ray(camera.position, camera.position + (1000.f * ray), COLLISION_GROUP_HEIGHTMAP | COLLISION_GROUP_TOWN);
-	if (result.hit) {
-		if (result.object) {
-			set_meeple_target(meeple_controller.player, result.object->getUserIndex(), result.object->getUserIndex2());
-			// find initial path
-			glm::vec2 hitpoint = glm::vec2(result.point.x, result.point.z);
-			std::list<glm::vec2> nodes;
-			board->find_path(meeple_controller.player->position(), hitpoint, nodes);
-			// update visual marker
-			// marker color is based on entity type
-			if (nodes.size()) {
-				auto marker = marker_data(hitpoint, result.object->getUserIndex(), result.object->getUserIndex2());
-				// is marker on a valid land tile
-				const auto &tile = board->atlas().tile_at(marker.position);
-				if (tile) {
-					// if passable tile last path node is at marker
-					// if not a passable tile marker will be positioned at last node
-					if (walkable_tile(tile)) {
-						nodes.pop_back();
-						nodes.push_back(marker.position);
-					} else {
-						marker.position = nodes.back();
-					}
-					board->set_marker(marker);
-					meeple_controller.player->set_path(nodes);
-				}
-			}
+	if (result.hit && result.object) {
+		set_meeple_target(meeple_controller.player, result.object->getUserIndex(), result.object->getUserIndex2());
+		// find initial path
+		glm::vec2 hitpoint = glm::vec2(result.point.x, result.point.z);
+		auto marker = marker_data(hitpoint, result.object->getUserIndex(), result.object->getUserIndex2());
+		std::list<glm::vec2> nodes;
+		board->find_path(meeple_controller.player->position(), marker.position, nodes);
+		// update visual marker
+		// marker color is based on entity type
+		if (nodes.size()) {
+			marker.position = nodes.back();
+			board->set_marker(marker);
+			meeple_controller.player->set_path(nodes);
 		}
 	}
 }

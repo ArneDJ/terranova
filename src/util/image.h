@@ -58,6 +58,26 @@ public:
 	{
 		return sample(x * m_width, y * m_height, channel);
 	}
+public: // rasterize methods
+	// line drawing
+	void draw_line(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint8_t channel, T color)
+	{
+		int dx = abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
+		int dy = -abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
+		int err = dx + dy, e2; // error value e_xy
+
+		for (;;) {
+			plot(x0, y0, channel, color);
+			if (x0 == x1 && y0 == y1) { break; }
+			e2 = 2 * err;
+			if (e2 >= dy) { err += dy; x0 += sx; } // e_xy+e_x > 0
+			if (e2 <= dx) { err += dx; y0 += sy; } // e_xy+e_y < 0
+		}
+	}
+	void draw_line_relative(const glm::vec2 &a, const glm::vec2 &b, uint8_t channel, T color)
+	{
+		draw_line(a.x * m_width, a.y * m_height, b.x * m_width, b.y * m_height, channel, color);
+	}
 public:
 	template <class Archive>
 	void serialize(Archive &archive)

@@ -155,6 +155,7 @@ static bool prunable(const RiverBranch *node, uint8_t min_stream)
 Atlas::Atlas()
 {
 	m_heightmap.resize(1024, 1024, util::COLORSPACE_GRAYSCALE);
+	m_mask.resize(1024, 1024, util::COLORSPACE_GRAYSCALE);
 }
 	
 Atlas::~Atlas()
@@ -164,6 +165,7 @@ Atlas::~Atlas()
 
 void Atlas::generate(int seed, const geom::Rectangle &bounds, const AtlasParameters &parameters)
 {
+	m_bounds = bounds;
 	// clear all data
 	clear();
 
@@ -269,6 +271,9 @@ void Atlas::generate(int seed, const geom::Rectangle &bounds, const AtlasParamet
 	// relief has been altered by rivers // and apply corrections
 	floodfill_relief(4, ReliefType::MOUNTAINS, ReliefType::HILLS);
 	mark_walls();
+
+	// alter height map
+	river_cut_relief();
 }
 	
 void Atlas::clear()
@@ -282,6 +287,7 @@ void Atlas::clear()
 	m_graph.clear();
 
 	m_heightmap.wipe();
+	m_mask.wipe();
 }
 	
 const geom::VoronoiGraph& Atlas::graph() const
@@ -944,6 +950,34 @@ void Atlas::assign_rivers()
 	}
 }
 	
+void Atlas::river_cut_relief()
+{
+	// add rivers as lines to the mask
+	#pragma omp parallel for
+	for (const auto &border : m_borders) {
+		if (border.flags & BORDER_FLAG_RIVER) {
+			const auto &edge = m_graph.edges[border.index];
+			const auto &left_vertex = edge.left_vertex;
+			const auto &right_vertex = edge.right_vertex;
+			glm::vec2 a = left_vertex->position / m_bounds.max;
+			glm::vec2 b = right_vertex->position / m_bounds.max;
+			m_mask.draw_line_relative(a, b, util::CHANNEL_RED, 255);
+		}
+	}
+
+	// now alter the heightmap based on the river mask
+	for (int x = 0; x < m_heightmap.width(); x++) {
+		for (int y = 0; y < m_heightmap.height(); y++) {
+			uint8_t masker = m_mask.sample(x, y, util::CHANNEL_RED);
+			if (masker > 0) {
+				float height = m_heightmap.sample(x, y, util::CHANNEL_RED);
+				//float erosion = glm::clamp(1.f - (masker/255.f), 0.9f, 1.f);
+				m_heightmap.plot(x, y, util::CHANNEL_RED, 0);
+			}
+		}
+	}
+}
+
 void Atlas::delete_basins()
 {
 	for (auto &basin : basins) {

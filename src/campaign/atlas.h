@@ -112,11 +112,13 @@ public:
 		archive(m_graph, m_tiles, m_corners, m_borders, m_heightmap);
 	}
 private:
+	geom::Rectangle m_bounds;
 	geom::VoronoiGraph m_graph;
 	std::vector<Tile> m_tiles;
 	std::vector<Corner> m_corners;
 	std::vector<Border> m_borders;
 	util::Image<uint8_t> m_heightmap;
+	util::Image<uint8_t> m_mask;
 private:
 	std::list<DrainageBasin> basins;
 	void delete_basins();
@@ -136,6 +138,8 @@ private: // river stuff
 	void trim_rivers();
 	void prune_stubby_rivers(uint8_t min_branch, uint8_t min_basin);
 	void assign_rivers();
+private: // heightmap adjustments
+	void river_cut_relief();
 };
 
 bool walkable_tile(const Tile *tile);

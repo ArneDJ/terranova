@@ -16,6 +16,8 @@ uniform vec3 MARKER_COLOR;
 uniform float MARKER_RADIUS;
 uniform float MARKER_FADE;
 
+uniform sampler2D DISPLACEMENT;
+
 void main(void)
 {
 	vec3 marker_color = MARKER_COLOR;
@@ -28,6 +30,9 @@ void main(void)
 		final_color = mix(final_color, fragment.edge_color, 0.8 * pow(strength, 6));
 	}
 	}
+
+	float height = texture(DISPLACEMENT, fragment.texcoord).r;
+	final_color = mix(final_color, vec3(height), 0.5f);
 
 	if (MARKER_FADE > 0.f) {
 		float dist = distance(fragment.position.xz, MARKER_POS);
