@@ -965,14 +965,17 @@ void Atlas::river_cut_relief()
 		}
 	}
 
+	m_mask.blur(0.6f);
+
 	// now alter the heightmap based on the river mask
+	#pragma omp parallel for
 	for (int x = 0; x < m_heightmap.width(); x++) {
 		for (int y = 0; y < m_heightmap.height(); y++) {
 			uint8_t masker = m_mask.sample(x, y, util::CHANNEL_RED);
 			if (masker > 0) {
-				float height = m_heightmap.sample(x, y, util::CHANNEL_RED);
-				//float erosion = glm::clamp(1.f - (masker/255.f), 0.9f, 1.f);
-				m_heightmap.plot(x, y, util::CHANNEL_RED, 0);
+				uint8_t height = m_heightmap.sample(x, y, util::CHANNEL_RED);
+				float erosion = glm::clamp(1.f - (masker / 255.f), 0.6f, 1.f);
+				m_heightmap.plot(x, y, util::CHANNEL_RED, erosion * height);
 			}
 		}
 	}

@@ -79,6 +79,8 @@ public: // rasterize methods
 		draw_line(a.x * m_width, a.y * m_height, b.x * m_width, b.y * m_height, channel, color);
 	}
 public:
+	void blur(float sigma);
+public:
 	template <class Archive>
 	void serialize(Archive &archive)
 	{
