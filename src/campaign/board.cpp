@@ -131,7 +131,7 @@ void BoardMesh::color_border(uint32_t tile, uint32_t border, const glm::vec3 &co
 	}
 }
 
-BoardModel::BoardModel(std::shared_ptr<gfx::Shader> shader, const util::Image<uint8_t> &heightmap, const util::Image<uint8_t> &normalmap)
+BoardModel::BoardModel(std::shared_ptr<gfx::Shader> shader, const util::Image<float> &heightmap, const util::Image<float> &normalmap)
 	: m_shader(shader)
 {
 	m_heightmap.create(heightmap);

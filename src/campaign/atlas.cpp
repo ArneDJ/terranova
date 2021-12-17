@@ -236,7 +236,7 @@ void Atlas::generate(int seed, const geom::Rectangle &bounds, const AtlasParamet
 			float x = i; float y = j;
 			fastnoise.GradientPerturbFractal(x, y);
 			float height = 0.5f * (fastnoise.GetNoise(x, y) + 1.f);
-			m_heightmap.plot(i, j, util::CHANNEL_RED, 255 * height);
+			m_heightmap.plot(i, j, util::CHANNEL_RED, height);
 		}
 	}
 
@@ -244,7 +244,7 @@ void Atlas::generate(int seed, const geom::Rectangle &bounds, const AtlasParamet
 		glm::vec2 center = m_graph.cells[tile.index].center;
 		float x = center.x / bounds.max.x; 
 		float y = center.y / bounds.max.y;
-		tile.height = m_heightmap.sample_relative(x, y, util::CHANNEL_RED);
+		tile.height = 255 * m_heightmap.sample_relative(x, y, util::CHANNEL_RED);
 		if (tile.height > parameters.mountains) {
 			tile.relief = ReliefType::MOUNTAINS;
 		} else if (tile.height > parameters.hills) {
@@ -315,12 +315,12 @@ const std::vector<Border>& Atlas::borders() const
 	return m_borders;
 }
 	
-const util::Image<uint8_t>& Atlas::heightmap() const
+const util::Image<float>& Atlas::heightmap() const
 {
 	return m_heightmap;
 }
 
-const util::Image<uint8_t>& Atlas::normalmap() const
+const util::Image<float>& Atlas::normalmap() const
 {
 	return m_normalmap;
 }
@@ -984,7 +984,7 @@ void Atlas::river_cut_relief()
 		for (int y = 0; y < m_heightmap.height(); y++) {
 			uint8_t masker = m_mask.sample(x, y, util::CHANNEL_RED);
 			if (masker > 0) {
-				uint8_t height = m_heightmap.sample(x, y, util::CHANNEL_RED);
+				float height = m_heightmap.sample(x, y, util::CHANNEL_RED);
 				float erosion = glm::clamp(1.f - (masker / 255.f), 0.6f, 1.f);
 				m_heightmap.plot(x, y, util::CHANNEL_RED, erosion * height);
 			}
@@ -1000,9 +1000,9 @@ void Atlas::create_normalmap()
 	for (int x = 0; x < m_heightmap.width(); x++) {
 		for (int y = 0; y < m_heightmap.height(); y++) {
 			const glm::vec3 normal = util::filter_normal(x, y, util::CHANNEL_RED, strength, m_heightmap);
-			m_normalmap.plot(x, y, util::CHANNEL_RED, 255 * normal.x);
-			m_normalmap.plot(x, y, util::CHANNEL_GREEN, 255 * normal.y);
-			m_normalmap.plot(x, y, util::CHANNEL_BLUE, 255 * normal.z);
+			m_normalmap.plot(x, y, util::CHANNEL_RED, normal.x);
+			m_normalmap.plot(x, y, util::CHANNEL_GREEN, normal.y);
+			m_normalmap.plot(x, y, util::CHANNEL_BLUE, normal.z);
 		}
 	}
 }

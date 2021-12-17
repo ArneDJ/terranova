@@ -102,8 +102,8 @@ public:
 	const std::vector<Tile>& tiles() const;
 	const std::vector<Corner>& corners() const;
 	const std::vector<Border>& borders() const;
-	const util::Image<uint8_t>& heightmap() const;
-	const util::Image<uint8_t>& normalmap() const;
+	const util::Image<float>& heightmap() const;
+	const util::Image<float>& normalmap() const;
 	const Tile* tile_at(const glm::vec2 &position) const;
 	glm::vec2 tile_center(uint32_t index) const;
 public:
@@ -118,8 +118,8 @@ private:
 	std::vector<Tile> m_tiles;
 	std::vector<Corner> m_corners;
 	std::vector<Border> m_borders;
-	util::Image<uint8_t> m_heightmap;
-	util::Image<uint8_t> m_normalmap;
+	util::Image<float> m_heightmap;
+	util::Image<float> m_normalmap;
 	util::Image<uint8_t> m_mask;
 private:
 	std::list<DrainageBasin> basins;

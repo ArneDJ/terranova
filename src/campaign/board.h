@@ -38,7 +38,7 @@ private:
 
 class BoardModel {
 public:
-	BoardModel(std::shared_ptr<gfx::Shader> shader, const util::Image<uint8_t> &heightmap, const util::Image<uint8_t> &normalmap);
+	BoardModel(std::shared_ptr<gfx::Shader> shader, const util::Image<float> &heightmap, const util::Image<float> &normalmap);
 public:
 	void set_scale(const glm::vec3 &scale);
 	void add_material(const std::string &name, const gfx::Texture *texture);
