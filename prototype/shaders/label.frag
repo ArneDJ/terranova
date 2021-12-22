@@ -15,7 +15,9 @@ void main()
 		sampled.a = 1.0;
 	}
 
+	// I guess this is something like signed distance fields?
 	if (sampled.a < 0.5) { discard; }
+	sampled.a = 1.0;
 
 	fcolor = vec4(color, 1.0) * sampled;
 } 

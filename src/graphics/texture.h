@@ -10,6 +10,7 @@ public:
 	void create(const util::Image<float> &image);
 	void reload(const util::Image<float> &image);
 	void load_dds(const uint8_t *blob, const size_t size);
+	void change_filtering(GLint filter);
 public:
 	void bind(GLenum unit) const;
 private:

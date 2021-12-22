@@ -3,6 +3,7 @@
 #include <memory>
 #include <queue>
 #include <list>
+#include <chrono>
 #include <unordered_map>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
@@ -154,7 +155,7 @@ static bool prunable(const RiverBranch *node, uint8_t min_stream)
 
 Atlas::Atlas()
 {
-	const uint16_t size = 1024;
+	const uint16_t size = 2048;
 	m_heightmap.resize(size, size, util::COLORSPACE_GRAYSCALE);
 	m_normalmap.resize(size, size, util::COLORSPACE_RGB);
 	m_mask.resize(size, size, util::COLORSPACE_GRAYSCALE);
@@ -231,6 +232,7 @@ void Atlas::generate(int seed, const geom::Rectangle &bounds, const AtlasParamet
 	fastnoise.SetPerturbFrequency(parameters.perturb_frequency);
 	fastnoise.SetGradientPerturbAmp(parameters.perturb_amp);
 
+	/*
 	for (int i = 0; i < m_heightmap.width(); i++) {
 		for (int j = 0; j < m_heightmap.height(); j++) {
 			float x = i; float y = j;
@@ -239,12 +241,18 @@ void Atlas::generate(int seed, const geom::Rectangle &bounds, const AtlasParamet
 			m_heightmap.plot(i, j, util::CHANNEL_RED, height);
 		}
 	}
+	*/
 
 	for (auto &tile : m_tiles) {
 		glm::vec2 center = m_graph.cells[tile.index].center;
-		float x = center.x / bounds.max.x; 
-		float y = center.y / bounds.max.y;
-		tile.height = 255 * m_heightmap.sample_relative(x, y, util::CHANNEL_RED);
+		//float x = center.x / bounds.max.x; 
+		//float y = center.y / bounds.max.y;
+		//tile.height = 255 * m_heightmap.sample_relative(x, y, util::CHANNEL_RED);
+		float x = center.x; float y = center.y;
+		fastnoise.GradientPerturbFractal(x, y);
+		float height = 0.5f * (fastnoise.GetNoise(x, y) + 1.f);
+		tile.height = 255 * height;
+
 		if (tile.height > parameters.mountains) {
 			tile.relief = ReliefType::MOUNTAINS;
 		} else if (tile.height > parameters.hills) {
@@ -736,15 +744,17 @@ void Atlas::assign_mountain_ridges()
 			auto &right = m_tiles[edge.right_cell->index];
 			// only make ridge if both are mountains
 			if (left.relief == ReliefType::MOUNTAINS && right.relief == ReliefType::MOUNTAINS) {
-				uint8_t color = color_high;
+				//uint8_t color = color_high;
 				glm::vec2 a = m_graph.cells[left.index].center / m_bounds.max;
 				glm::vec2 b = m_graph.cells[right.index].center / m_bounds.max;
 				auto &left_corner = m_corners[edge.left_vertex->index];
 				auto &right_corner = m_corners[edge.right_vertex->index];
+				/*
 				if ((left_corner.flags & CORNER_FLAG_WALL) || (right_corner.flags & CORNER_FLAG_WALL)) {
 					color = color_low;
 				}
-				m_mask.draw_thick_line_relative(a, b, 2, util::CHANNEL_RED, color);
+				*/
+				m_mask.draw_thick_line_relative(a, b, 3, util::CHANNEL_RED, color_high);
 			}
 		}
 	}
@@ -762,11 +772,10 @@ void Atlas::assign_mountain_ridges()
 			if ((left_corner.flags & CORNER_FLAG_WALL) && (right_corner.flags & CORNER_FLAG_WALL)) {
 				glm::vec2 a = m_graph.cells[left.index].center / m_bounds.max;
 				glm::vec2 b = m_graph.cells[right.index].center / m_bounds.max;
-				m_mask.draw_thick_line_relative(a, b, 2, util::CHANNEL_RED, color_low);
+				m_mask.draw_thick_line_relative(a, b, 3, util::CHANNEL_RED, color_high);
 			}
 		}
 	}
-	// TODO maybe ridges for hills too
 }
 
 void Atlas::trim_drainage_basins(size_t min)
@@ -1021,22 +1030,33 @@ void Atlas::assign_rivers()
 	
 void Atlas::create_reliefmap(int seed)
 {
-	// add mountain peaks to mask
-	/*
-	for (const auto &tile : m_tiles) {
-		if (tile.relief == ReliefType::MOUNTAINS) {
-			glm::vec2 center = m_graph.cells[tile.index].center / m_bounds.max;
-			m_mask.draw_filled_circle(center.x * m_mask.width(), center.y * m_mask.height(), 2, util::CHANNEL_RED, tile.height);
-		}
-	}
-	*/
-	// relief heightmap
+	// base per tile relief heightmap
 	#pragma omp parallel for
 	for (const auto &tile : m_tiles) {
-		float amp = 1.f;
-		//if (tile.relief != ReliefType::MOUNTAINS) {
-			//amp = 0.99f;
-		//}
+		float amp = 0.9f;
+		if (tile.relief == ReliefType::MOUNTAINS) {
+			bool mountain_border = false;
+			for (const auto &cell : m_graph.cells[tile.index].neighbors) {
+				Tile *neighbor = &m_tiles[cell->index];
+				if (neighbor->relief != ReliefType::MOUNTAINS) {
+					mountain_border = true;
+					break;
+				}
+			}
+			
+			if (mountain_border) {
+				amp = 0.8f;
+			}
+		}
+		if (tile.relief == ReliefType::HILLS) {
+			amp = 0.7f;
+		}
+		if (tile.relief == ReliefType::LOWLAND) {
+			amp = 0.65f;
+		}
+		if (tile.relief == ReliefType::SEABED) {
+			amp = 0.5f;
+		}
 		// draw the triangles
 		glm::vec2 center = m_graph.cells[tile.index].center / m_bounds.max;
 		const auto &cell = m_graph.cells[tile.index];
@@ -1048,6 +1068,8 @@ void Atlas::create_reliefmap(int seed)
 			m_heightmap.draw_triangle_relative(center, a, b, util::CHANNEL_RED, amp * (tile.height / 255.f));
 		}
 	}
+	
+	m_mask.blur(1.f);
 
 	// mountain ridges
 	#pragma omp parallel for
@@ -1056,21 +1078,22 @@ void Atlas::create_reliefmap(int seed)
 			float height = m_heightmap.sample(x, y, util::CHANNEL_RED);
 			uint8_t amp = m_mask.sample(x, y, util::CHANNEL_RED);
 			if (amp) {
-				//height = glm::mix(height, amp / 255.f, 0.9f);
-				height += 0.2f * (amp / 255.f);
+				height += 0.1f * (amp / 255.f);
+				m_heightmap.plot(x, y, util::CHANNEL_RED, height);
 			}
-			m_heightmap.plot(x, y, util::CHANNEL_RED, height);
 		}
 	}
 	
-	m_heightmap.blur(3.f);
+	m_heightmap.blur(4.f);
+	
+	m_mask.blur(1.f);
 
 	// detail
 	FastNoise billow;
 	billow.SetSeed(seed);
 	billow.SetNoiseType(FastNoise::SimplexFractal);
 	billow.SetFractalType(FastNoise::Billow);
-	billow.SetFrequency(0.05f);
+	billow.SetFrequency(0.03f);
 	billow.SetFractalOctaves(6);
 	billow.SetFractalLacunarity(2.5f);
 	billow.SetGradientPerturbAmp(40.f);
@@ -1102,12 +1125,13 @@ void Atlas::river_cut_relief()
 			const auto &right_vertex = edge.right_vertex;
 			glm::vec2 a = left_vertex->position / m_bounds.max;
 			glm::vec2 b = right_vertex->position / m_bounds.max;
-			m_mask.draw_line_relative(a, b, util::CHANNEL_RED, 255);
+			//m_mask.draw_line_relative(a, b, util::CHANNEL_RED, 255);
+			m_mask.draw_thick_line_relative(a, b, 1, util::CHANNEL_RED, 255);
 		}
 	}
 
 	// blur the mask a bit so we have smooth transition
-	m_mask.blur(0.6f);
+	m_mask.blur(1.f);
 
 	// now alter the heightmap based on the river mask
 	#pragma omp parallel for
@@ -1116,7 +1140,7 @@ void Atlas::river_cut_relief()
 			uint8_t masker = m_mask.sample(x, y, util::CHANNEL_RED);
 			if (masker > 0) {
 				float height = m_heightmap.sample(x, y, util::CHANNEL_RED);
-				float erosion = glm::clamp(1.f - (masker / 255.f), 0.6f, 1.f);
+				float erosion = glm::clamp(1.f - (masker / 255.f), 0.9f, 1.f);
 				m_heightmap.plot(x, y, util::CHANNEL_RED, erosion * height);
 			}
 		}

@@ -239,8 +239,9 @@ Board::Board(std::shared_ptr<gfx::Shader> tilemap)
 	
 void Board::generate(int seed)
 {
+	const geom::Rectangle bounds = { { 0.F, 0.F }, { SCALE.x, SCALE.z } };
 	AtlasParameters parameters = {};
-	m_atlas.generate(seed, BOUNDS, parameters);
+	m_atlas.generate(seed, bounds, parameters);
 	
 	build_navigation();
 }
