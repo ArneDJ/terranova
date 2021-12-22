@@ -14,11 +14,11 @@
 
 #include "../extern/loguru/loguru.hpp"
 
+#include "../geometry/geometry.h"
+#include "../geometry/transform.h"
 #include "../util/camera.h"
 #include "../util/image.h"
 #include "../util/animation.h"
-#include "../geometry/geometry.h"
-#include "../geometry/transform.h"
 #include "../graphics/shader.h"
 #include "../graphics/mesh.h"
 #include "../graphics/texture.h"

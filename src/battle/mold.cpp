@@ -8,9 +8,9 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "../util/image.h"
 #include "../geometry/geometry.h"
 #include "../geometry/transform.h"
+#include "../util/image.h"
 #include "../graphics/mesh.h"
 #include "../graphics/texture.h"
 #include "../graphics/model.h"

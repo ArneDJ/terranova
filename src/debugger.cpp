@@ -14,11 +14,12 @@
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtx/rotate_vector.hpp>
 
+#include "geometry/transform.h"
+#include "geometry/geometry.h"
 #include "util/camera.h"
 #include "util/navigation.h"
 #include "util/image.h"
 #include "util/animation.h"
-#include "geometry/transform.h"
 #include "graphics/shader.h"
 #include "graphics/mesh.h"
 #include "graphics/texture.h"

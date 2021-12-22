@@ -8,10 +8,10 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "../util/image.h"
 #include "../geometry/geometry.h"
 #include "../geometry/voronoi.h"
 #include "../geometry/transform.h"
+#include "../util/image.h"
 
 #include "atlas.h"
 #include "faction.h"

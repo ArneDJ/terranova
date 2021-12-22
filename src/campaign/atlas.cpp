@@ -275,6 +275,7 @@ void Atlas::generate(int seed, const geom::Rectangle &bounds, const AtlasParamet
 	mark_walls();
 
 	// alter height map
+	create_reliefmap(seed);
 	river_cut_relief();
 
 	// the last step is to create the normalmap of the heightmap
@@ -556,19 +557,24 @@ void Atlas::form_rivers()
 
 	form_drainage_basins(candidates);
 
+	// first river assign
+	assign_rivers();
+
 	// river basins will erode some mountains
 	river_erode_mountains(2);
+	// create mountain ridges based on drainage basins
+	assign_mountain_ridges();
 
 	trim_drainage_basins(3);
 
-	// first river assign
+	// second river assign
 	assign_rivers();
 
 	trim_rivers();
 
 	prune_stubby_rivers(3, 4);
 
-	// second river assign
+	// last river assign
 	assign_rivers();
 }
 
@@ -708,6 +714,26 @@ void Atlas::river_erode_mountains(size_t min)
 		}
 		++it;
 	}
+}
+	
+void Atlas::assign_mountain_ridges()
+{
+	m_mask.wipe();
+
+	for (const auto &border : m_borders) {
+		if (!(border.flags & BORDER_FLAG_RIVER)) {
+			const auto &edge = m_graph.edges[border.index];
+			auto &left = m_tiles[edge.left_cell->index];
+			auto &right = m_tiles[edge.right_cell->index];
+			// only make ridge if both are mountains
+			if (left.relief == ReliefType::MOUNTAINS && right.relief == ReliefType::MOUNTAINS) {
+				glm::vec2 a = m_graph.cells[left.index].center / m_bounds.max;
+				glm::vec2 b = m_graph.cells[right.index].center / m_bounds.max;
+				m_mask.draw_thick_line_relative(a, b, 2, util::CHANNEL_RED, 255);
+			}
+		}
+	}
+	// TODO ridges for hills too
 }
 
 void Atlas::trim_drainage_basins(size_t min)
@@ -960,8 +986,94 @@ void Atlas::assign_rivers()
 	}
 }
 	
+void Atlas::create_reliefmap(int seed)
+{
+	/*
+	m_mask.wipe();
+
+	// make the tile relief type mask using triangle drawing
+	#pragma omp parallel for
+	for (const auto &tile : m_tiles) {
+		uint8_t amp = 0;
+		switch (tile.relief) {
+		case ReliefType::SEABED: amp = 0; break;
+		case ReliefType::LOWLAND: amp = 80; break;
+		case ReliefType::HILLS: amp = 100; break;
+		case ReliefType::MOUNTAINS: amp = 200; break;
+		}
+		// draw the triangles
+		glm::vec2 center = m_graph.cells[tile.index].center / m_bounds.max;
+		const auto &cell = m_graph.cells[tile.index];
+		for (auto &edge : cell.edges) {
+			const auto &left_vertex = edge->left_vertex;
+			const auto &right_vertex = edge->right_vertex;
+			glm::vec2 a = left_vertex->position / m_bounds.max;
+			glm::vec2 b = right_vertex->position / m_bounds.max;
+			//m_mask.draw_triangle_relative(center, a, b, util::CHANNEL_RED, uint8_t(tile.relief));
+			m_mask.draw_triangle_relative(center, a, b, util::CHANNEL_RED, amp);
+		}
+	}
+	
+	m_mask.blur(2.f);
+
+	// base line height values for relief tiles
+	// these are purely for the heightmap and have no effect on gameplay
+	static const geom::Bounding<float> SEABED_RELIEF_CLAMP = { 0.F, 0.1F };
+	static const geom::Bounding<float> LOWLAND_RELIEF_CLAMP = { 0.2F, 0.3F };
+	static const geom::Bounding<float> HILLS_RELIEF_CLAMP = { 0.3F, 0.4F };
+	static const geom::Bounding<float> MOUNTAINS_RELIEF_CLAMP = { 0.8F, 1.F };
+
+	FastNoise billow;
+	billow.SetSeed(seed);
+	billow.SetNoiseType(FastNoise::SimplexFractal);
+	billow.SetFractalType(FastNoise::Billow);
+	billow.SetFrequency(0.005f);
+	billow.SetFractalOctaves(6);
+	billow.SetFractalLacunarity(2.5f);
+	billow.SetGradientPerturbAmp(40.f);
+
+	#pragma omp parallel for
+	for (int x = 0; x < m_heightmap.width(); x++) {
+		for (int y = 0; y < m_heightmap.height(); y++) {
+			// find clamp values based on relief
+			uint8_t amp = m_mask.sample(x, y, util::CHANNEL_RED);
+			//float height = m_heightmap.sample(x, y, util::CHANNEL_RED);
+			// adjust height based on relief type
+			//height = (height * glm::distance(bounds.min, bounds.max)) + bounds.min;
+			//float noise = 0.5f * (billow.GetNoise(x, y) + 1.f);
+			//height = glm::mix(height, noise, 0.25f);
+			//height = 0.5f * (noise + height);
+			//height += bounds.min;
+			//height *= 0.5f;
+			//height = glm::mix(height, amp / 255.f, 0.5f);
+			m_heightmap.plot(x, y, util::CHANNEL_RED, amp / 255.f);
+		}
+	}
+
+	m_heightmap.blur(1.f);
+			
+	m_heightmap.normalize(util::CHANNEL_RED);
+	*/
+	
+	// mountain ridges
+	#pragma omp parallel for
+	for (int x = 0; x < m_heightmap.width(); x++) {
+		for (int y = 0; y < m_heightmap.height(); y++) {
+			uint8_t amp = m_mask.sample(x, y, util::CHANNEL_RED);
+			if (amp > 250) {
+				m_heightmap.plot(x, y, util::CHANNEL_RED, 1.f);
+			}
+		}
+	}
+	
+	m_heightmap.blur(2.f);
+}
+
 void Atlas::river_cut_relief()
 {
+	// blank canvas
+	m_mask.wipe();
+
 	// add rivers as lines to the mask
 	#pragma omp parallel for
 	for (const auto &border : m_borders) {

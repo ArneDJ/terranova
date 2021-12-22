@@ -14,10 +14,10 @@
 
 #include "../extern/fastnoise/FastNoise.h"
 
-#include "../util/camera.h"
-#include "../util/image.h"
 #include "../geometry/geometry.h"
 #include "../geometry/transform.h"
+#include "../util/camera.h"
+#include "../util/image.h"
 #include "../graphics/shader.h"
 #include "../graphics/mesh.h"
 #include "../graphics/texture.h"

@@ -28,11 +28,11 @@
 #include "../util/camera.h"
 #include "../util/timer.h"
 #include "../util/navigation.h"
-#include "../util/image.h"
 #include "../util/animation.h"
 #include "../geometry/geometry.h"
 #include "../geometry/transform.h"
 #include "../geometry/voronoi.h"
+#include "../util/image.h"
 #include "../graphics/shader.h"
 #include "../graphics/mesh.h"
 #include "../graphics/model.h"
@@ -795,7 +795,7 @@ void Campaign::update_faction_taxes()
 {
 	for (const auto &mapping : faction_controller.factions) {
 		auto &faction = mapping.second;
-		auto profit = 100 * faction->towns.size();
+		auto profit = 2 * faction->towns.size();
 		faction->add_gold(profit);
 	}
 }
