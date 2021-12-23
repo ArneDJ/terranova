@@ -306,8 +306,10 @@ void Campaign::update(float delta)
 	if (player_mode == PlayerMode::TOWN_PLACEMENT) {
 		glm::vec3 ray = camera.ndc_to_ray(util::InputManager::abs_mouse_coords());
 		set_player_construction(ray);
+		board->set_border_mix(0.5f);
 	} else {
 		con_marker.visible = false;
+		board->set_border_mix(0.f);
 	}
 
 	// if the game isn't paused update gameplay
@@ -419,6 +421,9 @@ void Campaign::spawn_factions()
 		faction->set_id(id);
 		glm::vec3 color = { dis(gen), dis(gen), dis(gen) };
 		faction->set_color(color);
+
+		faction->player_controlled = true;
+
 		faction_controller.factions[id] = std::move(faction);
 
 		player_data.faction_id = id;
@@ -824,8 +829,8 @@ void Campaign::update_factions()
 	// factions will look for new tiles to settle
 	for (const auto &mapping : faction_controller.factions) {
 		auto &faction = mapping.second;
-		// if the faction is not already expanding 
-		if (!faction->expanding) {
+		// if the faction is not already expanding or owned by player
+		if (!faction->expanding && !faction->player_controlled) {
 			// has enough gold it will look for a new tile to settle
 			// is not overextended by having too many towns too
 			if (faction->towns.size() < 32 && faction->gold() >= 100) {

@@ -16,8 +16,11 @@ uniform vec3 MARKER_COLOR;
 uniform float MARKER_RADIUS;
 uniform float MARKER_FADE;
 
+uniform float BORDER_MIX;
+
 uniform sampler2D DISPLACEMENT;
 uniform sampler2D NORMALMAP;
+uniform sampler2D BORDERS;
 
 vec3 apply_light(vec3 color, vec3 normal)
 {
@@ -37,6 +40,10 @@ void main(void)
 
 	vec3 final_color = fragment.tile_color;
 
+	float border = texture(BORDERS, fragment.texcoord).r;
+	if (border > 0.2) {
+		final_color = mix(final_color, vec3(1.0, 1.0, 1.0), BORDER_MIX);
+	}
 	/*
 	if (length(fragment.edge_color) == 0) {
 	if (fragment.barycentric.b < 0.1) {

@@ -351,6 +351,11 @@ glm::vec2 Atlas::tile_center(uint32_t index) const
 {
 	return m_graph.cells[index].center;
 }
+	
+const geom::Rectangle& Atlas::bounds() const
+{
+	return m_bounds;
+}
 		
 void Atlas::floodfill_relief(unsigned max_size, ReliefType target, ReliefType replacement)
 {

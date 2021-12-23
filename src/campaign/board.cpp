@@ -134,11 +134,16 @@ void BoardMesh::color_border(uint32_t tile, uint32_t border, const glm::vec3 &co
 BoardModel::BoardModel(std::shared_ptr<gfx::Shader> shader, const util::Image<float> &heightmap, const util::Image<float> &normalmap)
 	: m_shader(shader)
 {
+	m_border_map.resize(2048, 2048, util::COLORSPACE_GRAYSCALE);
+
 	m_heightmap.create(heightmap);
 	m_normalmap.create(normalmap);
+	
+	m_border_texture.create(m_border_map);
 
 	add_material("DISPLACEMENT", &m_heightmap);
 	add_material("NORMALMAP", &m_normalmap);
+	add_material("BORDERS", &m_border_texture);
 }
 	
 void BoardModel::set_scale(const glm::vec3 &scale)
@@ -164,9 +169,11 @@ void BoardModel::bind_textures() const
 void BoardModel::reload(const Atlas &atlas)
 {
 	m_mesh.clear();
+	m_border_map.wipe();
 
 	const auto &graph = atlas.graph();
 	const auto &tiles = atlas.tiles();
+	const auto &borders = atlas.borders();
 
 	uint32_t index = 0;
 	for (const auto &tile : tiles) {
@@ -185,8 +192,22 @@ void BoardModel::reload(const Atlas &atlas)
 
 	m_mesh.create();
 	
+	// create border map
+	const auto &bounds = atlas.bounds();
+	for (const auto &border : borders) {
+		const auto &edge = graph.edges[border.index];
+		const auto &left_vertex = edge.left_vertex;
+		const auto &right_vertex = edge.right_vertex;
+		glm::vec2 a = left_vertex->position / bounds.max;
+		glm::vec2 b = right_vertex->position / bounds.max;
+		m_border_map.draw_line_relative(a, b, util::CHANNEL_RED, 255);
+	}
+	m_border_map.blur(1.f);
+
 	m_heightmap.reload(atlas.heightmap());
 	m_normalmap.reload(atlas.normalmap());
+
+	m_border_texture.reload(m_border_map);
 }
 	
 void BoardModel::color_tile(uint32_t tile, const glm::vec3 &color)
@@ -215,6 +236,9 @@ void BoardModel::display(const util::Camera &camera) const
 	m_shader->uniform_vec3("MARKER_COLOR", m_marker.color);
 	m_shader->uniform_float("MARKER_RADIUS", m_marker.radius);
 	m_shader->uniform_float("MARKER_FADE", m_marker.fade);
+
+	// borders
+	m_shader->uniform_float("BORDER_MIX", m_border_mix);
 	
 	bind_textures();
 
@@ -229,6 +253,11 @@ void BoardModel::set_marker(const BoardMarker &marker)
 void BoardModel::hide_marker()
 {
 	m_marker.fade = 0.f;
+}
+	
+void BoardModel::set_border_mix(float mix)
+{
+	m_border_mix = mix;
 }
 	
 Board::Board(std::shared_ptr<gfx::Shader> tilemap)
@@ -396,5 +425,10 @@ void Board::set_marker(const BoardMarker &marker)
 void Board::hide_marker()
 {
 	m_model.hide_marker();
+}
+
+void Board::set_border_mix(float mix)
+{
+	m_model.set_border_mix(mix);
 }
 	

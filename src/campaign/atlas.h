@@ -106,11 +106,12 @@ public:
 	const util::Image<float>& normalmap() const;
 	const Tile* tile_at(const glm::vec2 &position) const;
 	glm::vec2 tile_center(uint32_t index) const;
+	const geom::Rectangle& bounds() const;
 public:
 	template <class Archive>
 	void serialize(Archive &archive)
 	{
-		archive(m_graph, m_tiles, m_corners, m_borders, m_heightmap, m_normalmap);
+		archive(m_graph, m_tiles, m_corners, m_borders, m_heightmap, m_normalmap, m_bounds);
 	}
 private:
 	geom::Rectangle m_bounds;

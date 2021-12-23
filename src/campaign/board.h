@@ -50,6 +50,8 @@ public:
 	void set_marker(const BoardMarker &marker);
 	void hide_marker();
 public:
+	void set_border_mix(float mix);
+public:
 	void display(const util::Camera &camera) const;
 	void bind_textures() const;
 private:
@@ -59,6 +61,10 @@ private:
 	gfx::Texture m_heightmap;
 	gfx::Texture m_normalmap;
 	std::unordered_map<std::string, const gfx::Texture*> m_materials;
+private:
+	util::Image<uint8_t> m_border_map;
+	gfx::Texture m_border_texture;
+	float m_border_mix = 0.f;
 private:
 	BoardMarker m_marker = {};
 	bool m_marker_visible = false;
@@ -89,6 +95,7 @@ public:
 public:
 	void set_marker(const BoardMarker &marker);
 	void hide_marker();
+	void set_border_mix(float mix);
 public:
 	fysx::HeightField* height_field();
 	const util::Navigation& navigation() const;
