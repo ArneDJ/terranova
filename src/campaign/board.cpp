@@ -196,11 +196,15 @@ void BoardModel::reload(const Atlas &atlas)
 	const auto &bounds = atlas.bounds();
 	for (const auto &border : borders) {
 		const auto &edge = graph.edges[border.index];
-		const auto &left_vertex = edge.left_vertex;
-		const auto &right_vertex = edge.right_vertex;
-		glm::vec2 a = left_vertex->position / bounds.max;
-		glm::vec2 b = right_vertex->position / bounds.max;
-		m_border_map.draw_line_relative(a, b, util::CHANNEL_RED, 255);
+		auto &left_tile = tiles[edge.left_cell->index];
+		auto &right_tile = tiles[edge.right_cell->index];
+		if (walkable_tile(&left_tile) || walkable_tile(&right_tile)) {
+			const auto &left_vertex = edge.left_vertex;
+			const auto &right_vertex = edge.right_vertex;
+			glm::vec2 a = left_vertex->position / bounds.max;
+			glm::vec2 b = right_vertex->position / bounds.max;
+			m_border_map.draw_line_relative(a, b, util::CHANNEL_RED, 255);
+		}
 	}
 	m_border_map.blur(1.f);
 
