@@ -1033,7 +1033,7 @@ void Atlas::create_reliefmap(int seed)
 	// base per tile relief heightmap
 	#pragma omp parallel for
 	for (const auto &tile : m_tiles) {
-		float amp = 0.9f;
+		float amp = 1.f;
 		if (tile.relief == ReliefType::MOUNTAINS) {
 			bool mountain_border = false;
 			for (const auto &cell : m_graph.cells[tile.index].neighbors) {
@@ -1045,14 +1045,14 @@ void Atlas::create_reliefmap(int seed)
 			}
 			
 			if (mountain_border) {
-				amp = 0.8f;
+				amp = 0.9f;
 			}
 		}
 		if (tile.relief == ReliefType::HILLS) {
-			amp = 0.7f;
+			amp = 0.85f;
 		}
 		if (tile.relief == ReliefType::LOWLAND) {
-			amp = 0.65f;
+			amp = 0.8f;
 		}
 		if (tile.relief == ReliefType::SEABED) {
 			amp = 0.5f;

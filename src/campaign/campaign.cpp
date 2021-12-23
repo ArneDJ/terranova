@@ -295,10 +295,6 @@ void Campaign::update(float delta)
 		if (util::InputManager::key_pressed(SDL_BUTTON_RIGHT)) {
 			glm::vec3 ray = camera.ndc_to_ray(util::InputManager::abs_mouse_coords());
 			set_player_movement(ray);
-			// if in pause mode unpause game
-			if (state == CampaignState::PAUSED) {
-				state = CampaignState::RUNNING;
-			}
 		}
 	}
 	
@@ -729,6 +725,12 @@ void Campaign::set_player_movement(const glm::vec3 &ray)
 			marker.position = nodes.back();
 			board->set_marker(marker);
 			meeple_controller.player->set_path(nodes);
+
+			// found a path so unpause
+			// if in pause mode unpause game
+			if (state == CampaignState::PAUSED) {
+				state = CampaignState::RUNNING;
+			}
 		}
 	}
 }
