@@ -37,12 +37,14 @@ void main(void)
 
 	vec3 final_color = fragment.tile_color;
 
+	/*
 	if (length(fragment.edge_color) == 0) {
 	if (fragment.barycentric.b < 0.1) {
 		float strength = 1.0 - fragment.barycentric.b;
 		final_color = mix(final_color, fragment.edge_color, 0.8 * pow(strength, 6));
 	}
 	}
+	*/
 
 	float height = texture(DISPLACEMENT, fragment.texcoord).r;
 	final_color = mix(final_color, vec3(height), 0.5f);

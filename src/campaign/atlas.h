@@ -136,13 +136,14 @@ private: // river stuff
 	void form_rivers();
 	void form_drainage_basins(const std::vector<const Corner*> &candidates);
 	void river_erode_mountains(size_t min);
-	void assign_mountain_ridges();
 	void trim_drainage_basins(size_t min);
 	void trim_rivers();
 	void prune_stubby_rivers(uint8_t min_branch, uint8_t min_basin);
 	void assign_rivers();
 private: // image maps adjustments
 	void create_reliefmap(int seed);
+	void form_base_relief();
+	void form_mountain_ridges();
 	void river_cut_relief();
 	void create_normalmap();
 };

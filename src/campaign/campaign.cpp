@@ -400,8 +400,8 @@ void Campaign::place_meeple(Meeple *meeple)
 	meeple->model = army_blueprint.model;
 
 	// add label
-	//glm::vec3 color = faction_controller.factions[meeple->faction()]->color();
-	glm::vec3 color = glm::vec3(1.f);
+	glm::vec3 color = faction_controller.factions[meeple->faction_id]->color();
+	//glm::vec3 color = glm::vec3(1.f);
 	labeler->add_label(&meeple->transform, 0.2f, glm::vec3(0.f, 2.f, 0.f), "Army " + std::to_string(meeple->id), color);
 }
 	

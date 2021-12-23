@@ -79,7 +79,7 @@ class Board {
 public:
 	Board(std::shared_ptr<gfx::Shader> tilemap);
 public:
-	const glm::vec3 SCALE = { 1024.f, 48.f, 1024.f };
+	const glm::vec3 SCALE = { 1024.f, 32.f, 1024.f };
 public:
 	void generate(int seed);
 	void reload();

@@ -316,6 +316,7 @@ void Engine::run()
 		if (state == EngineState::NEW_CAMPAIGN) {
 			campaign.clear();
 			campaign.generate(distrib(gen));
+			//campaign.generate(1337);
 			campaign.prepare();
 			campaign.reset_camera();
 			state = EngineState::RUNNING_CAMPAIGN;
