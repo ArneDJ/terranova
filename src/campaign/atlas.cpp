@@ -281,6 +281,8 @@ void Atlas::generate(int seed, const geom::Rectangle &bounds, const AtlasParamet
 	// alter height map
 	create_reliefmap(seed);
 	river_cut_relief();
+	
+	m_heightmap.normalize(util::CHANNEL_RED);
 
 	// the last step is to create the normalmap of the heightmap
 	create_normalmap();

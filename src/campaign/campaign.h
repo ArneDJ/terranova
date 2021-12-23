@@ -1,4 +1,5 @@
 #pragma once
+#include "../extern/namegen/namegen.h"
 #include "atlas.h"
 #include "board.h"
 #include "entity.h"

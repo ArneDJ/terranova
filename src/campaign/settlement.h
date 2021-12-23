@@ -6,6 +6,8 @@ class Village {
 
 class Town {
 public:
+	std::string name = {};
+public:
 	Town();
 public:
 	uint32_t id() const;
@@ -32,7 +34,8 @@ public:
 	{
 		archive(
 			m_id, m_tile, m_faction, m_fiefdom, m_size,
-			m_transform->position, m_transform->rotation, m_transform->scale
+			m_transform->position, m_transform->rotation, m_transform->scale,
+			name
 		);
 	}
 private:

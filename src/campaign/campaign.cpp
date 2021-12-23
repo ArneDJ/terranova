@@ -74,7 +74,7 @@ void Campaign::init(const gfx::ShaderGroup *shaders)
 {
 	debugger = std::make_unique<Debugger>(shaders->debug);
 
-	labeler = std::make_unique<gfx::Labeler>("fonts/arial.ttf", 30, shaders->label);
+	labeler = std::make_unique<gfx::Labeler>("fonts/diablo.ttf", 30, shaders->label);
 
 	board = std::make_unique<Board>(shaders->tilemap);
 	
@@ -243,6 +243,11 @@ void Campaign::prepare()
 	}
 	
 	debugger->add_navmesh(board->navigation().navmesh());
+
+	// game is paused at the start
+	state = CampaignState::PAUSED;
+	// marker is not present at start
+	board->hide_marker();
 }
 
 // clears all the campaign data
@@ -467,6 +472,8 @@ uint32_t Campaign::spawn_town(const Tile *tile, Faction *faction)
 		return 0;
 	}
 
+	NameGen::Generator namegen(MIDDLE_EARTH);
+
 	auto search = faction_controller.tile_owners.find(tile->index);
 	if (search == faction_controller.tile_owners.end() || search->second == 0) {
 		std::unique_ptr<Town> town = std::make_unique<Town>();
@@ -480,6 +487,9 @@ uint32_t Campaign::spawn_town(const Tile *tile, Faction *faction)
 		} else {
 			town->set_size(1);
 		}
+
+		// give town a name
+		town->name = namegen.toString();
 
 		settlement_controller.towns[id] = std::move(town);
 
@@ -563,7 +573,7 @@ void Campaign::place_town(Town *town)
 
 	town->set_position(glm::vec3(center.x, offset, center.y));
 
-	town->set_model(town_blueprint.model);
+	town->set_model(town_blueprint.model); // TODO needs to be done at spawn
 
 	const int mask = COLLISION_GROUP_INTERACTION | COLLISION_GROUP_VISIBILITY | COLLISION_GROUP_RAY;
 
@@ -572,12 +582,9 @@ void Campaign::place_town(Town *town)
 	trigger->ghost_object()->setUserIndex2(int(CampaignEntity::TOWN));
 	physics.add_object(trigger->ghost_object(), COLLISION_GROUP_TOWN, mask);
 
-	// debug collision
-	//debugger->add_sphere(trigger->form(), trigger->transform());
-
 	// add label
 	glm::vec3 color = faction_controller.factions[town->faction()]->color();
-	labeler->add_label(town->transform(), 1.f, glm::vec3(0.f, 3.f, 0.f), "Town " + std::to_string(town->id()), color);
+	labeler->add_label(town->transform(), 1.f, glm::vec3(0.f, 3.f, 0.f), town->name, color);
 }
 	
 // teleports the camera to the player position
