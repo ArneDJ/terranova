@@ -204,28 +204,27 @@ void Campaign::prepare()
 		place_town(town.second.get());
 	}
 
-	// paint fiefdom tiles
-	for (const auto &fiefdom : settlement_controller.fiefdoms) {
-		glm::vec3 color = faction_controller.factions[fiefdom.second->faction()]->color();
-		for (const auto &tile : fiefdom.second->tiles()) {
-			board->paint_tile(tile, color);
-		}
-	}
-
 	const auto &atlas = board->atlas();	
 	const auto &graph = atlas.graph();	
 	const auto &tiles = atlas.tiles();	
 	const auto &borders = atlas.borders();	
-	for (const auto &tile : tiles) {
-		glm::vec3 color = tile.relief == ReliefType::SEABED ? glm::vec3(1.f, 0.f, 1.f) : glm::vec3(0.f, 0.f, 0.f);
-		if (tile.flags & TILE_FLAG_COAST) {
-			//board->paint_tile(tile.index, color);
-		}
-		const auto &cell = graph.cells[tile.index];
-		for (const auto &edge : cell.edges) {
-			const auto &border = borders[edge->index];
-			if (border.flags & BORDER_FLAG_RIVER) {
-				board->paint_border(tile.index, border.index, color);
+	const auto &cells = graph.cells;	
+
+	// paint fiefdom tiles
+	for (const auto &mapping : settlement_controller.fiefdoms) {
+		const auto &fiefdom = mapping.second;
+		glm::vec3 color = faction_controller.factions[fiefdom->faction()]->color();
+		for (const auto &tile : fiefdom->tiles()) {
+			board->paint_tile(tile, color);
+			// draw the political borders on the map
+			const auto &cell = cells[tile];
+			for (const auto &edge : cell.edges) {
+				// find neighbor tile
+				auto neighbor_index = edge->left_cell->index == tile ? edge->right_cell->index : edge->left_cell->index;
+				const Tile *neighbor = &tiles[neighbor_index];
+				if (faction_controller.tile_owners[neighbor->index] != fiefdom->faction()) {
+					board->paint_border(edge->index, 255);
+				}
 			}
 		}
 	}
@@ -538,6 +537,8 @@ void Campaign::spawn_fiefdom(Town *town)
 	depth[town->tile()] = 0;
 	faction_controller.tile_owners[town->tile()] = faction;
 
+	std::vector<uint32_t> border_tiles; // tiles found at the border, very important for AI expansion and visualizing the borders
+
 	while (!nodes.empty()) {
 		auto node = nodes.front();
 		nodes.pop();
@@ -558,6 +559,22 @@ void Campaign::spawn_fiefdom(Town *town)
 					}
 				}
 			}
+		} else {
+			border_tiles.push_back(node);
+		}
+	}
+
+	// first wipe borders between same factions
+	for (const auto &tile : fiefdom->tiles()) {
+		// draw the political borders on the map
+		const auto &cell = cells[tile];
+		for (const auto &edge : cell.edges) {
+			// find neighbor tile
+			auto neighbor_index = edge->left_cell->index == tile ? edge->right_cell->index : edge->left_cell->index;
+			const Tile *neighbor = &tiles[neighbor_index];
+			if (faction_controller.tile_owners[neighbor->index] == fiefdom->faction()) {
+				board->paint_border(edge->index, 0);
+			}
 		}
 	}
 
@@ -565,7 +582,32 @@ void Campaign::spawn_fiefdom(Town *town)
 	glm::vec3 color = faction_controller.factions[faction]->color();
 	for (const auto &tile : fiefdom->tiles()) {
 		board->paint_tile(tile, color);
+		// draw the political borders on the map
+		const auto &cell = cells[tile];
+		for (const auto &edge : cell.edges) {
+			// find neighbor tile
+			auto neighbor_index = edge->left_cell->index == tile ? edge->right_cell->index : edge->left_cell->index;
+			const Tile *neighbor = &tiles[neighbor_index];
+			if (faction_controller.tile_owners[neighbor->index] != fiefdom->faction()) {
+				board->paint_border(edge->index, 255);
+			}
+		}
 	}
+
+	// draw the political borders on the map
+	/*
+	for (const auto &border_tile : border_tiles) {
+		const auto &cell = cells[border_tile];
+		for (const auto &edge : cell.edges) {
+			// find neighbor tile
+			auto neighbor_index = edge->left_cell->index == border_tile ? edge->right_cell->index : edge->left_cell->index;
+			const Tile *neighbor = &tiles[neighbor_index];
+			if (faction_controller.tile_owners[neighbor->index] != faction) {
+				board->paint_border(border_tile, edge->index, color);
+			}
+		}
+	}
+	*/
 
 	settlement_controller.fiefdoms[id] = std::move(fiefdom);
 }

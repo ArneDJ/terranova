@@ -130,20 +130,35 @@ void BoardMesh::color_border(uint32_t tile, uint32_t border, const glm::vec3 &co
 		m_vertices[edge.second].edge_color = color;
 	}
 }
+	
+void BoardModel::paint_political_triangle(const glm::vec2 &a, const glm::vec2 &b, const glm::vec2 &c, const glm::vec3 &color)
+{
+	m_political_map.draw_triangle_relative(a, b, c, util::CHANNEL_RED, 255 * color.x);
+	m_political_map.draw_triangle_relative(a, b, c, util::CHANNEL_GREEN, 255 * color.y);
+	m_political_map.draw_triangle_relative(a, b, c, util::CHANNEL_BLUE, 255 * color.z);
+}
+
+void BoardModel::paint_political_line(const glm::vec2 &a, const glm::vec2 &b, uint8_t color)
+{
+	m_political_map.draw_thick_line_relative(a, b, 2, util::CHANNEL_ALPHA, color);
+}
 
 BoardModel::BoardModel(std::shared_ptr<gfx::Shader> shader, const util::Image<float> &heightmap, const util::Image<float> &normalmap)
 	: m_shader(shader)
 {
 	m_border_map.resize(2048, 2048, util::COLORSPACE_GRAYSCALE);
+	m_political_map.resize(2048, 2048, util::COLORSPACE_RGBA);
 
 	m_heightmap.create(heightmap);
 	m_normalmap.create(normalmap);
 	
 	m_border_texture.create(m_border_map);
+	m_political_texture.create(m_political_map);
 
 	add_material("DISPLACEMENT", &m_heightmap);
 	add_material("NORMALMAP", &m_normalmap);
 	add_material("BORDERS", &m_border_texture);
+	add_material("POLITICAL", &m_political_texture);
 }
 	
 void BoardModel::set_scale(const glm::vec3 &scale)
@@ -170,6 +185,7 @@ void BoardModel::reload(const Atlas &atlas)
 {
 	m_mesh.clear();
 	m_border_map.wipe();
+	m_political_map.wipe();
 
 	const auto &graph = atlas.graph();
 	const auto &tiles = atlas.tiles();
@@ -227,6 +243,8 @@ void BoardModel::color_border(uint32_t tile, uint32_t border, const glm::vec3 &c
 void BoardModel::update_mesh()
 {
 	m_mesh.refresh();
+	
+	m_political_texture.reload(m_political_map);
 }
 
 void BoardModel::display(const util::Camera &camera) const
@@ -243,6 +261,8 @@ void BoardModel::display(const util::Camera &camera) const
 
 	// borders
 	m_shader->uniform_float("BORDER_MIX", m_border_mix);
+
+	m_shader->uniform_float("POLITICAL_MIX", m_political_mix);
 	
 	bind_textures();
 
@@ -291,9 +311,9 @@ void Board::paint_tile(uint32_t tile, const glm::vec3 &color)
 	m_paint_jobs.push(job);
 }
 
-void Board::paint_border(uint32_t tile, uint32_t border, const glm::vec3 &color)
+void Board::paint_border(uint32_t border, uint8_t color)
 {
-	BorderPaintJob job = { tile, border, color };
+	BorderPaintJob job = { border, color };
 	m_border_paint_jobs.push(job);
 }
 
@@ -338,12 +358,29 @@ void Board::find_path(const glm::vec2 &start, const glm::vec2 &end, std::list<gl
 	
 void Board::update()
 {
+	const auto &tiles = m_atlas.tiles();
+	const auto &borders = m_atlas.borders();
+	const auto &graph = m_atlas.graph();
+	const auto &cells = graph.cells;
+	const auto &edges = graph.edges;
+	const auto &bounds = m_atlas.bounds();
+
 	bool update_model = false;
 	// color tiles
 	if (!m_paint_jobs.empty()) {
 		while (!m_paint_jobs.empty()) {
 			auto order = m_paint_jobs.front();
-			m_model.color_tile(order.tile, order.color);
+			//m_model.color_tile(order.tile, order.color);
+			const auto &tile = tiles[order.tile];
+			glm::vec2 center = cells[tile.index].center / bounds.max;
+			const auto &cell = cells[tile.index];
+			for (auto &edge : cell.edges) {
+				const auto &left_vertex = edge->left_vertex;
+				const auto &right_vertex = edge->right_vertex;
+				glm::vec2 a = left_vertex->position / bounds.max;
+				glm::vec2 b = right_vertex->position / bounds.max;
+				m_model.paint_political_triangle(a, b, center, order.color);
+			}
 			m_paint_jobs.pop();
 		}
 
@@ -353,7 +390,14 @@ void Board::update()
 	if (!m_border_paint_jobs.empty()) {
 		while (!m_border_paint_jobs.empty()) {
 			auto order = m_border_paint_jobs.front();
-			m_model.color_border(order.tile, order.border, order.color);
+			const auto &border = borders[order.border];
+			const auto &edge = graph.edges[border.index];
+			const auto &left_vertex = edge.left_vertex;
+			const auto &right_vertex = edge.right_vertex;
+			glm::vec2 a = left_vertex->position / bounds.max;
+			glm::vec2 b = right_vertex->position / bounds.max;
+			m_model.paint_political_line(a, b, order.color);
+			//m_model.color_border(order.tile, order.border, order.color);
 			m_border_paint_jobs.pop();
 		}
 		update_model = true;

@@ -136,10 +136,10 @@ void Texture::bind(GLenum unit) const
 void Texture::change_filtering(GLint filter)
 {
 	glBindTexture(m_target, m_binding);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
+	glTexParameteri(m_target, GL_TEXTURE_MAG_FILTER, filter);
+	glTexParameteri(m_target, GL_TEXTURE_MIN_FILTER, filter);
 }
-	
+
 void Texture::load_dds(const uint8_t *blob, const size_t size)
 {
 	ddsktx_texture_info tc = { 0 };

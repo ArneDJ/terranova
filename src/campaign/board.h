@@ -45,6 +45,8 @@ public:
 	void reload(const Atlas &atlas);
 	void color_tile(uint32_t tile, const glm::vec3 &color);
 	void color_border(uint32_t tile, uint32_t border, const glm::vec3 &color);
+	void paint_political_triangle(const glm::vec2 &a, const glm::vec2 &b, const glm::vec2 &c, const glm::vec3 &color);
+	void paint_political_line(const glm::vec2 &a, const glm::vec2 &b, uint8_t color);
 	void update_mesh();
 public:
 	void set_marker(const BoardMarker &marker);
@@ -66,6 +68,10 @@ private:
 	gfx::Texture m_border_texture;
 	float m_border_mix = 0.f;
 private:
+	util::Image<uint8_t> m_political_map;
+	gfx::Texture m_political_texture;
+	float m_political_mix = 0.f;
+private:
 	BoardMarker m_marker = {};
 	bool m_marker_visible = false;
 };
@@ -76,9 +82,8 @@ struct TilePaintJob {
 };
 
 struct BorderPaintJob {
-	uint32_t tile;
 	uint32_t border;
-	glm::vec3 color;
+	uint8_t color;
 };
 
 class Board {
@@ -91,7 +96,7 @@ public:
 	void reload();
 	void update();
 	void paint_tile(uint32_t tile, const glm::vec3 &color);
-	void paint_border(uint32_t tile, uint32_t border, const glm::vec3 &color);
+	void paint_border(uint32_t border, uint8_t color);
 public:
 	void set_marker(const BoardMarker &marker);
 	void hide_marker();
