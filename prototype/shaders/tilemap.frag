@@ -22,6 +22,7 @@ uniform sampler2D DISPLACEMENT;
 uniform sampler2D NORMALMAP;
 uniform sampler2D BORDERS;
 uniform sampler2D POLITICAL;
+uniform sampler2D BOUNDARIES;
 
 vec3 apply_light(vec3 color, vec3 normal)
 {
@@ -39,21 +40,23 @@ void main(void)
 
 	vec3 normal = texture(NORMALMAP, fragment.texcoord).rgb;
 
-	vec4 political = texture(POLITICAL, fragment.texcoord);
+	vec3 political = texture(POLITICAL, fragment.texcoord).rgb;
 
 	vec3 final_color = fragment.tile_color;
 
 	//vec3 final_color = political.rgb;
-
 	float border = texture(BORDERS, fragment.texcoord).r;
-	vec3 border_color = mix(final_color, vec3(1.0, 1.0, 1.0), BORDER_MIX);
-	final_color = mix(final_color, border_color, smoothstep(0.1, 0.2, border));
 
-	float political_mix = smoothstep(0.0, 0.1, political.a);
-	final_color = mix(final_color, political.rgb, political_mix);
+	float political_mix = texture(BOUNDARIES, fragment.texcoord).r;
+	political_mix = smoothstep(0.1, 0.2, political_mix);
+	float negative_border = 1.0 - smoothstep(0.1, 0.2, border);
+	final_color = mix(final_color, political, negative_border * political_mix);
 
 	float height = texture(DISPLACEMENT, fragment.texcoord).r;
 	final_color = mix(final_color, vec3(height), 0.5f);
+
+	vec3 border_color = mix(final_color, vec3(1.0, 1.0, 1.0), BORDER_MIX);
+	final_color = mix(final_color, border_color, smoothstep(0.1, 0.2, border));
 
 	// terrain lighting
 	final_color = apply_light(final_color, normal);

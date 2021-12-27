@@ -33,6 +33,20 @@ public:
 	{
 		std::fill(m_raster.begin(), m_raster.end(), 0);
 	}
+	void copy(const Image<T> &original)
+	{
+		const auto &raster = original.raster();
+
+		if (m_width != original.width() || m_height != original.height() || m_channels != original.channels() || m_raster.size() != raster.size()) {
+			m_width = original.width();
+			m_height = original.height();
+			m_channels = original.channels();
+
+			m_raster.resize(raster.size());
+		}
+
+		std::copy(raster.begin(), raster.end(), m_raster.begin());
+	}
 	void plot(uint16_t x, uint16_t y, uint8_t channel, T color)
 	{
 		if (channel >= m_channels) { return; }

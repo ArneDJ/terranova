@@ -13,6 +13,8 @@ public:
 	void change_filtering(GLint filter);
 public:
 	void bind(GLenum unit) const;
+public:
+	GLuint binding();
 private:
 	GLuint m_binding = 0;
 	GLenum m_target = GL_TEXTURE_2D;

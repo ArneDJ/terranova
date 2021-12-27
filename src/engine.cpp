@@ -179,6 +179,10 @@ void Engine::load_shaders()
 	shaders->creature->compile("shaders/creature.vert", GL_VERTEX_SHADER);
 	shaders->creature->compile("shaders/creature.frag", GL_FRAGMENT_SHADER);
 	shaders->creature->link();
+
+	shaders->blur = std::make_shared<gfx::Shader>();
+	shaders->blur->compile("shaders/blur.comp", GL_COMPUTE_SHADER);
+	shaders->blur->link();
 }
 	
 void Engine::load_module()

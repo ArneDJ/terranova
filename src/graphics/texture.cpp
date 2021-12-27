@@ -132,6 +132,11 @@ void Texture::bind(GLenum unit) const
 	glActiveTexture(unit);
 	glBindTexture(m_target, m_binding);
 }
+	
+GLuint Texture::binding()
+{
+	return m_binding;
+}
 
 void Texture::change_filtering(GLint filter)
 {

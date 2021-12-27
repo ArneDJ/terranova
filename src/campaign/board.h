@@ -38,7 +38,7 @@ private:
 
 class BoardModel {
 public:
-	BoardModel(std::shared_ptr<gfx::Shader> shader, const util::Image<float> &heightmap, const util::Image<float> &normalmap);
+	BoardModel(std::shared_ptr<gfx::Shader> shader, std::shared_ptr<gfx::Shader> blur_shader, const util::Image<float> &heightmap, const util::Image<float> &normalmap);
 public:
 	void set_scale(const glm::vec3 &scale);
 	void add_material(const std::string &name, const gfx::Texture *texture);
@@ -47,7 +47,7 @@ public:
 	void color_border(uint32_t tile, uint32_t border, const glm::vec3 &color);
 	void paint_political_triangle(const glm::vec2 &a, const glm::vec2 &b, const glm::vec2 &c, const glm::vec3 &color);
 	void paint_political_line(const glm::vec2 &a, const glm::vec2 &b, uint8_t color);
-	void update_mesh();
+	void update();
 public:
 	void set_marker(const BoardMarker &marker);
 	void hide_marker();
@@ -58,6 +58,8 @@ public:
 	void bind_textures() const;
 private:
 	std::shared_ptr<gfx::Shader> m_shader;
+	std::shared_ptr<gfx::Shader> m_blur_shader;
+private:
 	glm::vec3 m_scale = { 1.f, 1.f, 1.f };
 	BoardMesh m_mesh;
 	gfx::Texture m_heightmap;
@@ -71,6 +73,10 @@ private:
 	util::Image<uint8_t> m_political_map;
 	gfx::Texture m_political_texture;
 	float m_political_mix = 0.f;
+private:
+	util::Image<uint8_t> m_political_boundaries;
+	gfx::Texture m_political_boundaries_raw;
+	gfx::Texture m_political_boundaries_blurred; // blurred version for smooth visuals
 private:
 	BoardMarker m_marker = {};
 	bool m_marker_visible = false;
@@ -88,7 +94,7 @@ struct BorderPaintJob {
 
 class Board {
 public:
-	Board(std::shared_ptr<gfx::Shader> tilemap);
+	Board(std::shared_ptr<gfx::Shader> tilemap, std::shared_ptr<gfx::Shader> blur_shader);
 public:
 	const glm::vec3 SCALE = { 1024.f, 32.f, 1024.f };
 public:

@@ -25,6 +25,8 @@
 #include "atlas.h"
 #include "board.h"
 
+#define INT_CEIL(n,d) (int)ceil((float)n/d)
+
 void BoardMesh::clear()
 {
 	m_vertices.clear();
@@ -140,25 +142,29 @@ void BoardModel::paint_political_triangle(const glm::vec2 &a, const glm::vec2 &b
 
 void BoardModel::paint_political_line(const glm::vec2 &a, const glm::vec2 &b, uint8_t color)
 {
-	m_political_map.draw_thick_line_relative(a, b, 4, util::CHANNEL_ALPHA, color);
+	m_political_boundaries.draw_thick_line_relative(a, b, 3, util::CHANNEL_RED, color);
 }
 
-BoardModel::BoardModel(std::shared_ptr<gfx::Shader> shader, const util::Image<float> &heightmap, const util::Image<float> &normalmap)
-	: m_shader(shader)
+BoardModel::BoardModel(std::shared_ptr<gfx::Shader> shader, std::shared_ptr<gfx::Shader> blur_shader, const util::Image<float> &heightmap, const util::Image<float> &normalmap)
+	: m_shader(shader), m_blur_shader(blur_shader)
 {
 	m_border_map.resize(2048, 2048, util::COLORSPACE_GRAYSCALE);
-	m_political_map.resize(2048, 2048, util::COLORSPACE_RGBA);
+	m_political_map.resize(2048, 2048, util::COLORSPACE_RGB);
+	m_political_boundaries.resize(2048, 2048, util::COLORSPACE_GRAYSCALE);
 
 	m_heightmap.create(heightmap);
 	m_normalmap.create(normalmap);
 	
 	m_border_texture.create(m_border_map);
 	m_political_texture.create(m_political_map);
+	m_political_boundaries_raw.create(m_political_boundaries);
+	m_political_boundaries_blurred.create(m_political_boundaries);
 
 	add_material("DISPLACEMENT", &m_heightmap);
 	add_material("NORMALMAP", &m_normalmap);
 	add_material("BORDERS", &m_border_texture);
 	add_material("POLITICAL", &m_political_texture);
+	add_material("BOUNDARIES", &m_political_boundaries_blurred);
 }
 	
 void BoardModel::set_scale(const glm::vec3 &scale)
@@ -186,6 +192,7 @@ void BoardModel::reload(const Atlas &atlas)
 	m_mesh.clear();
 	m_border_map.wipe();
 	m_political_map.wipe();
+	m_political_boundaries.wipe();
 
 	const auto &graph = atlas.graph();
 	const auto &tiles = atlas.tiles();
@@ -240,11 +247,41 @@ void BoardModel::color_border(uint32_t tile, uint32_t border, const glm::vec3 &c
 	m_mesh.color_border(tile, border, color);
 }
 	
-void BoardModel::update_mesh()
+void BoardModel::update()
 {
 	m_mesh.refresh();
 	
+	// send image data to GPU
 	m_political_texture.reload(m_political_map);
+	m_political_boundaries_blurred.reload(m_political_boundaries);
+	// now blur the image data on GPU using a compute shader
+	glm::vec2 resolution = { 
+		m_political_boundaries.width(), 
+		m_political_boundaries.height() 
+	};
+
+	m_blur_shader->use();
+	
+	GLuint ping = m_political_boundaries_blurred.binding();
+	GLuint pong = m_political_boundaries_raw.binding();
+
+	for (int i = 0; i < 6; i++) {
+		glBindImageTexture(0, ping, 0, GL_FALSE, 0, GL_READ_ONLY, GL_R8);
+		glBindImageTexture(1, pong, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R8);
+
+		m_blur_shader->uniform_vec2("DIR", glm::vec2(1.f, 0.f));
+
+		glDispatchCompute(INT_CEIL(resolution.x, 16), INT_CEIL(resolution.y, 16), 1);
+		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
+		glBindImageTexture(0, pong, 0, GL_FALSE, 0, GL_READ_ONLY, GL_R8);
+		glBindImageTexture(1, ping, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R8);
+
+		m_blur_shader->uniform_vec2("DIR", glm::vec2(0.f, 1.f));
+
+		glDispatchCompute(INT_CEIL(resolution.x, 16), INT_CEIL(resolution.y, 16), 1);
+		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+	}
 }
 
 void BoardModel::display(const util::Camera &camera) const
@@ -284,8 +321,8 @@ void BoardModel::set_border_mix(float mix)
 	m_border_mix = mix;
 }
 	
-Board::Board(std::shared_ptr<gfx::Shader> tilemap)
-	: m_model(tilemap, m_atlas.heightmap(), m_atlas.normalmap())
+Board::Board(std::shared_ptr<gfx::Shader> tilemap, std::shared_ptr<gfx::Shader> blur_shader)
+	: m_model(tilemap, blur_shader, m_atlas.heightmap(), m_atlas.normalmap())
 {
 	m_height_field = std::make_unique<fysx::HeightField>(m_atlas.heightmap(), SCALE);
 }
@@ -408,7 +445,7 @@ void Board::update()
 
 	// tile colors have been changed, update mesh
 	if (update_model) {
-		m_model.update_mesh();
+		m_model.update();
 	}
 }
 	

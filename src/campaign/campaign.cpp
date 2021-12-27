@@ -76,7 +76,7 @@ void Campaign::init(const gfx::ShaderGroup *shaders)
 
 	labeler = std::make_unique<gfx::Labeler>("fonts/diablo.ttf", 30, shaders->label);
 
-	board = std::make_unique<Board>(shaders->tilemap);
+	board = std::make_unique<Board>(shaders->tilemap, shaders->blur);
 	
 	object_shader = shaders->debug;
 	meeple_shader = shaders->creature;
