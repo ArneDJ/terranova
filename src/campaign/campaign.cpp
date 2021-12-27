@@ -851,7 +851,14 @@ void Campaign::update_faction_taxes()
 {
 	for (const auto &mapping : faction_controller.factions) {
 		auto &faction = mapping.second;
-		auto profit = 2 * faction->towns.size();
+		int profit = 0;
+		for (const auto &town_id : faction->towns) {
+			auto search = settlement_controller.towns.find(town_id);
+			if (search != settlement_controller.towns.end()) {
+				const auto &town = search->second;
+				profit += 2 * town->size();
+			}
+		}
 		faction->add_gold(profit);
 	}
 }

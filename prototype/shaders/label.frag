@@ -20,4 +20,5 @@ void main()
 	sampled.a = 1.0;
 
 	fcolor = vec4(color, 1.0) * sampled;
+	fcolor.a = 0.7;
 } 

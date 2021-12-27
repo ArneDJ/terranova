@@ -140,7 +140,7 @@ void BoardModel::paint_political_triangle(const glm::vec2 &a, const glm::vec2 &b
 
 void BoardModel::paint_political_line(const glm::vec2 &a, const glm::vec2 &b, uint8_t color)
 {
-	m_political_map.draw_thick_line_relative(a, b, 2, util::CHANNEL_ALPHA, color);
+	m_political_map.draw_thick_line_relative(a, b, 4, util::CHANNEL_ALPHA, color);
 }
 
 BoardModel::BoardModel(std::shared_ptr<gfx::Shader> shader, const util::Image<float> &heightmap, const util::Image<float> &normalmap)
@@ -207,7 +207,7 @@ void BoardModel::reload(const Atlas &atlas)
 	}
 
 	m_mesh.create();
-	
+
 	// create border map
 	const auto &bounds = atlas.bounds();
 	for (const auto &border : borders) {
@@ -301,6 +301,9 @@ void Board::generate(int seed)
 	
 void Board::reload()
 {
+	// world normalmap from heightmap
+	m_atlas.create_normalmap();
+	
 	m_model.reload(m_atlas);
 	m_model.set_scale(SCALE);
 }

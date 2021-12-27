@@ -97,6 +97,7 @@ public:
 	~Atlas();
 public:
 	void generate(int seed, const geom::Rectangle &bounds, const AtlasParameters &parameters);
+	void create_normalmap();
 public:
 	const geom::VoronoiGraph& graph() const;
 	const std::vector<Tile>& tiles() const;
@@ -111,7 +112,7 @@ public:
 	template <class Archive>
 	void serialize(Archive &archive)
 	{
-		archive(m_graph, m_tiles, m_corners, m_borders, m_heightmap, m_normalmap, m_bounds);
+		archive(m_graph, m_tiles, m_corners, m_borders, m_heightmap, m_bounds);
 	}
 private:
 	geom::Rectangle m_bounds;
@@ -146,7 +147,6 @@ private: // image maps adjustments
 	void form_base_relief();
 	void form_mountain_ridges();
 	void river_cut_relief();
-	void create_normalmap();
 };
 
 bool walkable_tile(const Tile *tile);
