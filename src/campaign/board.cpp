@@ -135,9 +135,11 @@ void BoardMesh::color_border(uint32_t tile, uint32_t border, const glm::vec3 &co
 	
 void BoardModel::paint_political_triangle(const glm::vec2 &a, const glm::vec2 &b, const glm::vec2 &c, const glm::vec3 &color)
 {
+	// TODO fetch pixels to rasterize so we don't repeat this 4 times
 	m_political_map.draw_triangle_relative(a, b, c, util::CHANNEL_RED, 255 * color.x);
 	m_political_map.draw_triangle_relative(a, b, c, util::CHANNEL_GREEN, 255 * color.y);
 	m_political_map.draw_triangle_relative(a, b, c, util::CHANNEL_BLUE, 255 * color.z);
+	m_political_map.draw_triangle_relative(a, b, c, util::CHANNEL_ALPHA, 255);
 }
 
 void BoardModel::paint_political_line(const glm::vec2 &a, const glm::vec2 &b, uint8_t color)
@@ -149,7 +151,7 @@ BoardModel::BoardModel(std::shared_ptr<gfx::Shader> shader, std::shared_ptr<gfx:
 	: m_shader(shader), m_blur_shader(blur_shader)
 {
 	m_border_map.resize(2048, 2048, util::COLORSPACE_GRAYSCALE);
-	m_political_map.resize(2048, 2048, util::COLORSPACE_RGB);
+	m_political_map.resize(2048, 2048, util::COLORSPACE_RGBA);
 	m_political_boundaries.resize(2048, 2048, util::COLORSPACE_GRAYSCALE);
 
 	m_heightmap.create(heightmap);

@@ -40,17 +40,16 @@ void main(void)
 
 	vec3 normal = texture(NORMALMAP, fragment.texcoord).rgb;
 
-	vec3 political = texture(POLITICAL, fragment.texcoord).rgb;
+	vec4 political = texture(POLITICAL, fragment.texcoord);
 
 	vec3 final_color = fragment.tile_color;
 
-	//vec3 final_color = political.rgb;
 	float border = texture(BORDERS, fragment.texcoord).r;
 
 	float political_mix = texture(BOUNDARIES, fragment.texcoord).r;
 	political_mix = smoothstep(0.1, 0.2, political_mix);
 	float negative_border = 1.0 - smoothstep(0.1, 0.2, border);
-	final_color = mix(final_color, political, negative_border * political_mix);
+	final_color = mix(final_color, political.rgb, negative_border * political_mix * political.a);
 
 	float height = texture(DISPLACEMENT, fragment.texcoord).r;
 	final_color = mix(final_color, vec3(height), 0.5f);
