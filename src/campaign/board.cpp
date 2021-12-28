@@ -26,112 +26,6 @@
 #include "board.h"
 
 #define INT_CEIL(n,d) (int)ceil((float)n/d)
-
-void BoardMesh::clear()
-{
-	m_vertices.clear();
-	m_tile_targets.clear();
-	m_triangle_targets.clear();
-}
-
-void BoardMesh::add_cell(const geom::VoronoiCell &cell, const glm::vec3 &color)
-{
-	auto &targets = m_tile_targets[cell.index];
-
-	for (const auto &edge : cell.edges) {
-		BoardMeshVertex vertex_a = {
-			edge->left_vertex->position,
-			color,
-			glm::vec3(1.f)
-		};
-		BoardMeshVertex vertex_b = {
-			edge->right_vertex->position,
-			color,
-			glm::vec3(1.f)
-		};
-		BoardMeshVertex vertex_c = {
-			cell.center,
-			color,
-			glm::vec3(1.f)
-		};
-		if (!geom::clockwise(edge->left_vertex->position, edge->right_vertex->position, cell.center)) {
-			std::swap(vertex_a.position, vertex_b.position);
-		}
-
-		// add references
-		TriangleKey key = std::make_pair(cell.index, edge->index);
-
-		auto left_index = m_vertices.size();
-		targets.push_back(left_index);
-		m_vertices.push_back(vertex_a);
-
-		auto right_index = m_vertices.size();
-		targets.push_back(right_index);
-		m_vertices.push_back(vertex_b);
-
-		m_triangle_targets[key] = std::make_pair(left_index, right_index);
-
-		targets.push_back(m_vertices.size());
-		m_vertices.push_back(vertex_c);
-	}
-}
-
-void BoardMesh::create()
-{
-	const size_t size = sizeof(BoardMeshVertex) * m_vertices.size();
-
-	m_primitive.first_index = 0;
-	m_primitive.index_count = 0;
-	m_primitive.first_vertex = 0;
-	m_primitive.vertex_count = GLsizei(m_vertices.size());
-	m_primitive.mode = GL_TRIANGLES;
-	m_primitive.index_type = GL_UNSIGNED_INT;
-
-	m_vao.bind();
-
-	// add position buffer
-	m_vbo.set_target(GL_ARRAY_BUFFER);
-	m_vbo.store_mutable(size, m_vertices.data(), GL_STATIC_DRAW);
-
-	m_vao.set_attribute(0, 2, GL_FLOAT, GL_FALSE, sizeof(BoardMeshVertex), (char*)(offsetof(BoardMeshVertex, position)));
-	m_vao.set_attribute(1, 3, GL_FLOAT, GL_FALSE, sizeof(BoardMeshVertex), (char*)(offsetof(BoardMeshVertex, tile_color)));
-	m_vao.set_attribute(2, 3, GL_FLOAT, GL_FALSE, sizeof(BoardMeshVertex), (char*)(offsetof(BoardMeshVertex, edge_color)));
-}
-	
-void BoardMesh::refresh()
-{
-	const size_t data_size = sizeof(BoardMeshVertex) * m_vertices.size();
-	m_vbo.store_mutable_part(0, data_size, m_vertices.data());
-}
-
-void BoardMesh::draw() const
-{
-	m_vao.bind();
-
-	glPatchParameteri(GL_PATCH_VERTICES, 3);
-	glDrawArrays(GL_PATCHES, 0, m_vertices.size());
-}
-
-void BoardMesh::color_tile(uint32_t tile, const glm::vec3 &color)
-{
-	auto search = m_tile_targets.find(tile);
-	if (search != m_tile_targets.end()) {
-		for (const auto &index : search->second) {
-			m_vertices[index].tile_color = color;
-		}
-	}
-}
-	
-void BoardMesh::color_border(uint32_t tile, uint32_t border, const glm::vec3 &color)
-{
-	TriangleKey key = std::make_pair(tile, border);
-	auto search = m_triangle_targets.find(key);
-	if (search != m_triangle_targets.end()) {
-		auto &edge = search->second;
-		m_vertices[edge.first].edge_color = color;
-		m_vertices[edge.second].edge_color = color;
-	}
-}
 	
 void BoardModel::paint_political_triangle(const glm::vec2 &a, const glm::vec2 &b, const glm::vec2 &c, const glm::vec3 &color)
 {
@@ -170,6 +64,10 @@ BoardModel::BoardModel(std::shared_ptr<gfx::Shader> shader, std::shared_ptr<gfx:
 	add_material("BORDERS", &m_border_texture);
 	add_material("POLITICAL", &m_political_texture);
 	add_material("BOUNDARIES", &m_political_boundaries_blurred);
+
+	// create the mesh
+	geom::Rectangle rectangle = { { 0.f, 0.f }, { 1024.f, 1024.f } };
+	m_mesh.create(32, rectangle);
 }
 	
 void BoardModel::set_scale(const glm::vec3 &scale)
@@ -194,7 +92,6 @@ void BoardModel::bind_textures() const
 
 void BoardModel::reload(const Atlas &atlas)
 {
-	m_mesh.clear();
 	m_border_map.wipe();
 	m_political_map.wipe();
 	m_political_boundaries.wipe();
@@ -202,23 +99,6 @@ void BoardModel::reload(const Atlas &atlas)
 	const auto &graph = atlas.graph();
 	const auto &tiles = atlas.tiles();
 	const auto &borders = atlas.borders();
-
-	uint32_t index = 0;
-	for (const auto &tile : tiles) {
-		const auto &cell = graph.cells[tile.index];
-		uint8_t height = tile.height;
-		glm::vec3 color = { 0.f, 0.f, 0.f };
-		switch (tile.relief) {
-		case ReliefType::SEABED: color = glm::vec3(0.1f); break;
-		case ReliefType::LOWLAND: color = glm::vec3(0.5f); break;
-		case ReliefType::HILLS: color = glm::vec3(0.75f); break;
-		case ReliefType::MOUNTAINS: color = glm::vec3(1.f); break;
-		}
-
-		m_mesh.add_cell(cell, color);
-	}
-
-	m_mesh.create();
 
 	// create border map
 	const auto &bounds = atlas.bounds();
@@ -242,20 +122,8 @@ void BoardModel::reload(const Atlas &atlas)
 	m_border_texture.reload(m_border_map);
 }
 	
-void BoardModel::color_tile(uint32_t tile, const glm::vec3 &color)
-{
-	m_mesh.color_tile(tile, color);
-}
-	
-void BoardModel::color_border(uint32_t tile, uint32_t border, const glm::vec3 &color)
-{
-	m_mesh.color_border(tile, border, color);
-}
-	
 void BoardModel::update()
 {
-	m_mesh.refresh();
-	
 	// send image data to GPU
 	m_political_texture.reload(m_political_map);
 	m_political_boundaries_blurred.reload(m_political_boundaries);
@@ -415,7 +283,6 @@ void Board::update()
 	if (!m_paint_jobs.empty()) {
 		while (!m_paint_jobs.empty()) {
 			auto order = m_paint_jobs.front();
-			//m_model.color_tile(order.tile, order.color);
 			const auto &tile = tiles[order.tile];
 			glm::vec2 center = cells[tile.index].center / bounds.max;
 			const auto &cell = cells[tile.index];
@@ -442,7 +309,6 @@ void Board::update()
 			glm::vec2 a = left_vertex->position / bounds.max;
 			glm::vec2 b = right_vertex->position / bounds.max;
 			m_model.paint_political_line(a, b, order.color);
-			//m_model.color_border(order.tile, order.border, order.color);
 			m_border_paint_jobs.pop();
 		}
 		update_model = true;

@@ -1196,32 +1196,10 @@ void Atlas::form_base_relief()
 			int score = glm::clamp(data.score, score_bounds.min, score_bounds.max);
 			float mix = score / float(score_bounds.max);
 			amp = glm::mix(0.8f, 1.f, mix);
+		} else if (tile.relief == ReliefType::SEABED) {
+			amp = 0.4f;
 		}
-			/*
-		if (tile.relief == ReliefType::MOUNTAINS) {
-			bool mountain_border = false;
-			for (const auto &cell : m_graph.cells[tile.index].neighbors) {
-				Tile *neighbor = &m_tiles[cell->index];
-				if (neighbor->relief != ReliefType::MOUNTAINS) {
-					mountain_border = true;
-					break;
-				}
-			}
-			
-			if (mountain_border) {
-				amp = 0.9f;
-			}
-		}
-		if (tile.relief == ReliefType::HILLS) {
-			amp = 0.85f;
-		}
-		if (tile.relief == ReliefType::LOWLAND) {
-			amp = 0.8f;
-		}
-		if (tile.relief == ReliefType::SEABED) {
-			amp = 0.5f;
-		}
-			*/
+
 		// draw the triangles
 		glm::vec2 center = m_graph.cells[tile.index].center / m_bounds.max;
 		const auto &cell = m_graph.cells[tile.index];
@@ -1299,7 +1277,7 @@ void Atlas::river_cut_relief()
 			uint8_t masker = m_mask.sample(x, y, util::CHANNEL_RED);
 			if (masker > 0) {
 				float height = m_heightmap.sample(x, y, util::CHANNEL_RED);
-				float erosion = glm::clamp(1.f - (masker / 255.f), 0.9f, 1.f);
+				float erosion = glm::clamp(1.f - (masker / 255.f), 0.8f, 1.f);
 				m_heightmap.plot(x, y, util::CHANNEL_RED, erosion * height);
 			}
 		}

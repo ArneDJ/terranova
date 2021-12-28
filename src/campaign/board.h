@@ -1,39 +1,9 @@
 
-struct BoardMeshVertex {
-	glm::vec2 position = {};
-	glm::vec3 tile_color = {};
-	glm::vec3 edge_color = {};
-};
-
-using TriangleKey = std::pair<uint32_t, uint32_t>; // left tile index, right border index
-using VertexPair = std::pair<uint32_t, uint32_t>;
-
 struct BoardMarker {
 	glm::vec2 position = {};
 	glm::vec3 color = {};
 	float radius = 3.f;
 	float fade = 1.f; // transparancy, keep this between 0 and 1
-};
-
-class BoardMesh {
-public:
-	void add_cell(const geom::VoronoiCell &cell, const glm::vec3 &color);
-	void create();
-	void refresh();
-	void draw() const;
-	void clear();
-public:
-	void color_tile(uint32_t tile, const glm::vec3 &color);
-	void color_border(uint32_t tile, uint32_t border, const glm::vec3 &color);
-private:
-	gfx::Primitive m_primitive;
-	gfx::BufferObject m_vbo;
-	gfx::BufferObject m_ebo;
-	gfx::VertexArrayObject m_vao;
-private:
-	std::vector<BoardMeshVertex> m_vertices;
-	std::unordered_map<uint32_t, std::vector<uint32_t>> m_tile_targets; // reference from tile to vertices
-	std::map<TriangleKey, VertexPair> m_triangle_targets;
 };
 
 class BoardModel {
@@ -43,8 +13,6 @@ public:
 	void set_scale(const glm::vec3 &scale);
 	void add_material(const std::string &name, const gfx::Texture *texture);
 	void reload(const Atlas &atlas);
-	void color_tile(uint32_t tile, const glm::vec3 &color);
-	void color_border(uint32_t tile, uint32_t border, const glm::vec3 &color);
 	void paint_political_triangle(const glm::vec2 &a, const glm::vec2 &b, const glm::vec2 &c, const glm::vec3 &color);
 	void paint_political_line(const glm::vec2 &a, const glm::vec2 &b, uint8_t color);
 	void update();
@@ -61,7 +29,7 @@ private:
 	std::shared_ptr<gfx::Shader> m_blur_shader;
 private:
 	glm::vec3 m_scale = { 1.f, 1.f, 1.f };
-	BoardMesh m_mesh;
+	gfx::TesselationMesh m_mesh;
 	gfx::Texture m_heightmap;
 	gfx::Texture m_normalmap;
 	std::unordered_map<std::string, const gfx::Texture*> m_materials;

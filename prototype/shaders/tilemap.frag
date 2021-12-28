@@ -2,9 +2,6 @@
 
 in TESSEVAL {
 	vec3 position;
-	vec3 barycentric;
-	vec3 tile_color;
-	vec3 edge_color;
 	vec2 texcoord;
 	float zclipspace;
 } fragment;
@@ -42,7 +39,12 @@ void main(void)
 
 	vec4 political = texture(POLITICAL, fragment.texcoord);
 
-	vec3 final_color = fragment.tile_color;
+	//vec3 final_color = fragment.tile_color;
+
+	float height = texture(DISPLACEMENT, fragment.texcoord).r;
+	//final_color = mix(final_color, vec3(height), 0.5f);
+	
+	vec3 final_color = vec3(height);
 
 	float border = texture(BORDERS, fragment.texcoord).r;
 
@@ -50,9 +52,6 @@ void main(void)
 	political_mix = smoothstep(0.1, 0.2, political_mix);
 	float negative_border = 1.0 - smoothstep(0.1, 0.2, border);
 	final_color = mix(final_color, political.rgb, negative_border * political_mix * political.a);
-
-	float height = texture(DISPLACEMENT, fragment.texcoord).r;
-	final_color = mix(final_color, vec3(height), 0.5f);
 
 	vec3 border_color = mix(final_color, vec3(1.0, 1.0, 1.0), BORDER_MIX);
 	final_color = mix(final_color, border_color, smoothstep(0.1, 0.2, border));

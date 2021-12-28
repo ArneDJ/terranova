@@ -1,21 +1,14 @@
 #version 430 core
 
-layout(vertices = 3) out;
-
-in vec3 v_cell_color[];
-in vec3 v_edge_color[];
-
-out vec3 tile_color[];
-out vec3 edge_color[];
+layout(vertices = 4) out;
 
 uniform vec3 CAMERA_POSITION;
 
 float lod(float dist)
 {
-	//float tessfactor = smoothstep(100.0, 140.0, dist);
+	float tessfactor = smoothstep(100.0, 110.0, dist);
 
-	//return mix(2.0, 4.0, 1.0 - tessfactor);
-	return (dist > 100.0) ? 2.0 : 4.0;
+	return mix(8.0, 32.0, 1.0 - tessfactor);
 }
 
 // add half vector
@@ -28,14 +21,19 @@ void main(void)
 {
 	float detail = 4;
 	if (gl_InvocationID == 0) {
-		gl_TessLevelOuter[0] = detail;
-		gl_TessLevelOuter[1] = detail;
-		gl_TessLevelOuter[2] = detail;
-		gl_TessLevelInner[0] = detail;
-	}
+		// tesselate based on distance to edges midpoint to prevent cracking
+		vec2 e0 = midpoint(gl_in[0].gl_Position.xz, gl_in[1].gl_Position.xz); // 0
+		vec2 e1 = midpoint(gl_in[0].gl_Position.xz, gl_in[2].gl_Position.xz); // 1
+		vec2 e2 = midpoint(gl_in[2].gl_Position.xz, gl_in[3].gl_Position.xz); // 2
+		vec2 e3 = midpoint(gl_in[1].gl_Position.xz, gl_in[3].gl_Position.xz); // 3
 
-	tile_color[gl_InvocationID] = v_cell_color[gl_InvocationID];
-	edge_color[gl_InvocationID] = v_edge_color[gl_InvocationID];
+		gl_TessLevelOuter[0] = lod(distance(e0, CAMERA_POSITION.xz));
+		gl_TessLevelOuter[1] = lod(distance(e1, CAMERA_POSITION.xz));
+		gl_TessLevelOuter[2] = lod(distance(e2, CAMERA_POSITION.xz));
+		gl_TessLevelOuter[3] = lod(distance(e3, CAMERA_POSITION.xz));
+		gl_TessLevelInner[0] = mix(gl_TessLevelOuter[0], gl_TessLevelOuter[3], 0.5);
+		gl_TessLevelInner[1] = mix(gl_TessLevelOuter[2], gl_TessLevelOuter[1], 0.5);
+	}
 
 	gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
 }
