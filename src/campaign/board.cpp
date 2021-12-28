@@ -161,6 +161,9 @@ BoardModel::BoardModel(std::shared_ptr<gfx::Shader> shader, std::shared_ptr<gfx:
 	m_political_texture.create(m_political_map);
 	m_political_boundaries_raw.create(m_political_boundaries);
 	m_political_boundaries_blurred.create(m_political_boundaries);
+	
+	// sample method to prevent black spots
+	m_political_texture.change_filtering(GL_NEAREST);
 
 	add_material("DISPLACEMENT", &m_heightmap);
 	add_material("NORMALMAP", &m_normalmap);
