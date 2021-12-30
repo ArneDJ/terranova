@@ -141,6 +141,7 @@ public: // rasterize methods
 	{
 		draw_thick_line(a.x * m_width, a.y * m_height, b.x * m_width, b.y * m_height, radius, channel, color);
 	}
+public:
 	// triangle rasterize
 	void draw_triangle(glm::vec2 a, glm::vec2 b, glm::vec2 c, uint8_t channel, T color)
 	{
@@ -216,6 +217,79 @@ public: // rasterize methods
 		glm::vec2 c_coords = { c.x * m_width, c.y * m_height };
 
 		draw_triangle(a_coords, b_coords, c_coords, channel, color);
+	}
+	// finds what pixels to plot to rasterize a triangle
+	void find_triangle_pixels(glm::vec2 a, glm::vec2 b, glm::vec2 c, std::vector<glm::ivec2> &output)
+	{
+		// maybe use an anonymous function to not repeat the same code as the other triangle rasterize function?
+	
+		// make sure the triangle is counter clockwise
+		if (geom::clockwise(a, b, c)) {
+			std::swap(b, c);
+		}
+
+		a.x = floorf(a.x);
+		a.y = floorf(a.y);
+		b.x = floorf(b.x);
+		b.y = floorf(b.y);
+		c.x = floorf(c.x);
+		c.y = floorf(c.y);
+
+		// Compute triangle bounding box
+		int minX = std::min(int(a.x), std::min(int(b.x), int(c.x)));
+		int minY = std::min(int(a.y), std::min(int(b.y), int(c.y)));
+		int maxX = std::max(int(a.x), std::max(int(b.x), int(c.x)));
+		int maxY = std::max(int(a.y), std::max(int(b.y), int(c.y)));
+
+		// Clip against screen bounds
+		minX = (std::max)(minX, 0);
+		minY = (std::max)(minY, 0);
+		maxX = (std::min)(maxX, m_width - 1);
+		maxY = (std::min)(maxY, m_height - 1);
+
+		// Triangle setup
+		int A01 = a.y - b.y, B01 = b.x - a.x;
+		int A12 = b.y - c.y, B12 = c.x - b.x;
+		int A20 = c.y - a.y, B20 = a.x - c.x;
+
+		// Barycentric coordinates at minX/minY corner
+		glm::ivec2 p = { minX, minY };
+		int w0_row = geom::orient(b.x, b.y, c.x, c.y, p.x, p.y);
+		int w1_row = geom::orient(c.x, c.y, a.x, a.y, p.x, p.y);
+		int w2_row = geom::orient(a.x, a.y, b.x, b.y, p.x, p.y);
+
+		// Rasterize
+		for (p.y = minY; p.y <= maxY; p.y++) {
+			// Barycentric coordinates at start of row
+			int w0 = w0_row;
+			int w1 = w1_row;
+			int w2 = w2_row;
+
+			for (p.x = minX; p.x <= maxX; p.x++) {
+				// If p is on or inside all edges, render pixel.
+				if ((w0 | w1 | w2) >= 0) {
+					output.push_back(p);
+				}
+
+				// One step to the right
+				w0 += A12;
+				w1 += A20;
+				w2 += A01;
+			}
+
+			// One row step
+			w0_row += B12;
+			w1_row += B20;
+			w2_row += B01;
+		}
+	}
+	void find_triangle_pixels_relative(glm::vec2 a, glm::vec2 b, glm::vec2 c, std::vector<glm::ivec2> &output)
+	{
+		glm::vec2 a_coords = { a.x * m_width, a.y * m_height };
+		glm::vec2 b_coords = { b.x * m_width, b.y * m_height };
+		glm::vec2 c_coords = { c.x * m_width, c.y * m_height };
+
+		find_triangle_pixels(a_coords, b_coords, c_coords, output);
 	}
 public:
 	void blur(float sigma);

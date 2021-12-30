@@ -1,4 +1,5 @@
 #include <vector>
+#include <chrono>
 #include <random>
 #include <memory>
 #include <list>
@@ -29,11 +30,14 @@
 	
 void BoardModel::paint_political_triangle(const glm::vec2 &a, const glm::vec2 &b, const glm::vec2 &c, const glm::vec3 &color)
 {
-	// TODO fetch pixels to rasterize so we don't repeat this 4 times
-	m_political_map.draw_triangle_relative(a, b, c, util::CHANNEL_RED, 255 * color.x);
-	m_political_map.draw_triangle_relative(a, b, c, util::CHANNEL_GREEN, 255 * color.y);
-	m_political_map.draw_triangle_relative(a, b, c, util::CHANNEL_BLUE, 255 * color.z);
-	m_political_map.draw_triangle_relative(a, b, c, util::CHANNEL_ALPHA, 255);
+	std::vector<glm::ivec2> pixels;
+	m_political_map.find_triangle_pixels_relative(a, b, c, pixels);
+	for (const auto &pixel : pixels) {
+		m_political_map.plot(pixel.x, pixel.y, util::CHANNEL_RED, 255 * color.x);
+		m_political_map.plot(pixel.x, pixel.y, util::CHANNEL_GREEN, 255 * color.y);
+		m_political_map.plot(pixel.x, pixel.y, util::CHANNEL_BLUE, 255 * color.z);
+		m_political_map.plot(pixel.x, pixel.y, util::CHANNEL_ALPHA, 255);
+	}
 }
 
 void BoardModel::paint_political_line(const glm::vec2 &a, const glm::vec2 &b, uint8_t color)
@@ -353,8 +357,6 @@ void Board::build_navigation()
 					a = geom::midpoint(a, cell.center);
 					b = geom::midpoint(b, cell.center);
 				}
-
-				// TODO desired river width
 
 				if (!geom::clockwise(cell.center, a, b)) {
 					std::swap(a, b);

@@ -153,10 +153,10 @@ void Engine::load_shaders()
 	shaders->object->link();
 
 	shaders->tilemap = std::make_shared<gfx::Shader>();
-	shaders->tilemap->compile("shaders/tilemap.vert", GL_VERTEX_SHADER);
-	shaders->tilemap->compile("shaders/tilemap.tesc", GL_TESS_CONTROL_SHADER);
-	shaders->tilemap->compile("shaders/tilemap.tese", GL_TESS_EVALUATION_SHADER);
-	shaders->tilemap->compile("shaders/tilemap.frag", GL_FRAGMENT_SHADER);
+	shaders->tilemap->compile("shaders/board.vert", GL_VERTEX_SHADER);
+	shaders->tilemap->compile("shaders/board.tesc", GL_TESS_CONTROL_SHADER);
+	shaders->tilemap->compile("shaders/board.tese", GL_TESS_EVALUATION_SHADER);
+	shaders->tilemap->compile("shaders/board.frag", GL_FRAGMENT_SHADER);
 	shaders->tilemap->link();
 
 	shaders->culling = std::make_shared<gfx::Shader>();
