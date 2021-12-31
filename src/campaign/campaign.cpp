@@ -152,26 +152,32 @@ void Campaign::generate(int seedling)
 	
 	seed = seedling;
 
+	// new ids
 	id_generator.reset();
 
+	// generate our world
 	board->generate(seed);
 
+	// set a new clean state for game data
 	const auto &atlas = board->atlas();	
 	const auto &tiles = atlas.tiles();	
 	for (const auto &tile : tiles) {
 		faction_controller.tile_owners[tile.index] = 0;
+		settlement_controller.tile_owners[tile.index] = 0;
 	}
 
+	// find ideal places to settle towns in our generated world
 	faction_controller.find_town_targets(atlas, 4 + 1);
 
+	// spawn factions including the player's
 	spawn_factions();
 
+	// assign player data
 	player_data.meeple_id = id_generator.generate();
 	meeple_controller.meeples[player_data.meeple_id] = std::make_unique<Meeple>();
 	meeple_controller.player = meeple_controller.meeples[player_data.meeple_id].get();
 	meeple_controller.player->id = player_data.meeple_id;
 	meeple_controller.player->set_speed(4.f);
-
 	meeple_controller.player->faction_id = player_data.faction_id;
 
 	// position meeples at faction capitals
@@ -229,8 +235,10 @@ void Campaign::prepare()
 		}
 	}
 
+	// initial update to color the tiles
 	board->update();
 
+	// place meeples
 	meeple_controller.player = meeple_controller.meeples[player_data.meeple_id].get();
 	for (auto &mapping : meeple_controller.meeples) {
 		auto &meeple = mapping.second;
@@ -536,6 +544,7 @@ void Campaign::spawn_fiefdom(Town *town)
 	nodes.push(town->tile());
 	depth[town->tile()] = 0;
 	faction_controller.tile_owners[town->tile()] = faction;
+	settlement_controller.tile_owners[town->tile()] = id;
 
 	std::vector<uint32_t> border_tiles; // tiles found at the border, very important for AI expansion and visualizing the borders
 
@@ -555,6 +564,7 @@ void Campaign::spawn_fiefdom(Town *town)
 					if (walkable_tile(neighbor) && (faction_controller.tile_owners[neighbor->index] == 0)) {
 						depth[neighbor->index] = layer;
 						faction_controller.tile_owners[neighbor->index] = faction;
+						settlement_controller.tile_owners[neighbor->index] = id;
 						nodes.push(neighbor->index);
 					}
 				}
@@ -593,21 +603,6 @@ void Campaign::spawn_fiefdom(Town *town)
 			}
 		}
 	}
-
-	// draw the political borders on the map
-	/*
-	for (const auto &border_tile : border_tiles) {
-		const auto &cell = cells[border_tile];
-		for (const auto &edge : cell.edges) {
-			// find neighbor tile
-			auto neighbor_index = edge->left_cell->index == border_tile ? edge->right_cell->index : edge->left_cell->index;
-			const Tile *neighbor = &tiles[neighbor_index];
-			if (faction_controller.tile_owners[neighbor->index] != faction) {
-				board->paint_border(border_tile, edge->index, color);
-			}
-		}
-	}
-	*/
 
 	settlement_controller.fiefdoms[id] = std::move(fiefdom);
 }

@@ -1,6 +1,9 @@
 
 /*
-class Village {
+class Village : public Settlement {
+};
+
+class Town : public Settlement {
 };
 */
 
@@ -80,16 +83,18 @@ class SettlementController {
 public:
 	std::unordered_map<uint32_t, std::unique_ptr<Town>> towns;
 	std::unordered_map<uint32_t, std::unique_ptr<Fiefdom>> fiefdoms;
+	std::unordered_map<uint32_t, uint32_t> tile_owners; // left: tile ID, right: fiefdom ID
 public:
 	template <class Archive>
 	void serialize(Archive &archive)
 	{
-		archive(towns, fiefdoms);
+		archive(towns, fiefdoms, tile_owners);
 	}
 public:
 	void clear()
 	{
 		towns.clear();
 		fiefdoms.clear();
+		tile_owners.clear();
 	}
 };

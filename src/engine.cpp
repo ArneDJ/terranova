@@ -321,7 +321,6 @@ void Engine::run()
 			campaign.clear();
 			campaign.generate(distrib(gen));
 			//campaign.generate(1337);
-			campaign.prepare();
 			campaign.reset_camera();
 			state = EngineState::RUNNING_CAMPAIGN;
 		}
@@ -329,11 +328,11 @@ void Engine::run()
 		if (state == EngineState::LOADING_CAMPAIGN) {
 			campaign.clear();
 			campaign.load(user_dir.saves + "test.save");
-			campaign.prepare();
 			state = EngineState::RUNNING_CAMPAIGN;
 		}
 		// run the selected campaign
 		if (state == EngineState::RUNNING_CAMPAIGN) {
+			campaign.prepare();
 			run_campaign();
 		}
 	}
