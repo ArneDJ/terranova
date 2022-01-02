@@ -50,6 +50,7 @@ struct MeepleBlueprint {
 	std::unique_ptr<util::AnimationSet> anim_set;
 };
 
+// the overworld
 class Campaign {
 public:
 	std::string name = {};
@@ -103,12 +104,14 @@ private:
 	uint32_t spawn_town(const Tile *tile, Faction *faction);
 	void spawn_fiefdom(Town *town);
 	void place_town(Town *town);
-	void place_meeple(Meeple *meeple);
-	void set_meeple_target(Meeple *meeple, uint32_t target_id, uint8_t target_type);
-	void update_meeple_target(Meeple *meeple);
 	void set_player_movement(const glm::vec3 &ray);
 	void set_player_construction(const glm::vec3 &ray);
 	void transfer_town(Town *town, uint32_t faction);
+private:
+	void place_meeple(Meeple *meeple);
+	void set_meeple_target(Meeple *meeple, uint32_t target_id, uint8_t target_type);
+	void update_meeple_target(Meeple *meeple);
+	void spawn_barbarians();
 public:
 	void spawn_factions();
 	void update_faction_taxes();

@@ -22,6 +22,8 @@
 
 #include "../extern/freetypegl/freetype-gl.h"
 
+#include "../extern/poisson/PoissonGenerator.h"
+
 #include "../util/serialize.h"
 #include "../util/config.h"
 #include "../util/input.h"
@@ -171,6 +173,11 @@ void Campaign::generate(int seedling)
 
 	// spawn factions including the player's
 	spawn_factions();
+
+	// spawn a meeple for every faction
+
+	// spawn roaming meeples like bandits and barbarians
+	spawn_barbarians();
 
 	// assign player data
 	player_data.meeple_id = id_generator.generate();
@@ -362,7 +369,6 @@ void Campaign::display()
 	for (auto &mapping : meeple_controller.meeples) {
 		auto &meeple = mapping.second;
 		meeple_shader->uniform_mat4("MODEL", meeple->transform.to_matrix());
-		//meeple->model->display();
 		meeple->display();
 	}
 
@@ -373,7 +379,19 @@ void Campaign::display()
 	}
 	
 	if (display_debug) {
-		//debugger->display_wireframe();
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		// display meeple trigger and vision sphere
+		for (auto &mapping : meeple_controller.meeples) {
+
+			auto &meeple = mapping.second;
+			const auto &trigger = meeple->trigger();
+			debugger->display_sphere(trigger->position(), trigger->radius());
+			const auto &visibility = meeple->visibility();
+			debugger->display_sphere(visibility->position(), visibility->radius());
+		}
+	
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
 		debugger->display_navmeshes();
 	}
 
@@ -409,9 +427,15 @@ void Campaign::place_meeple(Meeple *meeple)
 	meeple->model = army_blueprint.model;
 
 	// add label
-	glm::vec3 color = faction_controller.factions[meeple->faction_id]->color();
-	//glm::vec3 color = glm::vec3(1.f);
-	labeler->add_label(&meeple->transform, 0.2f, glm::vec3(0.f, 2.f, 0.f), "Army " + std::to_string(meeple->id), color);
+	auto faction_search = faction_controller.factions.find(meeple->faction_id);
+	if (faction_search != faction_controller.factions.end()) {
+		auto &faction = faction_search->second;
+		glm::vec3 color = faction->color();
+		labeler->add_label(&meeple->transform, 0.2f, glm::vec3(0.f, 2.f, 0.f), "Army " + std::to_string(meeple->id), color);
+	} else {
+		glm::vec3 color = { 1.f, 0.f, 0.f };
+		labeler->add_label(&meeple->transform, 0.2f, glm::vec3(0.f, 2.f, 0.f), "Barbarians " + std::to_string(meeple->id), color);
+	}
 }
 	
 // spawns a group of new factions
@@ -652,6 +676,12 @@ void Campaign::set_meeple_target(Meeple *meeple, uint32_t target_id, uint8_t tar
 		}
 	} else if (entity_type == CampaignEntity::LAND_SURFACE) {
 		meeple->target_type = target_type;
+	} else if (entity_type == CampaignEntity::MEEPLE) {
+		auto search = meeple_controller.meeples.find(target_id);
+		if (search != meeple_controller.meeples.end()) {
+			meeple->target_type = target_type;
+			meeple->target_id = target_id;
+		}
 	}
 }
 
@@ -677,6 +707,17 @@ BoardMarker Campaign::marker_data(const glm::vec2 &hitpoint, uint32_t target_id,
 			}
 		}
 	} else if (type == CampaignEntity::MEEPLE) {
+		auto search = meeple_controller.meeples.find(target_id);
+		if (search != meeple_controller.meeples.end()) {
+			auto &meeple = search->second;
+			marker.position = meeple->position();
+			marker.radius = 2.f;
+			if (meeple->faction_id == player_data.faction_id) {
+				marker.color = glm::vec3(0.f, 1.f, 0.f);
+			} else {
+				marker.color = glm::vec3(1.f, 1.f, 0.f);
+			}
+		}
 	}
 
 	return marker;
@@ -760,7 +801,7 @@ void Campaign::update_camera(float delta)
 	
 void Campaign::set_player_movement(const glm::vec3 &ray)
 {
-	auto result = physics.cast_ray(camera.position, camera.position + (1000.f * ray), COLLISION_GROUP_HEIGHTMAP | COLLISION_GROUP_TOWN);
+	auto result = physics.cast_ray(camera.position, camera.position + (1000.f * ray), COLLISION_GROUP_HEIGHTMAP | COLLISION_GROUP_TOWN | COLLISION_GROUP_INTERACTION);
 	if (result.hit && result.object) {
 		set_meeple_target(meeple_controller.player, result.object->getUserIndex(), result.object->getUserIndex2());
 		// find initial path
@@ -909,5 +950,47 @@ void Campaign::update_factions()
 				}
 			}
 		}
+	}
+}
+	
+// attempt to spawn a certain number of barbarians
+void Campaign::spawn_barbarians()
+{
+	const auto &atlas = board->atlas();	
+	const auto &tiles = atlas.tiles();	
+
+	// can't do anything if no tiles
+	if (!tiles.size()) {
+		return;
+	}
+
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_int_distribution<> distrib;
+
+	// generate random points with poisson distrib
+	PoissonGenerator::DefaultPRNG PRNG(distrib(gen));
+	const auto positions = PoissonGenerator::generatePoissonPoints(100, PRNG, false);
+
+	std::vector<glm::vec2> points;
+
+	for (const auto &position : positions) {
+		glm::vec2 point = { board->SCALE.x * position.x, board->SCALE.z * position.y };
+		const Tile *tile = board->atlas().tile_at(point);
+		if (walkable_tile(tile) && !faction_controller.tile_owners[tile->index]) {
+			glm::vec2 center = board->tile_center(tile->index);
+			points.push_back(center);
+		}
+	}
+	
+	// shuffle positions
+	std::shuffle(points.begin(), points.end(), gen);
+
+	for (const auto &point : points) {
+		auto id = id_generator.generate();
+		auto meeple = std::make_unique<Meeple>();
+		meeple->id = id;
+		meeple->teleport(point);
+		meeple_controller.meeples[id] = std::move(meeple);
 	}
 }

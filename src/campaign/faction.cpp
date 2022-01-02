@@ -2,6 +2,7 @@
 #include <vector>
 #include <chrono>
 #include <memory>
+#include <random>
 #include <list>
 #include <unordered_map>
 
@@ -87,9 +88,9 @@ void FactionController::find_town_targets(const Atlas &atlas, int radius)
 		}
 	}
 
-	for (int i = 0; i < 5; i++) {
-		std::random_shuffle(town_targets.begin(), town_targets.end());
-	}
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::shuffle(town_targets.begin(), town_targets.end(), gen);
 }
 	
 // finds the closest desirable unoccupied town target for a faction to settle

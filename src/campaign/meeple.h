@@ -32,6 +32,15 @@ enum MeepleAnimation : uint8_t {
 	MA_RUN
 };
 
+enum class MeepleControlType : uint8_t {
+	NONE, // not active
+	PLAYER,
+	AI_KINGDOM,
+	AI_BANDIT,
+	AI_RAIDER,
+	AI_BARBARIAN
+};
+
 // moves on the campaign map
 // either controlled by the player or the AI
 class Meeple : public BaseEntity {

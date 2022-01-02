@@ -8,7 +8,8 @@ public:
 public:
 	const geom::Transform* transform() const {  return m_transform.get(); }
 	btGhostObject* ghost_object() const { return m_ghost_object.get(); }
-	geom::Sphere form() const;
+	glm::vec3 position() const;
+	float radius() const;
 public:
 	void set_position(const glm::vec3 &position);
 private:

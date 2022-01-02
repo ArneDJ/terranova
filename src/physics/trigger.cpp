@@ -37,6 +37,7 @@ void TriggerSphere::set_position(const glm::vec3 &position)
 	m_transform->position = position;
 }
 	
+/*
 geom::Sphere TriggerSphere::form() const
 {
 	geom::Sphere sphere = {
@@ -45,6 +46,16 @@ geom::Sphere TriggerSphere::form() const
 	};
 
 	return sphere;
+}
+*/
+float TriggerSphere::radius() const
+{
+	return m_shape->getRadius();
+}
+	
+glm::vec3 TriggerSphere::position() const
+{
+	return bt_to_vec3(m_ghost_object->getWorldTransform().getOrigin());
 }
 
 };
