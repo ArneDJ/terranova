@@ -60,6 +60,8 @@ public:
 public:
 	MeepleBlueprint army_blueprint;
 	Blueprint town_blueprint;
+public: // indicators
+	BoardMarker marker = {};
 public:
 	util::IdGenerator id_generator;
 	util::Camera camera;
@@ -118,5 +120,6 @@ public:
 	void update_factions();
 private:
 	float vertical_offset(const glm::vec2 &position);
-	BoardMarker marker_data(const glm::vec2 &hitpoint, uint32_t target_id, uint8_t target_type);
+	BoardMarker marker_data(const glm::vec2 &position, uint32_t target_id, uint8_t target_type);
+	void update_marker(uint32_t target_id, uint8_t target_type);
 };

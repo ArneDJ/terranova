@@ -336,7 +336,6 @@ void Campaign::update(float delta)
 	if (state == CampaignState::RUNNING) {
 		update_factions();
 		meeple_controller.update(delta);
-		update_meeple_target(meeple_controller.player);
 		// roaming on map
 		for (auto &mapping : meeple_controller.meeples) {
 			auto &meeple = mapping.second;
@@ -357,15 +356,15 @@ void Campaign::update(float delta)
 			float offset = vertical_offset(meeple->position());
 			meeple->set_vertical_offset(offset);
 		}
+		update_meeple_target(meeple_controller.player);
 	}
+
+	update_marker(meeple_controller.player->target_id, meeple_controller.player->target_type);
 
 	// if player reached the target hide marker
 	if (meeple_controller.player->target_type == 0) {
 		board->hide_marker();
 	}
-
-	//float offset = vertical_offset(meeple_controller.player->position());
-	//meeple_controller.player->set_vertical_offset(offset);
 
 	// find out if other armies are visible to player
 	//meeple_controller.check_visibility();
@@ -717,46 +716,47 @@ void Campaign::set_meeple_target(Meeple *meeple, uint32_t target_id, uint8_t tar
 	}
 }
 
-BoardMarker Campaign::marker_data(const glm::vec2 &hitpoint, uint32_t target_id, uint8_t target_type)
+BoardMarker Campaign::marker_data(const glm::vec2 &position, uint32_t target_id, uint8_t target_type)
 {
-	BoardMarker marker = { hitpoint, glm::vec3(0.f), 2.f, 1.f };
+	BoardMarker data = { position, glm::vec3(0.f), 2.f, 1.f };
 
 	// if target is an entity change marker position to target center
 
 	CampaignEntity type = CampaignEntity(target_type);
 	if (type == CampaignEntity::LAND_SURFACE) {
-		marker.color = glm::vec3(0.8f, 0.8f, 1.f);
+		data.color = glm::vec3(0.8f, 0.8f, 1.f);
 	} else if (type == CampaignEntity::TOWN) {
 		auto search = settlement_controller.towns.find(target_id);
 		if (search != settlement_controller.towns.end()) {
 			auto &town = search->second;
-			marker.position = town->map_position();
-			marker.radius = 5.f;
+			data.position = town->map_position();
+			data.radius = 5.f;
 			if (town->faction() == player_data.faction_id) {
-				marker.color = glm::vec3(0.f, 1.f, 0.f);
+				data.color = glm::vec3(0.f, 1.f, 0.f);
 			} else {
-				marker.color = glm::vec3(1.f, 1.f, 0.f);
+				data.color = glm::vec3(1.f, 1.f, 0.f);
 			}
 		}
 	} else if (type == CampaignEntity::MEEPLE) {
 		auto search = meeple_controller.meeples.find(target_id);
 		if (search != meeple_controller.meeples.end()) {
 			auto &meeple = search->second;
-			marker.position = meeple->position();
-			marker.radius = 2.f;
+			data.position = meeple->position();
+			data.radius = 2.f;
 			if (!meeple->faction_id) {
-				marker.color = glm::vec3(1.f, 0.f, 0.f);
+				data.color = glm::vec3(1.f, 0.f, 0.f);
 			} else if (meeple->faction_id == player_data.faction_id) {
-				marker.color = glm::vec3(0.f, 1.f, 0.f);
+				data.color = glm::vec3(0.f, 1.f, 0.f);
 			} else {
-				marker.color = glm::vec3(1.f, 1.f, 0.f);
+				data.color = glm::vec3(1.f, 1.f, 0.f);
 			}
 		}
 	}
 
-	return marker;
+	return data;
 }
 
+// calculates distance to target and changes game state if the target has been reached
 void Campaign::update_meeple_target(Meeple *meeple)
 {
 	CampaignEntity entity_type = CampaignEntity(meeple->target_type);
@@ -776,6 +776,20 @@ void Campaign::update_meeple_target(Meeple *meeple)
 		} else {
 			// town not found clear target
 			meeple->clear_target();
+		}
+	}
+}
+	
+// updates the visual marker on the board
+void Campaign::update_marker(uint32_t target_id, uint8_t target_type)
+{
+	// only need to update if dynamic entity
+	CampaignEntity entity_type = CampaignEntity(target_type);
+	if (entity_type == CampaignEntity::MEEPLE) {
+		auto search = meeple_controller.meeples.find(target_id);
+		if (search != meeple_controller.meeples.end()) {
+			marker.position = search->second->position();
+			board->set_marker(marker);
 		}
 	}
 }
@@ -840,7 +854,7 @@ void Campaign::set_player_movement(const glm::vec3 &ray)
 		set_meeple_target(meeple_controller.player, result.object->getUserIndex(), result.object->getUserIndex2());
 		// find initial path
 		glm::vec2 hitpoint = glm::vec2(result.point.x, result.point.z);
-		auto marker = marker_data(hitpoint, result.object->getUserIndex(), result.object->getUserIndex2());
+		marker = marker_data(hitpoint, result.object->getUserIndex(), result.object->getUserIndex2());
 		std::list<glm::vec2> nodes;
 		board->find_path(meeple_controller.player->position(), marker.position, nodes);
 		// update visual marker
