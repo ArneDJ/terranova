@@ -110,7 +110,7 @@ const fysx::TriggerSphere* Meeple::trigger() const { return m_trigger.get(); }
 
 const fysx::TriggerSphere* Meeple::visibility() const { return m_visibility.get(); }
 
-glm::vec2 Meeple::position() const
+glm::vec2 Meeple::map_position() const
 {
 	return glm::vec2(transform.position.x, transform.position.z);
 }
@@ -225,10 +225,18 @@ void Meeple::display() const
 	
 void MeepleController::update(float delta)
 {
-	player->update(delta);
-	for (auto &meeple : meeples) {
-		meeple.second->update(delta);
-		meeple.second->update_animation(delta);
+	for (auto &mapping : meeples) {
+		auto &meeple = mapping.second;
+		meeple->update(delta);
+		meeple->update_animation(delta);
+	}
+}
+	
+void MeepleController::add_ticks(uint64_t ticks)
+{
+	for (auto &mapping : meeples) {
+		auto &meeple = mapping.second;
+		meeple->ticks += ticks;
 	}
 }
 	

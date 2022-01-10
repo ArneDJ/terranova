@@ -49,7 +49,7 @@ enum class MeepleBehavior : uint8_t {
 
 // moves on the campaign map
 // either controlled by the player or the AI
-class Meeple : public BaseEntity {
+class Meeple : public CampaignEntity {
 public:
 	MeepleControlType control_type = MeepleControlType::NONE;
 	uint32_t target_id = 0; // id of target entity
@@ -77,13 +77,13 @@ public:
 public:
 	const fysx::TriggerSphere* trigger() const;
 	const fysx::TriggerSphere* visibility() const;
-	glm::vec2 position() const;
+	glm::vec2 map_position() const;
 public:
 	// TODO remove this and create seperate save record from entity
 	template <class Archive>
 	void serialize(Archive &archive)
 	{
-		archive(id, control_type, m_speed, transform.position, transform.rotation, transform.scale, target_id, target_type, faction_id);
+		archive(id, control_type, m_speed, transform.position, transform.rotation, transform.scale, target_id, target_type, faction_id, ticks);
 	}
 private:
 	float m_speed = 5.f;
@@ -103,6 +103,7 @@ public:
 	std::unordered_map<uint32_t, std::unique_ptr<Meeple>> meeples;
 public:
 	void update(float delta);
+	void add_ticks(uint64_t ticks);
 	void clear();
 public:
 	void check_visibility(); // check if other armies are visible to player

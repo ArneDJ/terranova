@@ -17,98 +17,29 @@
 #include "../graphics/mesh.h"
 #include "../graphics/model.h"
 
+#include "entity.h"
 #include "settlement.h"
 	
-Town::Town()
+Settlement::Settlement()
 {
-	m_transform = std::make_unique<geom::Transform>();
-
 	geom::Sphere sphere = {
-		m_transform->position,
+		transform.position,
 		1.5f
 	};
 
-	m_trigger = std::make_unique<fysx::TriggerSphere>(sphere);
-	m_trigger->ghost_object()->setUserPointer(this);
+	trigger = std::make_unique<fysx::TriggerSphere>(sphere);
+	trigger->ghost_object()->setUserPointer(this);
 }
 
-uint32_t Town::id() const
+glm::vec2 Settlement::map_position() const
 {
-	return m_id;
+	return glm::vec2(transform.position.x, transform.position.z);
 }
 
-uint32_t Town::faction() const
+void Settlement::set_position(const glm::vec3 &position)
 {
-	return m_faction;
-}
-
-uint32_t Town::tile() const
-{
-	return m_tile;
-}
-
-uint32_t Town::fiefdom() const
-{
-	return m_fiefdom;
-}
-	
-uint8_t Town::size() const
-{
-	return m_size;
-}
-
-glm::vec2 Town::map_position() const
-{
-	return glm::vec2(m_transform->position.x, m_transform->position.z);
-}
-
-const fysx::TriggerSphere* Town::trigger() const { return m_trigger.get(); }
-
-const geom::Transform* Town::transform() const
-{
-	return m_transform.get();
-}
-
-const gfx::Model* Town::model() const
-{
-	return m_model;
-}
-
-void Town::set_id(uint32_t id)
-{
-	m_id = id;
-	m_trigger->ghost_object()->setUserIndex(id);
-}
-
-void Town::set_faction(uint32_t faction)
-{
-	m_faction = faction;
-}
-
-void Town::set_tile(uint32_t tile)
-{
-	m_tile = tile;
-}
-
-void Town::set_fiefdom(uint32_t fiefdom)
-{
-	m_fiefdom = fiefdom;
-}
-	
-void Town::set_size(uint8_t size)
-{
-	m_size = size;
-}
-
-void Town::set_position(const glm::vec3 &position)
-{
-	m_transform->position = position;
-	m_trigger->set_position(position);
-}
-
-void Town::set_model(const gfx::Model *model)
-{
-	m_model = model;
+	transform.position = position;
+	trigger->set_position(position);
 }
 
 uint32_t Fiefdom::id() const
