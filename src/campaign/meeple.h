@@ -41,13 +41,21 @@ enum class MeepleControlType : uint8_t {
 	AI_BARBARIAN
 };
 
+enum class MeepleBehavior : uint8_t {
+	PATROL,
+	EVADE,
+	ATTACK
+};
+
 // moves on the campaign map
 // either controlled by the player or the AI
 class Meeple : public BaseEntity {
 public:
+	MeepleControlType control_type = MeepleControlType::NONE;
 	uint32_t target_id = 0; // id of target entity
 	uint8_t target_type = 0;
 	uint32_t faction_id = 0;
+	bool moving = false;
 public:
 	Meeple();
 	void set_animation(const util::AnimationSet *set);
@@ -75,7 +83,7 @@ public:
 	template <class Archive>
 	void serialize(Archive &archive)
 	{
-		archive(id, m_speed, transform.position, transform.rotation, transform.scale, target_id, target_type, faction_id);
+		archive(id, control_type, m_speed, transform.position, transform.rotation, transform.scale, target_id, target_type, faction_id);
 	}
 private:
 	float m_speed = 5.f;
@@ -96,4 +104,6 @@ public:
 public:
 	void update(float delta);
 	void clear();
+public:
+	void check_visibility(); // check if other armies are visible to player
 };

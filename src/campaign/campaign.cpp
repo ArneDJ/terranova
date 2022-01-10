@@ -186,6 +186,7 @@ void Campaign::generate(int seedling)
 	meeple_controller.player->id = player_data.meeple_id;
 	meeple_controller.player->set_speed(4.f);
 	meeple_controller.player->faction_id = player_data.faction_id;
+	meeple_controller.player->control_type = MeepleControlType::PLAYER;
 
 	// position meeples at faction capitals
 	for (auto &mapping : meeple_controller.meeples) {
@@ -327,10 +328,35 @@ void Campaign::update(float delta)
 	}
 
 	// if the game isn't paused update gameplay
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_real_distribution<float> distrib(-1.f, 1.f);
+	std::uniform_real_distribution<float> distance_distrib(100.f, 300.f);
+
 	if (state == CampaignState::RUNNING) {
 		update_factions();
 		meeple_controller.update(delta);
 		update_meeple_target(meeple_controller.player);
+		// roaming on map
+		for (auto &mapping : meeple_controller.meeples) {
+			auto &meeple = mapping.second;
+			if (meeple->control_type == MeepleControlType::AI_BARBARIAN) {
+				if (!meeple->moving) {
+					// go to new random location
+					glm::vec2 direction = { distrib(gen), distrib(gen) };
+					float distance = distance_distrib(gen);
+					glm::vec2 destination = meeple->position() + distance * direction;
+					std::list<glm::vec2> nodes;
+					board->find_path(meeple->position(), destination, nodes);
+					if (nodes.size()) {
+						meeple->set_path(nodes);
+					}
+				}
+			}
+			// vertical offset on map
+			float offset = vertical_offset(meeple->position());
+			meeple->set_vertical_offset(offset);
+		}
 	}
 
 	// if player reached the target hide marker
@@ -338,8 +364,11 @@ void Campaign::update(float delta)
 		board->hide_marker();
 	}
 
-	float offset = vertical_offset(meeple_controller.player->position());
-	meeple_controller.player->set_vertical_offset(offset);
+	//float offset = vertical_offset(meeple_controller.player->position());
+	//meeple_controller.player->set_vertical_offset(offset);
+
+	// find out if other armies are visible to player
+	//meeple_controller.check_visibility();
 
 	// campaign map paint jobs
 	board->update();
@@ -368,8 +397,11 @@ void Campaign::display()
 	meeple_shader->uniform_mat4("CAMERA_VP", camera.VP);
 	for (auto &mapping : meeple_controller.meeples) {
 		auto &meeple = mapping.second;
-		meeple_shader->uniform_mat4("MODEL", meeple->transform.to_matrix());
-		meeple->display();
+		// only display if visible to player
+		//if (meeple->visible) {
+			meeple_shader->uniform_mat4("MODEL", meeple->transform.to_matrix());
+			meeple->display();
+		//}
 	}
 
 	if (wireframe_worldmap) {
@@ -712,7 +744,9 @@ BoardMarker Campaign::marker_data(const glm::vec2 &hitpoint, uint32_t target_id,
 			auto &meeple = search->second;
 			marker.position = meeple->position();
 			marker.radius = 2.f;
-			if (meeple->faction_id == player_data.faction_id) {
+			if (!meeple->faction_id) {
+				marker.color = glm::vec3(1.f, 0.f, 0.f);
+			} else if (meeple->faction_id == player_data.faction_id) {
 				marker.color = glm::vec3(0.f, 1.f, 0.f);
 			} else {
 				marker.color = glm::vec3(1.f, 1.f, 0.f);
@@ -990,6 +1024,7 @@ void Campaign::spawn_barbarians()
 		auto id = id_generator.generate();
 		auto meeple = std::make_unique<Meeple>();
 		meeple->id = id;
+		meeple->control_type = MeepleControlType::AI_BARBARIAN;
 		meeple->teleport(point);
 		meeple_controller.meeples[id] = std::move(meeple);
 	}

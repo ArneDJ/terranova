@@ -165,8 +165,10 @@ void Meeple::update_animation(float delta)
 {
 	if (m_path_finder.state() == PathState::MOVING) {
 		m_animation = MA_RUN;
+		moving = true;
 	} else {
 		m_animation = MA_IDLE;
+		moving = false;
 	}
 	m_animation_controller->update(m_animation, delta);
 
@@ -235,3 +237,27 @@ void MeepleController::clear()
 	meeples.clear();
 }
 	
+/*
+void MeepleController::check_visibility()
+{
+	for (auto &mapping : meeples) {
+		auto &meeple = mapping.second;
+		meeple->visible = false;
+	}
+	const auto &visibility = player->visibility()->ghost_object();
+	int count = visibility->getNumOverlappingObjects();
+	for (int i = 0; i < count; i++) {
+		btCollisionObject *obj = visibility->getOverlappingObject(i);
+		CampaignEntity entity_type = CampaignEntity(obj->getUserIndex2());
+		if (entity_type == CampaignEntity::MEEPLE) {
+			Meeple *target = static_cast<Meeple*>(obj->getUserPointer());
+			if (target) {
+				target->visible = true;
+			}
+		}
+	}
+
+	// make player always visible
+	player->visible = true;
+}
+*/
