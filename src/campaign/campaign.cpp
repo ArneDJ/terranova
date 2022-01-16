@@ -187,6 +187,7 @@ void Campaign::generate(int seedling)
 	meeple_controller.player->set_speed(4.f);
 	meeple_controller.player->faction_id = player_data.faction_id;
 	meeple_controller.player->control_type = MeepleControlType::PLAYER;
+	meeple_controller.player->troop_count = 15;
 
 	// position meeples at faction capitals
 	for (auto &mapping : meeple_controller.meeples) {
@@ -467,10 +468,10 @@ void Campaign::place_meeple(Meeple *meeple)
 	if (faction_search != faction_controller.factions.end()) {
 		auto &faction = faction_search->second;
 		glm::vec3 color = faction->color();
-		labeler->add_label(&meeple->transform, 0.2f, glm::vec3(0.f, 2.f, 0.f), "Army " + std::to_string(meeple->id), color);
+		labeler->add_label(&meeple->transform, 0.2f, glm::vec3(0.f, 2.f, 0.f), "Army " + std::to_string(meeple->troop_count), color);
 	} else {
 		glm::vec3 color = { 1.f, 0.f, 0.f };
-		labeler->add_label(&meeple->transform, 0.2f, glm::vec3(0.f, 2.f, 0.f), "Barbarians " + std::to_string(meeple->id), color);
+		labeler->add_label(&meeple->transform, 0.2f, glm::vec3(0.f, 2.f, 0.f), "Barbarians " + std::to_string(meeple->troop_count), color);
 	}
 }
 	
@@ -546,6 +547,10 @@ uint32_t Campaign::spawn_town(const Tile *tile, Faction *faction)
 
 	NameGen::Generator namegen(MIDDLE_EARTH);
 
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_int_distribution<> distrib(15, 30);
+
 	auto search = faction_controller.tile_owners.find(tile->index);
 	if (search == faction_controller.tile_owners.end() || search->second == 0) {
 		std::unique_ptr<Town> town = std::make_unique<Town>();
@@ -560,8 +565,11 @@ uint32_t Campaign::spawn_town(const Tile *tile, Faction *faction)
 			town->size = 1;
 		}
 
-		// give town a name
+		// give town a random name
 		town->name = namegen.toString();
+
+		// add random amount of garrison troops
+		town->troop_count = distrib(gen);
 
 		settlement_controller.towns[id] = std::move(town);
 
@@ -666,6 +674,31 @@ void Campaign::spawn_fiefdom(Town *town)
 
 	settlement_controller.fiefdoms[id] = std::move(fiefdom);
 }
+	
+void Campaign::wipe_fiefdom(Fiefdom *fiefdom)
+{
+	const auto &atlas = board->atlas();	
+	const auto &cells = atlas.graph().cells;	
+	const auto &tiles = atlas.tiles();	
+	const auto &borders = atlas.borders();	
+
+	// wipe political borders from map
+	glm::vec3 color = { 0.f, 0.f, 0.f };
+	for (const auto &tile : fiefdom->tiles()) {
+		board->paint_tile(tile, color);
+		const auto &cell = cells[tile];
+		for (const auto &edge : cell.edges) {
+			// find neighbor tile
+			auto neighbor_index = edge->left_cell->index == tile ? edge->right_cell->index : edge->left_cell->index;
+			const Tile *neighbor = &tiles[neighbor_index];
+			if (faction_controller.tile_owners[neighbor->index] != fiefdom->faction()) {
+				board->paint_border(edge->index, 0);
+			} else {
+				board->paint_border(edge->index, 255);
+			}
+		}
+	}
+}
 
 // place the town entity on the campaign map
 void Campaign::place_town(Town *town)
@@ -687,6 +720,15 @@ void Campaign::place_town(Town *town)
 	// add label
 	glm::vec3 color = faction_controller.factions[town->faction]->color();
 	labeler->add_label(&town->transform, 1.f, glm::vec3(0.f, 3.f, 0.f), town->name, color);
+}
+	
+//  remove town entity from the campaign map
+void Campaign::raze_town(Town *town)
+{
+	town->visible = false;
+
+	auto &trigger = town->trigger;
+	physics.remove_object(trigger->ghost_object());
 }
 	
 // teleports the camera to the player position
@@ -1020,6 +1062,8 @@ void Campaign::spawn_barbarians()
 	std::random_device rd;
 	std::mt19937 gen(rd());
 	std::uniform_int_distribution<> distrib;
+	
+	std::uniform_int_distribution<> troop_size_distrib(10, 20);
 
 	// generate random points with poisson distrib
 	PoissonGenerator::DefaultPRNG PRNG(distrib(gen));
@@ -1045,6 +1089,7 @@ void Campaign::spawn_barbarians()
 		meeple->id = id;
 		meeple->control_type = MeepleControlType::AI_BARBARIAN;
 		meeple->teleport(point);
+		meeple->troop_count = troop_size_distrib(gen);
 		meeple_controller.meeples[id] = std::move(meeple);
 	}
 }

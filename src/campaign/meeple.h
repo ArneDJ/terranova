@@ -52,10 +52,13 @@ enum class MeepleBehavior : uint8_t {
 class Meeple : public CampaignEntity {
 public:
 	MeepleControlType control_type = MeepleControlType::NONE;
+	MeepleBehavior behavior_state = MeepleBehavior::PATROL;
 	uint32_t target_id = 0; // id of target entity
 	uint8_t target_type = 0;
 	uint32_t faction_id = 0;
+public:
 	bool moving = false;
+	uint32_t troop_count = 1; // including the leader
 public:
 	Meeple();
 	void set_animation(const util::AnimationSet *set);
@@ -73,8 +76,6 @@ public:
 	void clear_target();
 	void set_vertical_offset(float offset);
 public:
-	void add_troops(uint32_t troop_type, int count);
-public:
 	const fysx::TriggerSphere* trigger() const;
 	const fysx::TriggerSphere* visibility() const;
 	glm::vec2 map_position() const;
@@ -83,7 +84,9 @@ public:
 	template <class Archive>
 	void serialize(Archive &archive)
 	{
-		archive(id, control_type, m_speed, transform.position, transform.rotation, transform.scale, target_id, target_type, faction_id, ticks);
+		archive(id, control_type, m_speed, transform.position, transform.rotation, transform.scale, target_id, target_type, faction_id, ticks,
+			troop_count
+		);
 	}
 private:
 	float m_speed = 5.f;

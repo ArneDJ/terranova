@@ -6,6 +6,8 @@ public:
 	uint32_t fiefdom = 0;
 	uint8_t size = 1;
 public:
+	uint32_t troop_count = 0;
+public:
 	std::unique_ptr<fysx::TriggerSphere> trigger;
 public:
 	const gfx::Model *model = nullptr; // visual 3D model
@@ -23,7 +25,8 @@ public:
 			id, tile, faction, fiefdom, size,
 			transform.position, transform.rotation, transform.scale,
 			name,
-			ticks
+			ticks,
+			troop_count
 		);
 	}
 };

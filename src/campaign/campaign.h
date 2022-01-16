@@ -104,11 +104,13 @@ private:
 	void visit_current_tile();
 private:
 	uint32_t spawn_town(const Tile *tile, Faction *faction);
-	void spawn_fiefdom(Town *town);
 	void place_town(Town *town);
+	void raze_town(Town *town);
+	void transfer_town(Town *town, uint32_t faction);
+	void spawn_fiefdom(Town *town);
+	void wipe_fiefdom(Fiefdom *fiefdom);
 	void set_player_movement(const glm::vec3 &ray);
 	void set_player_construction(const glm::vec3 &ray);
-	void transfer_town(Town *town, uint32_t faction);
 private:
 	void place_meeple(Meeple *meeple);
 	void set_meeple_target(Meeple *meeple, uint32_t target_id, uint8_t target_type);
