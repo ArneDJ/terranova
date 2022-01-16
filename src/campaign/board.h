@@ -13,7 +13,7 @@ public:
 	void set_scale(const glm::vec3 &scale);
 	void add_material(const std::string &name, const gfx::Texture *texture);
 	void reload(const Atlas &atlas);
-	void paint_political_triangle(const glm::vec2 &a, const glm::vec2 &b, const glm::vec2 &c, const glm::vec3 &color);
+	void paint_political_triangle(const glm::vec2 &a, const glm::vec2 &b, const glm::vec2 &c, const glm::vec3 &color, float alpha);
 	void paint_political_line(const glm::vec2 &a, const glm::vec2 &b, uint8_t color);
 	void update();
 public:
@@ -53,6 +53,7 @@ private:
 struct TilePaintJob {
 	uint32_t tile;
 	glm::vec3 color;
+	float alpha = 1.f;
 };
 
 struct BorderPaintJob {
@@ -69,7 +70,7 @@ public:
 	void generate(int seed);
 	void reload();
 	void update();
-	void paint_tile(uint32_t tile, const glm::vec3 &color);
+	void paint_tile(uint32_t tile, const glm::vec3 &color, float alpha);
 	void paint_border(uint32_t border, uint8_t color);
 public:
 	void set_marker(const BoardMarker &marker);

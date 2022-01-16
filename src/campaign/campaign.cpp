@@ -48,6 +48,7 @@
 #include "../debugger.h"
 #include "../media.h"
 #include "../module.h"
+#include "../console.h"
 
 #include "campaign.h"
 
@@ -55,9 +56,9 @@ enum CampaignCollisionGroup {
 	COLLISION_GROUP_NONE = 0,
 	COLLISION_GROUP_RAY = 1 << 0,
 	COLLISION_GROUP_INTERACTION = 1 << 1,
-	COLLISION_GROUP_TOWN = 1 << 2,
-	COLLISION_GROUP_VISIBILITY = 1 << 3,
-	COLLISION_GROUP_HEIGHTMAP = 1 << 4
+//	COLLISION_GROUP_TOWN = 1 << 2,
+	COLLISION_GROUP_VISIBILITY = 1 << 2,
+	COLLISION_GROUP_HEIGHTMAP = 1 << 3
 };
 
 enum class CampaignEntityType : uint8_t {
@@ -230,7 +231,7 @@ void Campaign::prepare()
 		const auto &fiefdom = mapping.second;
 		glm::vec3 color = faction_controller.factions[fiefdom->faction()]->color();
 		for (const auto &tile : fiefdom->tiles()) {
-			board->paint_tile(tile, color);
+			board->paint_tile(tile, color, 1.f);
 			// draw the political borders on the map
 			const auto &cell = cells[tile];
 			for (const auto &edge : cell.edges) {
@@ -295,6 +296,10 @@ void Campaign::update(float delta)
 			state = CampaignState::RUNNING;
 		}
 	}
+	
+	update_camera(delta);
+
+	delta *= 8.f;
 
 	// accumulate time for game tick if not paused
 	if (state == CampaignState::RUNNING) {
@@ -307,13 +312,15 @@ void Campaign::update(float delta)
 			meeple_controller.add_ticks(integral);
 			hourglass_sand -= integral; // reset plus fractional part
 			// do updates that should only happen once per tick update
+			for (auto &mapping : meeple_controller.meeples) {
+				auto &meeple = mapping.second;
+				update_meeple_behavior(meeple.get());
+			}
 			update_meeple_paths();
 		}
 	}
 
 	update_debug_menu();
-
-	update_camera(delta);
 
 	physics.update_collision_only();
 
@@ -345,7 +352,7 @@ void Campaign::update(float delta)
 		// roaming on map
 		for (auto &mapping : meeple_controller.meeples) {
 			auto &meeple = mapping.second;
-			if (meeple->control_type == MeepleControlType::AI_BARBARIAN) {
+			if (meeple->control_type == MeepleControlType::AI_BARBARIAN && meeple->behavior_state == MeepleBehavior::PATROL) {
 				if (!meeple->moving) {
 					// go to new random location
 					glm::vec2 direction = { distrib(gen), distrib(gen) };
@@ -358,11 +365,11 @@ void Campaign::update(float delta)
 					}
 				}
 			}
+			update_meeple_target(meeple.get());
 			// vertical offset on map
 			float offset = vertical_offset(meeple->map_position());
 			meeple->set_vertical_offset(offset);
 		}
-		update_meeple_target(meeple_controller.player);
 	}
 
 	update_marker(meeple_controller.player->target_id, meeple_controller.player->target_type);
@@ -452,7 +459,7 @@ void Campaign::place_meeple(Meeple *meeple)
 	float offset = vertical_offset(meeple->map_position());
 	meeple->set_vertical_offset(offset);
 
-	int meeple_mask = COLLISION_GROUP_INTERACTION | COLLISION_GROUP_VISIBILITY | COLLISION_GROUP_RAY | COLLISION_GROUP_TOWN;
+	int meeple_mask = COLLISION_GROUP_INTERACTION | COLLISION_GROUP_VISIBILITY | COLLISION_GROUP_RAY;
 
 	auto trigger = meeple->trigger();
 	trigger->ghost_object()->setUserIndex(meeple->id);
@@ -659,7 +666,7 @@ void Campaign::spawn_fiefdom(Town *town)
 	// add tile paint jobs
 	glm::vec3 color = faction_controller.factions[faction]->color();
 	for (const auto &tile : fiefdom->tiles()) {
-		board->paint_tile(tile, color);
+		board->paint_tile(tile, color, 1.f);
 		// draw the political borders on the map
 		const auto &cell = cells[tile];
 		for (const auto &edge : cell.edges) {
@@ -682,22 +689,31 @@ void Campaign::wipe_fiefdom(Fiefdom *fiefdom)
 	const auto &tiles = atlas.tiles();	
 	const auto &borders = atlas.borders();	
 
+	// release occupied tiles
+	for (const auto &tile : fiefdom->tiles()) {
+		faction_controller.tile_owners[tile] = 0;
+		settlement_controller.tile_owners[tile] = 0;
+	}
 	// wipe political borders from map
 	glm::vec3 color = { 0.f, 0.f, 0.f };
 	for (const auto &tile : fiefdom->tiles()) {
-		board->paint_tile(tile, color);
+		board->paint_tile(tile, color, 0.f);
 		const auto &cell = cells[tile];
 		for (const auto &edge : cell.edges) {
 			// find neighbor tile
 			auto neighbor_index = edge->left_cell->index == tile ? edge->right_cell->index : edge->left_cell->index;
 			const Tile *neighbor = &tiles[neighbor_index];
-			if (faction_controller.tile_owners[neighbor->index] != fiefdom->faction()) {
+			const auto &neighbor_faction = faction_controller.tile_owners[neighbor->index];
+			if (!neighbor_faction) {
 				board->paint_border(edge->index, 0);
 			} else {
 				board->paint_border(edge->index, 255);
 			}
 		}
 	}
+
+	// finally remove it
+	settlement_controller.fiefdoms.erase(fiefdom->id());
 }
 
 // place the town entity on the campaign map
@@ -715,11 +731,11 @@ void Campaign::place_town(Town *town)
 	auto &trigger = town->trigger;
 	trigger->ghost_object()->setUserIndex(town->id);
 	trigger->ghost_object()->setUserIndex2(int(CampaignEntityType::TOWN));
-	physics.add_object(trigger->ghost_object(), COLLISION_GROUP_TOWN, mask);
+	physics.add_object(trigger->ghost_object(), COLLISION_GROUP_INTERACTION, mask);
 
 	// add label
 	glm::vec3 color = faction_controller.factions[town->faction]->color();
-	labeler->add_label(&town->transform, 1.f, glm::vec3(0.f, 3.f, 0.f), town->name, color);
+	labeler->add_label(&town->transform, 1.f, glm::vec3(0.f, 3.f, 0.f), town->name + " " + std::to_string(town->troop_count), color);
 }
 	
 //  remove town entity from the campaign map
@@ -729,6 +745,34 @@ void Campaign::raze_town(Town *town)
 
 	auto &trigger = town->trigger;
 	physics.remove_object(trigger->ghost_object());
+
+	const auto &faction = faction_controller.factions[town->faction];
+
+	// remove town from faction list
+	faction->towns.remove(town->id);
+
+	labeler->remove_label(&town->transform);
+
+	// if town is faction captial find new capital
+	if (town->id == faction->capital_id) {
+		ConsoleManager::print("finding new capital");
+		// find largest town that isn't this town
+		uint8_t max_size = 0;
+		uint32_t candidate_id = 0;
+		for (const auto &candidate : faction->towns) {
+			auto search = settlement_controller.towns.find(candidate);
+			if (search != settlement_controller.towns.end()) {
+				if (search->second->size > max_size) {
+					max_size = search->second->size;
+					candidate_id = candidate;
+				}
+			}
+		}
+		faction->capital_id = candidate_id;
+	}
+			
+	// finally remove town
+	settlement_controller.towns.erase(town->id);
 }
 	
 // teleports the camera to the player position
@@ -810,18 +854,39 @@ void Campaign::update_meeple_target(Meeple *meeple)
 	if (entity_type == CampaignEntityType::TOWN) {
 		auto search = settlement_controller.towns.find(meeple->target_id);
 		if (search != settlement_controller.towns.end()) {
-			float distance = glm::distance(meeple->map_position(), search->second->map_position());
+			const auto &town = search->second;
+			float distance = glm::distance(meeple->map_position(), town->map_position());
 			if (distance < 1.F) {
 				meeple->clear_target();
+				meeple->behavior_state = MeepleBehavior::PATROL;
 				// add town event
 				if (meeple->id == player_data.meeple_id) {
-					battle_data.tile = search->second->tile;
-					battle_data.town_size = search->second->size;
+					battle_data.tile = town->tile;
+					battle_data.town_size = town->size;
 					state = CampaignState::BATTLE_REQUEST;
+				} else {
+					auto &fiefdom = settlement_controller.fiefdoms[town->fiefdom];
+					raze_town(town.get());
+					wipe_fiefdom(fiefdom.get());
 				}
+				//ConsoleManager::print("town action happens");
 			}
 		} else {
 			// town not found clear target
+			meeple->clear_target();
+		}
+	} else if (entity_type == CampaignEntityType::MEEPLE) {
+		auto search = meeple_controller.meeples.find(meeple->target_id);
+		if (search != meeple_controller.meeples.end()) {
+			float distance = glm::distance(meeple->map_position(), search->second->map_position());
+			if (distance < 1.F) {
+				meeple->clear_target();
+				meeple->behavior_state = MeepleBehavior::PATROL;
+				// add action event
+			}
+		}
+	} else if (entity_type == CampaignEntityType::LAND_SURFACE) {
+		if (meeple->path_state() == PathState::FINISHED) {
 			meeple->clear_target();
 		}
 	}
@@ -896,7 +961,7 @@ void Campaign::update_camera(float delta)
 	
 void Campaign::set_player_movement(const glm::vec3 &ray)
 {
-	auto result = physics.cast_ray(camera.position, camera.position + (1000.f * ray), COLLISION_GROUP_HEIGHTMAP | COLLISION_GROUP_TOWN | COLLISION_GROUP_INTERACTION);
+	auto result = physics.cast_ray(camera.position, camera.position + (1000.f * ray), COLLISION_GROUP_HEIGHTMAP | COLLISION_GROUP_INTERACTION);
 	if (result.hit && result.object) {
 		set_meeple_target(meeple_controller.player, result.object->getUserIndex(), result.object->getUserIndex2());
 		// find initial path
@@ -957,7 +1022,7 @@ void Campaign::transfer_town(Town *town, uint32_t faction)
 	glm::vec3 color = faction_controller.factions[faction]->color();
 	for (const auto &tile : fiefdom->tiles()) {
 		faction_controller.tile_owners[tile] = faction;
-		board->paint_tile(tile, color);
+		board->paint_tile(tile, color, 1.f);
 	}
 
 	// transfer capital
@@ -987,7 +1052,7 @@ void Campaign::update_faction_taxes()
 			auto search = settlement_controller.towns.find(town_id);
 			if (search != settlement_controller.towns.end()) {
 				const auto &town = search->second;
-				profit += 2 * town->size;
+				profit += 8 * town->size;
 			}
 		}
 		faction->add_gold(profit);
@@ -1105,10 +1170,50 @@ void Campaign::update_meeple_paths()
 			if (search != meeple_controller.meeples.end()) {
 				std::list<glm::vec2> nodes;
 				board->find_path(meeple->map_position(), search->second->map_position(), nodes);
-				// update visual marker
-				// marker color is based on entity type
 				if (nodes.size()) {
 					meeple->set_path(nodes);
+				}
+			}
+		}
+	}
+}
+	
+void Campaign::update_meeple_behavior(Meeple *meeple)
+{
+	if (meeple->control_type == MeepleControlType::AI_BARBARIAN && meeple->behavior_state == MeepleBehavior::PATROL) {
+		// scan area for enemies
+		const auto &visibility = meeple->visibility()->ghost_object();
+		int count = visibility->getNumOverlappingObjects();
+		for (int i = 0; i < count; i++) {
+			btCollisionObject *obj = visibility->getOverlappingObject(i);
+			CampaignEntityType entity_type = CampaignEntityType(obj->getUserIndex2());
+			if (entity_type == CampaignEntityType::MEEPLE) {
+				Meeple *target = static_cast<Meeple*>(obj->getUserPointer());
+				if (target) {
+					if (target->faction_id != meeple->faction_id) {
+						if (meeple->troop_count > target->troop_count) {
+							meeple->behavior_state = MeepleBehavior::ATTACK;
+							set_meeple_target(meeple, target->id, uint8_t(entity_type));
+							break;
+						}
+					}
+				}
+			} else if (entity_type == CampaignEntityType::TOWN) {
+				Town *target = static_cast<Town*>(obj->getUserPointer());
+				if (target) {
+					if (target->faction != meeple->faction_id) {
+						if (meeple->troop_count > target->troop_count) {
+							meeple->behavior_state = MeepleBehavior::ATTACK;
+							set_meeple_target(meeple, target->id, uint8_t(entity_type));
+							// find initial path
+							std::list<glm::vec2> nodes;
+							board->find_path(meeple->map_position(), target->map_position(), nodes);
+							if (nodes.size()) {
+								meeple->set_path(nodes);
+							}
+							break;
+						}
+					}
 				}
 			}
 		}

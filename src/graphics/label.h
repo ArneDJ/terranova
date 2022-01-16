@@ -46,7 +46,7 @@ public:
 public:
 	void add_label(const geom::Transform *transform, float scale, const glm::vec3 &offset, const std::string &text, const glm::vec3 &color);
 	void change_text_color(const geom::Transform *transform, const glm::vec3 &color);
-	//void remove_label(const Transform *transform);
+	void remove_label(const geom::Transform *transform);
 	void display(const util::Camera &camera) const;
 	void clear();
 private:

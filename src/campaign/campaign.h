@@ -117,6 +117,7 @@ private:
 	void update_meeple_target(Meeple *meeple);
 	void spawn_barbarians();
 	void update_meeple_paths();
+	void update_meeple_behavior(Meeple *meeple);
 public:
 	void spawn_factions();
 	void update_faction_taxes();

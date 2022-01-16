@@ -28,7 +28,7 @@
 
 #define INT_CEIL(n,d) (int)ceil((float)n/d)
 	
-void BoardModel::paint_political_triangle(const glm::vec2 &a, const glm::vec2 &b, const glm::vec2 &c, const glm::vec3 &color)
+void BoardModel::paint_political_triangle(const glm::vec2 &a, const glm::vec2 &b, const glm::vec2 &c, const glm::vec3 &color, float alpha)
 {
 	std::vector<glm::ivec2> pixels;
 	m_political_map.find_triangle_pixels_relative(a, b, c, pixels);
@@ -36,7 +36,7 @@ void BoardModel::paint_political_triangle(const glm::vec2 &a, const glm::vec2 &b
 		m_political_map.plot(pixel.x, pixel.y, util::CHANNEL_RED, 255 * color.x);
 		m_political_map.plot(pixel.x, pixel.y, util::CHANNEL_GREEN, 255 * color.y);
 		m_political_map.plot(pixel.x, pixel.y, util::CHANNEL_BLUE, 255 * color.z);
-		m_political_map.plot(pixel.x, pixel.y, util::CHANNEL_ALPHA, 255);
+		m_political_map.plot(pixel.x, pixel.y, util::CHANNEL_ALPHA, 255 * alpha);
 	}
 }
 
@@ -222,9 +222,9 @@ void Board::reload()
 	m_model.set_scale(SCALE);
 }
 	
-void Board::paint_tile(uint32_t tile, const glm::vec3 &color)
+void Board::paint_tile(uint32_t tile, const glm::vec3 &color, float alpha)
 {
-	TilePaintJob job = { tile, color };
+	TilePaintJob job = { tile, color, alpha };
 	m_paint_jobs.push(job);
 }
 
@@ -295,7 +295,7 @@ void Board::update()
 				const auto &right_vertex = edge->right_vertex;
 				glm::vec2 a = left_vertex->position / bounds.max;
 				glm::vec2 b = right_vertex->position / bounds.max;
-				m_model.paint_political_triangle(a, b, center, order.color);
+				m_model.paint_political_triangle(a, b, center, order.color, order.alpha);
 			}
 			m_paint_jobs.pop();
 		}

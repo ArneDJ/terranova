@@ -235,6 +235,10 @@ void Engine::update_campaign_menu()
 	if (ImGui::Button("Exit to Title")) { state = EngineState::TITLE; }
 	if (ImGui::Button("Exit")) { state = EngineState::EXIT; }
 
+	if (show_console) {
+		ConsoleManager::display();
+	}
+
 	ImGui::End();
 }
 
@@ -248,6 +252,10 @@ void Engine::run_campaign()
 	
 		// first update user keyboard and mouse input
 		util::InputManager::update();
+
+		if (util::InputManager::key_pressed(SDLK_BACKQUOTE)) {
+			show_console = !show_console;
+		}
 
 		update_campaign_menu();
 

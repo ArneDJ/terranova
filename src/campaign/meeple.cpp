@@ -114,6 +114,11 @@ glm::vec2 Meeple::map_position() const
 {
 	return glm::vec2(transform.position.x, transform.position.z);
 }
+	
+PathState Meeple::path_state() const
+{
+	return m_path_finder.state();
+}
 
 void Meeple::set_speed(float speed) { m_speed = speed; }
 	
@@ -139,9 +144,11 @@ void Meeple::update(float delta)
 	m_path_finder.update(delta, m_speed);
 
 	// check if path finished
+	/*
 	if (prev_path_state != PathState::FINISHED && m_path_finder.state() == PathState::FINISHED) {
 		clear_target();
 	}
+	*/
 
 	glm::vec2 location = m_path_finder.location();
 	transform.position.x = location.x;

@@ -214,6 +214,16 @@ void Labeler::add_label(const geom::Transform *transform, float scale, const glm
 
 	m_entities.push_back(std::move(entity));
 }
+	
+void Labeler::remove_label(const geom::Transform *transform)
+{
+	for (int i = 0; i < m_entities.size(); i++) {
+		if (m_entities[i]->transform == transform) {
+			m_entities.erase(m_entities.begin() + i);
+			break;
+		}
+	}
+}
 
 void Labeler::clear()
 {

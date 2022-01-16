@@ -79,12 +79,13 @@ public:
 	const fysx::TriggerSphere* trigger() const;
 	const fysx::TriggerSphere* visibility() const;
 	glm::vec2 map_position() const;
+	PathState path_state() const;
 public:
 	// TODO remove this and create seperate save record from entity
 	template <class Archive>
 	void serialize(Archive &archive)
 	{
-		archive(id, control_type, m_speed, transform.position, transform.rotation, transform.scale, target_id, target_type, faction_id, ticks,
+		archive(id, control_type, m_speed, transform.position, transform.rotation, transform.scale, target_id, target_type, faction_id, ticks, behavior_state,
 			troop_count
 		);
 	}
