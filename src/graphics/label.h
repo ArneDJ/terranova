@@ -1,3 +1,6 @@
+#pragma once
+#include "../extern/freetypegl/freetype-gl.h"
+
 namespace gfx {
 
 struct LabelVertex {
@@ -26,34 +29,28 @@ public:
 	void display() const;
 };
 
-class LabelEntity {
+class Label {
 public:
-	LabelEntity();
-public:
-	const geom::Transform *transform = nullptr;
-	float scale = 1.f;
-	glm::vec3 offset = {}; // offset from the transform position
-	glm::vec3 color = {};
-	std::string text = {};
 	std::unique_ptr<LabelMesh> text_mesh;
 	std::unique_ptr<LabelMesh> background_mesh;
+public:
+	glm::vec3 text_color = {};
+	glm::vec3 background_color = {};
+	float scale = 1.f;
+public:
+	Label();
+public:
+	void format(const std::string &text, texture_font_t *font);
 };
 
+// TODO rename
 class Labeler {
 public:
-	Labeler(const std::string &fontpath, size_t fontsize, std::shared_ptr<Shader> shader);
-	~Labeler();
+	texture_atlas_t *atlas = nullptr;
+	texture_font_t *font = nullptr;
 public:
-	void add_label(const geom::Transform *transform, float scale, const glm::vec3 &offset, const std::string &text, const glm::vec3 &color);
-	void change_text_color(const geom::Transform *transform, const glm::vec3 &color);
-	void remove_label(const geom::Transform *transform);
-	void display(const util::Camera &camera) const;
-	void clear();
-private:
-	texture_atlas_t *m_atlas = nullptr;
-	texture_font_t *m_font = nullptr;
-	std::shared_ptr<Shader> m_shader;
-	std::vector<std::unique_ptr<LabelEntity>> m_entities;
+	Labeler(const std::string &fontpath, size_t fontsize);
+	~Labeler();
 };
 
 };

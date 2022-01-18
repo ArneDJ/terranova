@@ -82,6 +82,7 @@ public: // to keep track of game time
 public:
 	std::shared_ptr<gfx::Shader> object_shader;
 	std::shared_ptr<gfx::Shader> meeple_shader;
+	std::shared_ptr<gfx::Shader> font_shader;
 public:
 	bool display_debug = false;
 	bool wireframe_worldmap = false;
@@ -98,6 +99,8 @@ public:
 	void update(float delta);
 	void display();
 	void reset_camera();
+private:
+	void display_labels();
 private:
 	void update_debug_menu();
 	void update_camera(float delta);

@@ -56,7 +56,6 @@ enum CampaignCollisionGroup {
 	COLLISION_GROUP_NONE = 0,
 	COLLISION_GROUP_RAY = 1 << 0,
 	COLLISION_GROUP_INTERACTION = 1 << 1,
-//	COLLISION_GROUP_TOWN = 1 << 2,
 	COLLISION_GROUP_VISIBILITY = 1 << 2,
 	COLLISION_GROUP_HEIGHTMAP = 1 << 3
 };
@@ -77,12 +76,14 @@ void Campaign::init(const gfx::ShaderGroup *shaders)
 {
 	debugger = std::make_unique<Debugger>(shaders->debug);
 
-	labeler = std::make_unique<gfx::Labeler>("fonts/diablo.ttf", 30, shaders->label);
+	labeler = std::make_unique<gfx::Labeler>("fonts/diablo.ttf", 30);
 
 	board = std::make_unique<Board>(shaders->tilemap, shaders->blur);
 	
 	object_shader = shaders->debug;
 	meeple_shader = shaders->creature;
+	// TODO seperate shader for text and background label
+	font_shader = shaders->label;
 }
 	
 // load campaign bueprints from the module
@@ -270,8 +271,6 @@ void Campaign::prepare()
 // clears all the campaign data
 void Campaign::clear()
 {
-	labeler->clear();
-
 	debugger->clear();
 
 	// clear physical objects
@@ -298,8 +297,6 @@ void Campaign::update(float delta)
 	}
 	
 	update_camera(delta);
-
-	delta *= 8.f;
 
 	// accumulate time for game tick if not paused
 	if (state == CampaignState::RUNNING) {
@@ -439,7 +436,52 @@ void Campaign::display()
 		debugger->display_navmeshes();
 	}
 
-	labeler->display(camera);
+	display_labels();
+}
+	
+void Campaign::display_labels()
+{
+	glDisable(GL_DEPTH_TEST);
+
+	font_shader->use();
+	font_shader->uniform_mat4("PROJECT", camera.projection);
+	font_shader->uniform_mat4("VIEW", camera.viewing);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, labeler->atlas->id);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, labeler->atlas->width, labeler->atlas->height, 0, GL_RED, GL_UNSIGNED_BYTE, labeler->atlas->data);
+
+	for (auto &mapping : meeple_controller.meeples) {
+		auto &meeple = mapping.second;
+		font_shader->uniform_float("SCALE", meeple->label->scale);
+		font_shader->uniform_vec3("ORIGIN", meeple->transform.position + glm::vec3(0.f, 2.5f, 0.f));
+		font_shader->uniform_vec3("COLOR", meeple->label->background_color);
+		meeple->label->background_mesh->display();
+	}
+	for (auto &mapping : meeple_controller.meeples) {
+		auto &meeple = mapping.second;
+		font_shader->uniform_float("SCALE", meeple->label->scale);
+		font_shader->uniform_vec3("ORIGIN", meeple->transform.position + glm::vec3(0.f, 2.5f, 0.f));
+		font_shader->uniform_vec3("COLOR", meeple->label->text_color);
+		meeple->label->text_mesh->display();
+	}
+	for (auto &mapping : settlement_controller.towns) {
+		auto &town = mapping.second;
+		font_shader->uniform_float("SCALE", town->label->scale);
+		font_shader->uniform_vec3("ORIGIN", town->transform.position + glm::vec3(0.f, 2.5f, 0.f));
+		font_shader->uniform_vec3("COLOR", town->label->background_color);
+		town->label->background_mesh->display();
+	}
+	for (auto &mapping : settlement_controller.towns) {
+		auto &town = mapping.second;
+		font_shader->uniform_float("SCALE", town->label->scale);
+		font_shader->uniform_vec3("ORIGIN", town->transform.position + glm::vec3(0.f, 2.5f, 0.f));
+		font_shader->uniform_vec3("COLOR", town->label->text_color);
+		town->label->text_mesh->display();
+	}
+
+	glEnable(GL_DEPTH_TEST);
 }
 	
 // returns the vertical offset of the campaign heightmap at map coordinates
@@ -474,12 +516,12 @@ void Campaign::place_meeple(Meeple *meeple)
 	auto faction_search = faction_controller.factions.find(meeple->faction_id);
 	if (faction_search != faction_controller.factions.end()) {
 		auto &faction = faction_search->second;
-		glm::vec3 color = faction->color();
-		labeler->add_label(&meeple->transform, 0.2f, glm::vec3(0.f, 2.f, 0.f), "Army " + std::to_string(meeple->troop_count), color);
+		meeple->label->text_color = faction->color();
 	} else {
-		glm::vec3 color = { 1.f, 0.f, 0.f };
-		labeler->add_label(&meeple->transform, 0.2f, glm::vec3(0.f, 2.f, 0.f), "Barbarians " + std::to_string(meeple->troop_count), color);
+		meeple->label->text_color = { 1.f, 0.f, 0.f };
 	}
+	meeple->label->format("Army " + std::to_string(meeple->troop_count), labeler->font);
+	meeple->label->scale = 0.2f;
 }
 	
 // spawns a group of new factions
@@ -735,7 +777,9 @@ void Campaign::place_town(Town *town)
 
 	// add label
 	glm::vec3 color = faction_controller.factions[town->faction]->color();
-	labeler->add_label(&town->transform, 1.f, glm::vec3(0.f, 3.f, 0.f), town->name + " " + std::to_string(town->troop_count), color);
+	town->label->format(town->name + " " + std::to_string(town->troop_count), labeler->font);
+	town->label->scale = 1.f;
+	town->label->text_color = color;
 }
 	
 //  remove town entity from the campaign map
@@ -750,8 +794,6 @@ void Campaign::raze_town(Town *town)
 
 	// remove town from faction list
 	faction->towns.remove(town->id);
-
-	labeler->remove_label(&town->transform);
 
 	// if town is faction captial find new capital
 	if (town->id == faction->capital_id) {
@@ -1027,7 +1069,7 @@ void Campaign::transfer_town(Town *town, uint32_t faction)
 
 	// transfer capital
 	town->faction = faction;
-	labeler->change_text_color(&town->transform, color);
+	town->label->text_color = color;
 }
 	
 // only used in cheat mode
@@ -1132,7 +1174,7 @@ void Campaign::spawn_barbarians()
 
 	// generate random points with poisson distrib
 	PoissonGenerator::DefaultPRNG PRNG(distrib(gen));
-	const auto positions = PoissonGenerator::generatePoissonPoints(100, PRNG, false);
+	const auto positions = PoissonGenerator::generatePoissonPoints(64, PRNG, false);
 
 	std::vector<glm::vec2> points;
 

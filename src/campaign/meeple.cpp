@@ -20,6 +20,7 @@
 #include "../physics/trigger.h"
 #include "../graphics/mesh.h"
 #include "../graphics/model.h"
+#include "../graphics/label.h"
 
 #include "entity.h"
 #include "meeple.h"
@@ -222,7 +223,7 @@ void Meeple::set_animation(const util::AnimationSet *set)
 	m_joint_matrices.data.resize(set->skeleton->num_joints());
 	m_joint_matrices.update_present();
 }
-		
+	
 void Meeple::display() const
 {
 	m_joint_matrices.buffer.bind_base(0);

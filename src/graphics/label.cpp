@@ -11,7 +11,7 @@
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "../extern/freetypegl/freetype-gl.h"
+//#include "../extern/freetypegl/freetype-gl.h"
 
 #include "../geometry/frustum.h"
 #include "../geometry/transform.h"
@@ -169,104 +169,40 @@ void LabelMesh::display() const
 	glDrawElements(GL_TRIANGLES, buffer.indices.size(), GL_UNSIGNED_INT, NULL);
 }
 	
-LabelEntity::LabelEntity()
+Label::Label()
 {
-	text_mesh = std::make_unique<LabelMesh>();
-	background_mesh = std::make_unique<LabelMesh>();
+	text_mesh = std::make_unique<gfx::LabelMesh>();
+	background_mesh = std::make_unique<gfx::LabelMesh>();
 }
 	
-Labeler::Labeler(const std::string &fontpath, size_t fontsize, std::shared_ptr<Shader> shader)
-	: m_shader(shader)
+void Label::format(const std::string &text, texture_font_t *font)
 {
-	m_atlas = texture_atlas_new(1024, 1024, 1);
-	m_font = texture_font_new_from_file(m_atlas, fontsize, fontpath.c_str());
+	text_mesh->set_text(text, font);
+	background_mesh->set_quad(text_mesh->bounds);
+}
+	
+Labeler::Labeler(const std::string &fontpath, size_t fontsize)
+{
+	atlas = texture_atlas_new(1024, 1024, 1);
+	font = texture_font_new_from_file(atlas, fontsize, fontpath.c_str());
 
 	// create the font atlas texture
-	glGenTextures(1, &m_atlas->id);
-	glBindTexture(GL_TEXTURE_2D, m_atlas->id);
+	glGenTextures(1, &atlas->id);
+	glBindTexture(GL_TEXTURE_2D, atlas->id);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, m_atlas->width, m_atlas->height, 0, GL_RED, GL_UNSIGNED_BYTE, m_atlas->data);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, atlas->width, atlas->height, 0, GL_RED, GL_UNSIGNED_BYTE, atlas->data);
 }
 
 Labeler::~Labeler()
 {
-	glDeleteTextures(1, &m_atlas->id);
+	glDeleteTextures(1, &atlas->id);
 
-	texture_font_delete(m_font);
+	texture_font_delete(font);
 
-	texture_atlas_delete(m_atlas);
-}
-
-void Labeler::add_label(const geom::Transform *transform, float scale, const glm::vec3 &offset, const std::string &text, const glm::vec3 &color)
-{
-	auto entity = std::make_unique<LabelEntity>();
-	entity->transform = transform;
-	entity->scale = scale;
-	entity->offset = offset;
-	entity->text = text;
-	entity->color = color;
-
-	entity->text_mesh->set_text(text, m_font);
-	entity->background_mesh->set_quad(entity->text_mesh->bounds);
-
-	m_entities.push_back(std::move(entity));
-}
-	
-void Labeler::remove_label(const geom::Transform *transform)
-{
-	for (int i = 0; i < m_entities.size(); i++) {
-		if (m_entities[i]->transform == transform) {
-			m_entities.erase(m_entities.begin() + i);
-			break;
-		}
-	}
-}
-
-void Labeler::clear()
-{
-	m_entities.clear();
-}
-
-void Labeler::display(const util::Camera &camera) const
-{
-	glDisable(GL_DEPTH_TEST);
-
-	m_shader->use();
-	m_shader->uniform_mat4("PROJECT", camera.projection);
-	m_shader->uniform_mat4("VIEW", camera.viewing);
-
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, m_atlas->id);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, m_atlas->width, m_atlas->height, 0, GL_RED, GL_UNSIGNED_BYTE, m_atlas->data);
-
-	for (const auto &entity : m_entities) {
-		m_shader->uniform_float("SCALE", entity->scale);
-		m_shader->uniform_vec3("ORIGIN", entity->transform->position + entity->offset);
-		m_shader->uniform_vec3("COLOR", glm::vec3(0.f));
-		entity->background_mesh->display();
-	}
-
-	for (const auto &entity : m_entities) {
-		m_shader->uniform_float("SCALE", entity->scale);
-		m_shader->uniform_vec3("ORIGIN", entity->transform->position + entity->offset);
-		m_shader->uniform_vec3("COLOR", entity->color);
-		entity->text_mesh->display();
-	}
-
-	glEnable(GL_DEPTH_TEST);
-}
-	
-void Labeler::change_text_color(const geom::Transform *transform, const glm::vec3 &color)
-{
-	for (auto &entity : m_entities) {
-		if (entity->transform == transform) {
-			entity->color = color;
-		}
-	}
+	texture_atlas_delete(atlas);
 }
 
 }
