@@ -76,7 +76,7 @@ void Campaign::init(const gfx::ShaderGroup *shaders)
 {
 	debugger = std::make_unique<Debugger>(shaders->debug);
 
-	labeler = std::make_unique<gfx::Labeler>("fonts/diablo.ttf", 30);
+	labeler = std::make_unique<gfx::LabelFont>("fonts/diablo.ttf", 30);
 
 	board = std::make_unique<Board>(shaders->tilemap, shaders->blur);
 	
@@ -90,6 +90,7 @@ void Campaign::init(const gfx::ShaderGroup *shaders)
 void Campaign::load_blueprints(const Module &module)
 {
 	town_blueprint.model = MediaManager::load_model(module.board_module.town);
+	wall_blueprint.model = MediaManager::load_model(module.board_module.town_wall);
 	con_marker.model = MediaManager::load_model(module.board_module.town);
 
 	army_blueprint.model = MediaManager::load_model(module.board_module.meeple);
@@ -399,6 +400,9 @@ void Campaign::display()
 		auto &town = mapping.second;
 		object_shader->uniform_mat4("MODEL", town->transform.to_matrix());
 		town->model->display();
+		if (town->walled) {
+			town->wall_model->display();
+		}
 	}
 
 	// display army entities
@@ -455,14 +459,14 @@ void Campaign::display_labels()
 	for (auto &mapping : meeple_controller.meeples) {
 		auto &meeple = mapping.second;
 		font_shader->uniform_float("SCALE", meeple->label->scale);
-		font_shader->uniform_vec3("ORIGIN", meeple->transform.position + glm::vec3(0.f, 2.5f, 0.f));
+		font_shader->uniform_vec3("ORIGIN", meeple->transform.position + glm::vec3(0.f, 1.f, 0.f));
 		font_shader->uniform_vec3("COLOR", meeple->label->background_color);
 		meeple->label->background_mesh->display();
 	}
 	for (auto &mapping : meeple_controller.meeples) {
 		auto &meeple = mapping.second;
 		font_shader->uniform_float("SCALE", meeple->label->scale);
-		font_shader->uniform_vec3("ORIGIN", meeple->transform.position + glm::vec3(0.f, 2.5f, 0.f));
+		font_shader->uniform_vec3("ORIGIN", meeple->transform.position + glm::vec3(0.f, 1.f, 0.f));
 		font_shader->uniform_vec3("COLOR", meeple->label->text_color);
 		meeple->label->text_mesh->display();
 	}
@@ -521,7 +525,7 @@ void Campaign::place_meeple(Meeple *meeple)
 		meeple->label->text_color = { 1.f, 0.f, 0.f };
 	}
 	meeple->label->format("Army " + std::to_string(meeple->troop_count), labeler->font);
-	meeple->label->scale = 0.2f;
+	meeple->label->scale = 0.1f;
 }
 	
 // spawns a group of new factions
@@ -613,6 +617,8 @@ uint32_t Campaign::spawn_town(const Tile *tile, Faction *faction)
 		} else {
 			town->size = 1;
 		}
+
+		town->walled = (town->size > 1);
 
 		// give town a random name
 		town->name = namegen.toString();
@@ -767,6 +773,7 @@ void Campaign::place_town(Town *town)
 	town->set_position(glm::vec3(center.x, offset, center.y));
 
 	town->model = town_blueprint.model; // TODO needs to be done at spawn
+	town->wall_model = wall_blueprint.model; // TODO needs to be done at spawn
 
 	const int mask = COLLISION_GROUP_INTERACTION | COLLISION_GROUP_VISIBILITY | COLLISION_GROUP_RAY;
 
@@ -778,8 +785,16 @@ void Campaign::place_town(Town *town)
 	// add label
 	glm::vec3 color = faction_controller.factions[town->faction]->color();
 	town->label->format(town->name + " " + std::to_string(town->troop_count), labeler->font);
-	town->label->scale = 1.f;
 	town->label->text_color = color;
+
+	float scale = 0.25f;
+	if (town->size > 2) {
+		scale = 0.5f;
+	} else if (town->size > 1) {
+		scale = 0.4f;
+	}
+
+	town->label->scale = scale;
 }
 	
 //  remove town entity from the campaign map
@@ -851,7 +866,7 @@ void Campaign::set_meeple_target(Meeple *meeple, uint32_t target_id, uint8_t tar
 
 BoardMarker Campaign::marker_data(const glm::vec2 &position, uint32_t target_id, uint8_t target_type)
 {
-	BoardMarker data = { position, glm::vec3(0.f), 2.f, 1.f };
+	BoardMarker data = { position, glm::vec3(0.f), 1.f, 1.f };
 
 	// if target is an entity change marker position to target center
 
@@ -863,7 +878,7 @@ BoardMarker Campaign::marker_data(const glm::vec2 &position, uint32_t target_id,
 		if (search != settlement_controller.towns.end()) {
 			auto &town = search->second;
 			data.position = town->map_position();
-			data.radius = 5.f;
+			data.radius = 2.5f;
 			if (town->faction == player_data.faction_id) {
 				data.color = glm::vec3(0.f, 1.f, 0.f);
 			} else {
@@ -875,7 +890,7 @@ BoardMarker Campaign::marker_data(const glm::vec2 &position, uint32_t target_id,
 		if (search != meeple_controller.meeples.end()) {
 			auto &meeple = search->second;
 			data.position = meeple->map_position();
-			data.radius = 2.f;
+			data.radius = 1.f;
 			if (!meeple->faction_id) {
 				data.color = glm::vec3(1.f, 0.f, 0.f);
 			} else if (meeple->faction_id == player_data.faction_id) {
@@ -905,6 +920,7 @@ void Campaign::update_meeple_target(Meeple *meeple)
 				if (meeple->id == player_data.meeple_id) {
 					battle_data.tile = town->tile;
 					battle_data.town_size = town->size;
+					battle_data.walled = town->walled;
 					state = CampaignState::BATTLE_REQUEST;
 				} else {
 					auto &fiefdom = settlement_controller.fiefdoms[town->fiefdom];
@@ -925,6 +941,13 @@ void Campaign::update_meeple_target(Meeple *meeple)
 				meeple->clear_target();
 				meeple->behavior_state = MeepleBehavior::PATROL;
 				// add action event
+				if (meeple->id == player_data.meeple_id) {
+					const Tile *tile = board->atlas().tile_at(meeple->map_position());
+					battle_data.tile = tile->index;
+					battle_data.town_size = 0;
+					battle_data.walled = false;
+					state = CampaignState::BATTLE_REQUEST;
+				}
 			}
 		}
 	} else if (entity_type == CampaignEntityType::LAND_SURFACE) {
@@ -982,7 +1005,7 @@ void Campaign::update_debug_menu()
 void Campaign::update_camera(float delta)
 {
 	float modifier = 10.f * delta;
-	float speed = 5.f * modifier;
+	float speed = 2.5f * modifier;
 	if (util::InputManager::key_down(SDL_BUTTON_LEFT)) {
 		glm::vec2 offset = modifier * 0.05f * util::InputManager::rel_mouse_coords();
 		camera.add_offset(offset);
@@ -993,7 +1016,7 @@ void Campaign::update_camera(float delta)
 	if (util::InputManager::key_down(SDLK_a)) { camera.move_left(speed); }
 
 	// collide with map
-	float offset = vertical_offset(glm::vec2(camera.position.x, camera.position.z)) + 5.f;
+	float offset = vertical_offset(glm::vec2(camera.position.x, camera.position.z)) + 2.5f;
 	if (camera.position.y < offset) {
 		camera.position.y = offset;
 	}
@@ -1080,6 +1103,7 @@ void Campaign::visit_current_tile()
 	if (tile) {
 		battle_data.tile = tile->index;
 		battle_data.town_size = 0;
+		battle_data.walled = false;
 		state = CampaignState::BATTLE_REQUEST;
 	}
 }

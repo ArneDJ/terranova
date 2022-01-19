@@ -46,11 +46,9 @@ void Landscaper::clear()
 	fortification.tower.transforms.clear();
 }
 
-void Landscaper::generate(int seed, uint32_t tile, uint8_t town_size, const util::Image<float> &heightmap)
+void Landscaper::generate(int seed, uint32_t tile, uint8_t town_size, bool walled, const util::Image<float> &heightmap)
 {
 	m_cadastre.generate(seed, tile, bounds, town_size);
-
-	bool walled = true;
 
 	// place buildings if town
 	if (town_size > 0) {

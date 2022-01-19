@@ -10,6 +10,7 @@ struct BattleParameters {
 	int seed;
 	uint32_t tile;
 	uint8_t town_size = 0;
+	bool walled = false;
 };
 
 enum class BattleCamMode {

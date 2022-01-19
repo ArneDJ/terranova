@@ -381,6 +381,7 @@ void Engine::run_battle()
 	parameters.seed = campaign.seed;
 	parameters.tile = campaign.battle_data.tile;
 	parameters.town_size = campaign.battle_data.town_size;
+	parameters.walled = campaign.battle_data.walled;
 
 	// prepare the battle based on selected parameters
 	battle.prepare(parameters);

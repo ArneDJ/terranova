@@ -39,6 +39,7 @@ struct ConstructionMarker {
 struct CampaignBattleData {
 	uint32_t tile;
 	uint8_t town_size = 0;
+	bool walled = false;
 };
 
 struct Blueprint {
@@ -60,6 +61,7 @@ public:
 public:
 	MeepleBlueprint army_blueprint;
 	Blueprint town_blueprint;
+	Blueprint wall_blueprint;
 public: // indicators
 	BoardMarker marker = {};
 public:
@@ -67,7 +69,7 @@ public:
 	util::Camera camera;
 	fysx::PhysicalSystem physics;
 	std::unique_ptr<Board> board;
-	std::unique_ptr<gfx::Labeler> labeler;
+	std::unique_ptr<gfx::LabelFont> labeler;
 	MeepleController meeple_controller;
 	SettlementController settlement_controller;
 	FactionController faction_controller;

@@ -181,7 +181,7 @@ void Label::format(const std::string &text, texture_font_t *font)
 	background_mesh->set_quad(text_mesh->bounds);
 }
 	
-Labeler::Labeler(const std::string &fontpath, size_t fontsize)
+LabelFont::LabelFont(const std::string &fontpath, size_t fontsize)
 {
 	atlas = texture_atlas_new(1024, 1024, 1);
 	font = texture_font_new_from_file(atlas, fontsize, fontpath.c_str());
@@ -196,7 +196,7 @@ Labeler::Labeler(const std::string &fontpath, size_t fontsize)
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, atlas->width, atlas->height, 0, GL_RED, GL_UNSIGNED_BYTE, atlas->data);
 }
 
-Labeler::~Labeler()
+LabelFont::~LabelFont()
 {
 	glDeleteTextures(1, &atlas->id);
 

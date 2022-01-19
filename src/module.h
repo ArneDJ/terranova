@@ -139,6 +139,7 @@ struct CreatureArmatureModule {
 struct BoardModule {
 	std::string marker = {};
 	std::string town = {};
+	std::string town_wall = {};
 	std::string meeple = {};
 	std::string meeple_skeleton = {};
 	std::string meeple_anim_idle = {};
@@ -147,7 +148,7 @@ struct BoardModule {
 	template <class Archive>
 	void serialize(Archive &archive)
 	{
-		archive(CEREAL_NVP(marker), CEREAL_NVP(town), 
+		archive(CEREAL_NVP(marker), CEREAL_NVP(town), CEREAL_NVP(town_wall),
 			CEREAL_NVP(meeple), CEREAL_NVP(meeple_skeleton), CEREAL_NVP(meeple_anim_idle), CEREAL_NVP(meeple_anim_run)
 		);
 	}

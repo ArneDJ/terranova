@@ -29,7 +29,7 @@ public:
 	LandscapeFortification fortification;
 public:
 	void clear();
-	void generate(int seed, uint32_t tile, uint8_t town_size, const util::Image<float> &heightmap);
+	void generate(int seed, uint32_t tile, uint8_t town_size, bool walled, const util::Image<float> &heightmap);
 public:
 	void add_house(uint32_t mold_id, const geom::AABB &bounds);
 private:

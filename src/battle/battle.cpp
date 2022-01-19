@@ -203,7 +203,7 @@ void Battle::prepare(const BattleParameters &params)
 	std::uniform_int_distribution<int> distrib;
 	terrain->generate(distrib(gen));
 
-	landscaper.generate(parameters.seed, parameters.tile, parameters.town_size, terrain->heightmap());
+	landscaper.generate(parameters.seed, parameters.tile, parameters.town_size, parameters.walled, terrain->heightmap());
 	
 	int group = COLLISION_GROUP_LANDSCAPE;
 	int mask = COLLISION_GROUP_RAY | COLLISION_GROUP_BUMPER;

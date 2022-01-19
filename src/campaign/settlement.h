@@ -4,13 +4,16 @@ public:
 	uint32_t tile = 0; // the tile this settlement is placed on
 	uint32_t faction = 0; // the faction this settlement belongs to
 	uint32_t fiefdom = 0;
+public:
 	uint8_t size = 1;
+	bool walled = false;
 public:
 	uint32_t troop_count = 0;
 public:
 	std::unique_ptr<fysx::TriggerSphere> trigger;
 public:
 	const gfx::Model *model = nullptr; // visual 3D model
+	const gfx::Model *wall_model = nullptr;
 public:
 	Settlement();
 public:
@@ -22,7 +25,7 @@ public:
 	void serialize(Archive &archive)
 	{
 		archive(
-			id, tile, faction, fiefdom, size,
+			id, tile, faction, fiefdom, size, walled,
 			transform.position, transform.rotation, transform.scale,
 			name,
 			ticks,

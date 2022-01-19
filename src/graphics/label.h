@@ -43,14 +43,13 @@ public:
 	void format(const std::string &text, texture_font_t *font);
 };
 
-// TODO rename
-class Labeler {
+class LabelFont {
 public:
 	texture_atlas_t *atlas = nullptr;
 	texture_font_t *font = nullptr;
 public:
-	Labeler(const std::string &fontpath, size_t fontsize);
-	~Labeler();
+	LabelFont(const std::string &fontpath, size_t fontsize);
+	~LabelFont();
 };
 
 };

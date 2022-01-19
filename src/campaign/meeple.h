@@ -90,7 +90,7 @@ public:
 		);
 	}
 private:
-	float m_speed = 5.f;
+	float m_speed = 3.f;
 	PathFinder m_path_finder;
 private:
 	MeepleAnimation m_animation = MA_IDLE;
