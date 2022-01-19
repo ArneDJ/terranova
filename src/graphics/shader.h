@@ -39,6 +39,7 @@ struct ShaderGroup {
 	std::shared_ptr<gfx::Shader> culling;
 	std::shared_ptr<gfx::Shader> terrain;
 	std::shared_ptr<gfx::Shader> label;
+	std::shared_ptr<gfx::Shader> font;
 	std::shared_ptr<gfx::Shader> creature;
 	std::shared_ptr<gfx::Shader> blur;
 };

@@ -175,6 +175,11 @@ void Engine::load_shaders()
 	shaders->label->compile("shaders/label.frag", GL_FRAGMENT_SHADER);
 	shaders->label->link();
 
+	shaders->font = std::make_shared<gfx::Shader>();
+	shaders->font->compile("shaders/font.vert", GL_VERTEX_SHADER);
+	shaders->font->compile("shaders/font.frag", GL_FRAGMENT_SHADER);
+	shaders->font->link();
+
 	shaders->creature = std::make_shared<gfx::Shader>();
 	shaders->creature->compile("shaders/creature.vert", GL_VERTEX_SHADER);
 	shaders->creature->compile("shaders/creature.frag", GL_FRAGMENT_SHADER);

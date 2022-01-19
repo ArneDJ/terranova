@@ -85,6 +85,7 @@ public:
 	std::shared_ptr<gfx::Shader> object_shader;
 	std::shared_ptr<gfx::Shader> meeple_shader;
 	std::shared_ptr<gfx::Shader> font_shader;
+	std::shared_ptr<gfx::Shader> label_shader;
 public:
 	bool display_debug = false;
 	bool wireframe_worldmap = false;

@@ -82,8 +82,8 @@ void Campaign::init(const gfx::ShaderGroup *shaders)
 	
 	object_shader = shaders->debug;
 	meeple_shader = shaders->creature;
-	// TODO seperate shader for text and background label
-	font_shader = shaders->label;
+	font_shader = shaders->font;
+	label_shader = shaders->label;
 }
 	
 // load campaign bueprints from the module
@@ -447,6 +447,25 @@ void Campaign::display_labels()
 {
 	glDisable(GL_DEPTH_TEST);
 
+	label_shader->use();
+	label_shader->uniform_mat4("PROJECT", camera.projection);
+	label_shader->uniform_mat4("VIEW", camera.viewing);
+
+	for (auto &mapping : meeple_controller.meeples) {
+		auto &meeple = mapping.second;
+		label_shader->uniform_float("SCALE", meeple->label->scale);
+		label_shader->uniform_vec3("ORIGIN", meeple->transform.position + glm::vec3(0.f, 1.f, 0.f));
+		label_shader->uniform_vec3("COLOR", meeple->label->background_color);
+		meeple->label->background_mesh->display();
+	}
+	for (auto &mapping : settlement_controller.towns) {
+		auto &town = mapping.second;
+		label_shader->uniform_float("SCALE", town->label->scale);
+		label_shader->uniform_vec3("ORIGIN", town->transform.position + glm::vec3(0.f, 2.5f, 0.f));
+		label_shader->uniform_vec3("COLOR", town->label->background_color);
+		town->label->background_mesh->display();
+	}
+
 	font_shader->use();
 	font_shader->uniform_mat4("PROJECT", camera.projection);
 	font_shader->uniform_mat4("VIEW", camera.viewing);
@@ -460,22 +479,8 @@ void Campaign::display_labels()
 		auto &meeple = mapping.second;
 		font_shader->uniform_float("SCALE", meeple->label->scale);
 		font_shader->uniform_vec3("ORIGIN", meeple->transform.position + glm::vec3(0.f, 1.f, 0.f));
-		font_shader->uniform_vec3("COLOR", meeple->label->background_color);
-		meeple->label->background_mesh->display();
-	}
-	for (auto &mapping : meeple_controller.meeples) {
-		auto &meeple = mapping.second;
-		font_shader->uniform_float("SCALE", meeple->label->scale);
-		font_shader->uniform_vec3("ORIGIN", meeple->transform.position + glm::vec3(0.f, 1.f, 0.f));
 		font_shader->uniform_vec3("COLOR", meeple->label->text_color);
 		meeple->label->text_mesh->display();
-	}
-	for (auto &mapping : settlement_controller.towns) {
-		auto &town = mapping.second;
-		font_shader->uniform_float("SCALE", town->label->scale);
-		font_shader->uniform_vec3("ORIGIN", town->transform.position + glm::vec3(0.f, 2.5f, 0.f));
-		font_shader->uniform_vec3("COLOR", town->label->background_color);
-		town->label->background_mesh->display();
 	}
 	for (auto &mapping : settlement_controller.towns) {
 		auto &town = mapping.second;
@@ -484,6 +489,7 @@ void Campaign::display_labels()
 		font_shader->uniform_vec3("COLOR", town->label->text_color);
 		town->label->text_mesh->display();
 	}
+
 
 	glEnable(GL_DEPTH_TEST);
 }
