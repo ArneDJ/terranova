@@ -122,6 +122,7 @@ private:
 	void set_meeple_target(Meeple *meeple, uint32_t target_id, uint8_t target_type);
 	void update_meeple_target(Meeple *meeple);
 	void spawn_barbarians();
+	void update_meeple_path(Meeple *meeple);
 	void update_meeple_paths();
 	void update_meeple_behavior(Meeple *meeple);
 public:

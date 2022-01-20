@@ -144,13 +144,6 @@ void Meeple::update(float delta)
 
 	m_path_finder.update(delta, m_speed);
 
-	// check if path finished
-	/*
-	if (prev_path_state != PathState::FINISHED && m_path_finder.state() == PathState::FINISHED) {
-		clear_target();
-	}
-	*/
-
 	glm::vec2 location = m_path_finder.location();
 	transform.position.x = location.x;
 	transform.position.z = location.y;
@@ -171,7 +164,7 @@ void Meeple::update(float delta)
 	
 void Meeple::update_animation(float delta)
 {
-	if (m_path_finder.state() == PathState::MOVING) {
+	if (m_path_finder.state() != PathState::FINISHED) {
 		m_animation = MA_RUN;
 		moving = true;
 	} else {
@@ -236,7 +229,7 @@ void MeepleController::update(float delta)
 	for (auto &mapping : meeples) {
 		auto &meeple = mapping.second;
 		meeple->update(delta);
-		meeple->update_animation(delta);
+		//meeple->update_animation(delta);
 	}
 }
 	

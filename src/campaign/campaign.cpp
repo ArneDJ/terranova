@@ -367,6 +367,8 @@ void Campaign::update(float delta)
 			// vertical offset on map
 			float offset = vertical_offset(meeple->map_position());
 			meeple->set_vertical_offset(offset);
+		
+			meeple->update_animation(delta);
 		}
 	}
 
@@ -913,6 +915,12 @@ BoardMarker Campaign::marker_data(const glm::vec2 &position, uint32_t target_id,
 // calculates distance to target and changes game state if the target has been reached
 void Campaign::update_meeple_target(Meeple *meeple)
 {
+	if (!meeple->target_type) {
+		return;
+	}
+
+	bool reached_target = false;
+
 	CampaignEntityType entity_type = CampaignEntityType(meeple->target_type);
 	if (entity_type == CampaignEntityType::TOWN) {
 		auto search = settlement_controller.towns.find(meeple->target_id);
@@ -920,6 +928,7 @@ void Campaign::update_meeple_target(Meeple *meeple)
 			const auto &town = search->second;
 			float distance = glm::distance(meeple->map_position(), town->map_position());
 			if (distance < 1.F) {
+				reached_target = true;
 				meeple->clear_target();
 				meeple->behavior_state = MeepleBehavior::PATROL;
 				// add town event
@@ -944,6 +953,7 @@ void Campaign::update_meeple_target(Meeple *meeple)
 		if (search != meeple_controller.meeples.end()) {
 			float distance = glm::distance(meeple->map_position(), search->second->map_position());
 			if (distance < 1.F) {
+				reached_target = true;
 				meeple->clear_target();
 				meeple->behavior_state = MeepleBehavior::PATROL;
 				// add action event
@@ -958,8 +968,14 @@ void Campaign::update_meeple_target(Meeple *meeple)
 		}
 	} else if (entity_type == CampaignEntityType::LAND_SURFACE) {
 		if (meeple->path_state() == PathState::FINISHED) {
+			reached_target = true;
 			meeple->clear_target();
 		}
+	}
+
+	// special case where last node of path has been reached but target has not been reached yet, this happens mostly when following a moving entity
+	if (!reached_target && meeple->path_state() == PathState::FINISHED) {
+		update_meeple_path(meeple);
 	}
 }
 	
@@ -1235,16 +1251,21 @@ void Campaign::update_meeple_paths()
 {
 	for (auto &mapping : meeple_controller.meeples) {
 		auto &meeple = mapping.second;
-		CampaignEntityType entity_type = CampaignEntityType(meeple->target_type);
-		// dynamic target so update path
-		if (entity_type == CampaignEntityType::MEEPLE) {
-			auto search = meeple_controller.meeples.find(meeple->target_id);
-			if (search != meeple_controller.meeples.end()) {
-				std::list<glm::vec2> nodes;
-				board->find_path(meeple->map_position(), search->second->map_position(), nodes);
-				if (nodes.size()) {
-					meeple->set_path(nodes);
-				}
+		update_meeple_path(meeple.get());
+	}
+}
+
+void Campaign::update_meeple_path(Meeple *meeple)
+{
+	CampaignEntityType entity_type = CampaignEntityType(meeple->target_type);
+	// dynamic target so update path
+	if (entity_type == CampaignEntityType::MEEPLE) {
+		auto search = meeple_controller.meeples.find(meeple->target_id);
+		if (search != meeple_controller.meeples.end()) {
+			std::list<glm::vec2> nodes;
+			board->find_path(meeple->map_position(), search->second->map_position(), nodes);
+			if (nodes.size()) {
+				meeple->set_path(nodes);
 			}
 		}
 	}
