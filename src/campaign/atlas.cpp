@@ -286,7 +286,7 @@ void Atlas::generate(int seed, const geom::Rectangle &bounds, const AtlasParamet
 	create_reliefmap(seed);
 	river_cut_relief();
 	
-	m_heightmap.normalize(util::CHANNEL_RED);
+	//m_heightmap.normalize(util::CHANNEL_RED);
 }
 	
 void Atlas::clear()
@@ -1233,6 +1233,14 @@ void Atlas::create_reliefmap(int seed)
 	billow.SetFractalOctaves(6);
 	billow.SetFractalLacunarity(2.5f);
 	billow.SetGradientPerturbAmp(40.f);
+
+	 // for edgy mountain peaks
+	FastNoise cellnoise;
+	cellnoise.SetSeed(seed);
+	cellnoise.SetNoiseType(FastNoise::Cellular);
+	cellnoise.SetCellularDistanceFunction(FastNoise::Euclidean);
+	cellnoise.SetFrequency(0.2f);
+	cellnoise.SetCellularReturnType(FastNoise::Distance2Add);
 	
 	#pragma omp parallel for
 	for (int x = 0; x < m_heightmap.width(); x++) {
@@ -1241,10 +1249,14 @@ void Atlas::create_reliefmap(int seed)
 			if (amp) {
 				float height = m_heightmap.sample(x, y, util::CHANNEL_RED);
 				float noise = 0.5f * (billow.GetNoise(x, y) + 1.f);
-				m_heightmap.plot(x, y, util::CHANNEL_RED, height + 0.1f * noise);
+				float peak = 0.08f * cellnoise.GetNoise(x, y);
+				height += 0.1f * noise;
+				height = glm::mix(height, height + peak, amp / 255.f);
+				m_heightmap.plot(x, y, util::CHANNEL_RED, height);
 			}
 		}
 	}
+
 	m_heightmap.blur(1.f);
 }
 
