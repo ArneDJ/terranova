@@ -79,6 +79,9 @@ void Campaign::init(const gfx::ShaderGroup *shaders)
 	labeler = std::make_unique<gfx::LabelFont>("fonts/diablo.ttf", 30);
 
 	board = std::make_unique<Board>(shaders->tilemap, shaders->blur);
+	auto &board_model = board->model();
+	board_model.add_material("ROCK", MediaManager::load_texture("data/media/textures/board/rock.dds"));
+	board_model.add_material("BUMP", MediaManager::load_texture("data/media/textures/board/bump.dds"));
 	
 	object_shader = shaders->debug;
 	meeple_shader = shaders->creature;
@@ -1050,23 +1053,25 @@ void Campaign::set_player_movement(const glm::vec3 &ray)
 {
 	auto result = physics.cast_ray(camera.position, camera.position + (1000.f * ray), COLLISION_GROUP_HEIGHTMAP | COLLISION_GROUP_INTERACTION);
 	if (result.hit && result.object) {
-		set_meeple_target(meeple_controller.player, result.object->getUserIndex(), result.object->getUserIndex2());
-		// find initial path
-		glm::vec2 hitpoint = glm::vec2(result.point.x, result.point.z);
-		marker = marker_data(hitpoint, result.object->getUserIndex(), result.object->getUserIndex2());
-		std::list<glm::vec2> nodes;
-		board->find_path(meeple_controller.player->map_position(), marker.position, nodes);
-		// update visual marker
-		// marker color is based on entity type
-		if (nodes.size()) {
-			marker.position = nodes.back();
-			board->set_marker(marker);
-			meeple_controller.player->set_path(nodes);
+		if (result.object->getUserIndex() != player_data.meeple_id) {
+			set_meeple_target(meeple_controller.player, result.object->getUserIndex(), result.object->getUserIndex2());
+			// find initial path
+			glm::vec2 hitpoint = glm::vec2(result.point.x, result.point.z);
+			marker = marker_data(hitpoint, result.object->getUserIndex(), result.object->getUserIndex2());
+			std::list<glm::vec2> nodes;
+			board->find_path(meeple_controller.player->map_position(), marker.position, nodes);
+			// update visual marker
+			// marker color is based on entity type
+			if (nodes.size()) {
+				marker.position = nodes.back();
+				board->set_marker(marker);
+				meeple_controller.player->set_path(nodes);
 
-			// found a path so unpause
-			// if in pause mode unpause game
-			if (state == CampaignState::PAUSED) {
-				state = CampaignState::RUNNING;
+				// found a path so unpause
+				// if in pause mode unpause game
+				if (state == CampaignState::PAUSED) {
+					state = CampaignState::RUNNING;
+				}
 			}
 		}
 	}

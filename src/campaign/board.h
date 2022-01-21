@@ -81,6 +81,7 @@ public:
 	const util::Navigation& navigation() const;
 	const Atlas& atlas() const { return m_atlas; }
 	Atlas& atlas() { return m_atlas; }
+	BoardModel& model() { return m_model; }
 	const Tile* tile_at(const glm::vec2 &position) const;
 	glm::vec2 tile_center(uint32_t index) const;
 	void find_path(const glm::vec2 &start, const glm::vec2 &end, std::list<glm::vec2> &path) const;
