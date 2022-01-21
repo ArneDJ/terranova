@@ -34,7 +34,7 @@ void main(void)
 	MV[2][1] = 0;
 	MV[2][2] = 1;
 
-	vec3 scaled_pos = SCALE * vec3(position.x, position.y, 0.0);
+	vec3 scaled_pos = SCALE * vec3(position.x, position.y, 0.1);
 
 	gl_Position = PROJECT * MV * vec4(scaled_pos, 1.0);
 }  

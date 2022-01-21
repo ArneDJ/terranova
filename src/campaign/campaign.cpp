@@ -451,7 +451,7 @@ void Campaign::display()
 	
 void Campaign::display_labels()
 {
-	glDisable(GL_DEPTH_TEST);
+	//glDisable(GL_DEPTH_TEST);
 
 	label_shader->use();
 	label_shader->uniform_mat4("PROJECT", camera.projection);
@@ -497,7 +497,7 @@ void Campaign::display_labels()
 	}
 
 
-	glEnable(GL_DEPTH_TEST);
+	//glEnable(GL_DEPTH_TEST);
 }
 	
 // returns the vertical offset of the campaign heightmap at map coordinates
