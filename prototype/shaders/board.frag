@@ -22,8 +22,9 @@ uniform sampler2D POLITICAL;
 uniform sampler2D BOUNDARIES;
 
 // surface color textures
-uniform sampler2D ROCK;
 uniform sampler2D BUMP;
+uniform sampler2D ROCK;
+uniform sampler2D GRAVEL;
 
 float random(in vec2 st)
 {
@@ -92,11 +93,14 @@ vec3 apply_light(vec3 color, vec3 normal)
 
 void main(void)
 {
-	float strata = pattern_b(0.1 * fragment.position.xz);
+	float strata = pattern_b(0.02 * fragment.position.xz);
 
 	vec3 marker_color = MARKER_COLOR;
 
 	vec3 normal = texture(NORMALMAP, fragment.texcoord).rgb;
+
+	float slope = 1.0 - normal.y;
+	slope = smoothstep(0.3, 0.7, slope);
 	
 	vec3 bump = texture(BUMP, 50.0 * fragment.texcoord).rbg;
 	bump = (bump * 2.0) - 1.0;
@@ -104,18 +108,22 @@ void main(void)
 	vec3 tangent = normalize(cross(normal, vec3(0.0, 0.0, 1.0)));
 	vec3 bitangent = normalize(cross(tangent, normal));
 	mat3 orthobasis = mat3(tangent, normal, bitangent);
-	normal = normalize(orthobasis * bump);
+	bump = normalize(orthobasis * bump);
 
-	vec3 rock_color = texture(ROCK, 50.0 * fragment.texcoord).rbg;
+	normal = mix(normal, bump, slope);
+
+	vec3 rock_color = vec3(0.8) * texture(ROCK, 50.0 * fragment.texcoord).rbg;
+	vec3 gravel_color = texture(GRAVEL, 50.0 * fragment.texcoord).rbg;
 
 	vec4 political = texture(POLITICAL, fragment.texcoord);
 
 	float height = texture(DISPLACEMENT, fragment.texcoord).r;
 	
-	vec3 final_color = vec3(height);
+	vec3 final_color = mix(gravel_color, rock_color, slope);
 
-	final_color = mix(final_color, vec3(strata), 0.8);
-	final_color = mix(final_color, rock_color, 0.5);
+	final_color = mix(final_color, vec3(height), 0.5);
+	
+	final_color = mix(final_color, vec3(strata) * final_color, 0.5);
 
 	float border = texture(BORDERS, fragment.texcoord).r;
 

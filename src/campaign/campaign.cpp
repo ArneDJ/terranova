@@ -80,8 +80,9 @@ void Campaign::init(const gfx::ShaderGroup *shaders)
 
 	board = std::make_unique<Board>(shaders->tilemap, shaders->blur);
 	auto &board_model = board->model();
-	board_model.add_material("ROCK", MediaManager::load_texture("data/media/textures/board/rock.dds"));
 	board_model.add_material("BUMP", MediaManager::load_texture("data/media/textures/board/bump.dds"));
+	board_model.add_material("ROCK", MediaManager::load_texture("data/media/textures/board/rock.dds"));
+	board_model.add_material("GRAVEL", MediaManager::load_texture("data/media/textures/board/gravel.dds"));
 	
 	object_shader = shaders->debug;
 	meeple_shader = shaders->creature;
