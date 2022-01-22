@@ -29,5 +29,5 @@ void Module::load()
 	load_json(architectures, "data/houses.json");
 	load_json(fortification, "data/fortifications.json");
 	load_json(human_armature, "data/creatures.json");
-	load_json(board_module, "data/board.json");
+	load_json(board_module, "data/overworld.json");
 }

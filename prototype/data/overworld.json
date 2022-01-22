@@ -6,6 +6,11 @@
         "meeple": "data/media/models/miniature/human.glb",
         "meeple_skeleton": "data/media/skeletons/miniature/human.ozz",
         "meeple_anim_idle": "data/media/animations/miniature/idle.ozz",
-        "meeple_anim_run": "data/media/animations/miniature/run.ozz"
+        "meeple_anim_run": "data/media/animations/miniature/run.ozz",
+	"materials": [
+		{ "shader_name": "BUMP", "texture_path": "data/media/textures/board/bump.dds" },
+		{ "shader_name": "ROCK", "texture_path": "data/media/textures/board/rock.dds" },
+		{ "shader_name": "GRAVEL", "texture_path": "data/media/textures/board/gravel.dds" }
+	]
     }
 }

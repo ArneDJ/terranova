@@ -15,4 +15,9 @@ public:
 	{
 		label = std::make_unique<gfx::Label>();
 	}
+public:
+	glm::vec2 map_position() const
+	{
+		return glm::vec2(transform.position.x, transform.position.z);
+	}
 };

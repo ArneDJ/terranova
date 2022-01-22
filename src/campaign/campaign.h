@@ -125,6 +125,7 @@ private:
 	void update_meeple_path(Meeple *meeple);
 	void update_meeple_paths();
 	void update_meeple_behavior(Meeple *meeple);
+	void check_meeple_visibility();
 public:
 	void spawn_factions();
 	void update_faction_taxes();

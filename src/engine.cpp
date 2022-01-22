@@ -298,8 +298,6 @@ void Engine::run()
 
 	load_shaders();
 
-	load_module();
-
 	// initialize the campaign
 	campaign.init(shaders.get());
 	campaign.camera.set_projection(video_settings.fov, video_settings.canvas.x, video_settings.canvas.y, 0.1f, 900.f);
@@ -307,6 +305,8 @@ void Engine::run()
 	// initialize the battle
 	battle.init(shaders.get());
 	battle.camera.set_projection(video_settings.fov, video_settings.canvas.x, video_settings.canvas.y, 0.1f, 900.f);
+
+	load_module();
 
 	// random number for the world seed
 	std::random_device rd;

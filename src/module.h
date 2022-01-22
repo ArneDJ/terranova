@@ -136,6 +136,17 @@ struct CreatureArmatureModule {
 	}
 };
 
+struct OverworldMaterial {
+	std::string shader_name = "";
+	std::string texture_path = "";
+
+	template <class Archive>
+	void serialize(Archive &archive)
+	{
+		archive(CEREAL_NVP(shader_name), CEREAL_NVP(texture_path));
+	}
+};
+
 struct BoardModule {
 	std::string marker = {};
 	std::string town = {};
@@ -145,11 +156,13 @@ struct BoardModule {
 	std::string meeple_anim_idle = {};
 	std::string meeple_anim_run = {};
 
+	std::vector<OverworldMaterial> materials;
+
 	template <class Archive>
 	void serialize(Archive &archive)
 	{
 		archive(CEREAL_NVP(marker), CEREAL_NVP(town), CEREAL_NVP(town_wall),
-			CEREAL_NVP(meeple), CEREAL_NVP(meeple_skeleton), CEREAL_NVP(meeple_anim_idle), CEREAL_NVP(meeple_anim_run)
+			CEREAL_NVP(meeple), CEREAL_NVP(meeple_skeleton), CEREAL_NVP(meeple_anim_idle), CEREAL_NVP(meeple_anim_run), CEREAL_NVP(materials)
 		);
 	}
 };

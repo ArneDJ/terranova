@@ -111,10 +111,12 @@ const fysx::TriggerSphere* Meeple::trigger() const { return m_trigger.get(); }
 
 const fysx::TriggerSphere* Meeple::visibility() const { return m_visibility.get(); }
 
+/*
 glm::vec2 Meeple::map_position() const
 {
 	return glm::vec2(transform.position.x, transform.position.z);
 }
+*/
 	
 PathState Meeple::path_state() const
 {

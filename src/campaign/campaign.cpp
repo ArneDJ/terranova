@@ -76,13 +76,9 @@ void Campaign::init(const gfx::ShaderGroup *shaders)
 {
 	debugger = std::make_unique<Debugger>(shaders->debug);
 
-	labeler = std::make_unique<gfx::LabelFont>("fonts/diablo.ttf", 30);
+	labeler = std::make_unique<gfx::LabelFont>("fonts/exocet.ttf", 30);
 
 	board = std::make_unique<Board>(shaders->tilemap, shaders->blur);
-	auto &board_model = board->model();
-	board_model.add_material("BUMP", MediaManager::load_texture("data/media/textures/board/bump.dds"));
-	board_model.add_material("ROCK", MediaManager::load_texture("data/media/textures/board/rock.dds"));
-	board_model.add_material("GRAVEL", MediaManager::load_texture("data/media/textures/board/gravel.dds"));
 	
 	object_shader = shaders->debug;
 	meeple_shader = shaders->creature;
@@ -104,6 +100,12 @@ void Campaign::load_blueprints(const Module &module)
 	army_blueprint.anim_set->animations[MA_IDLE] = MediaManager::load_animation(module.board_module.meeple_anim_idle);
 	army_blueprint.anim_set->animations[MA_RUN] = MediaManager::load_animation(module.board_module.meeple_anim_run);
 	army_blueprint.anim_set->find_max_tracks();
+
+	// load materials for world map board
+	auto &board_model = board->model();
+	for (const auto &material : module.board_module.materials) {
+		board_model.add_material(material.shader_name, MediaManager::load_texture(material.texture_path));
+	}
 }
 	
 // loads a campaign save game
@@ -384,7 +386,7 @@ void Campaign::update(float delta)
 	}
 
 	// find out if other armies are visible to player
-	//meeple_controller.check_visibility();
+	check_meeple_visibility();
 
 	// campaign map paint jobs
 	board->update();
@@ -417,10 +419,10 @@ void Campaign::display()
 	for (auto &mapping : meeple_controller.meeples) {
 		auto &meeple = mapping.second;
 		// only display if visible to player
-		//if (meeple->visible) {
+		if (meeple->visible) {
 			meeple_shader->uniform_mat4("MODEL", meeple->transform.to_matrix());
 			meeple->display();
-		//}
+		}
 	}
 
 	if (wireframe_worldmap) {
@@ -459,10 +461,12 @@ void Campaign::display_labels()
 
 	for (auto &mapping : meeple_controller.meeples) {
 		auto &meeple = mapping.second;
-		label_shader->uniform_float("SCALE", meeple->label->scale);
-		label_shader->uniform_vec3("ORIGIN", meeple->transform.position + glm::vec3(0.f, 1.f, 0.f));
-		label_shader->uniform_vec3("COLOR", meeple->label->background_color);
-		meeple->label->background_mesh->display();
+		if (meeple->visible) {
+			label_shader->uniform_float("SCALE", meeple->label->scale);
+			label_shader->uniform_vec3("ORIGIN", meeple->transform.position + glm::vec3(0.f, 1.f, 0.f));
+			label_shader->uniform_vec3("COLOR", meeple->label->background_color);
+			meeple->label->background_mesh->display();
+		}
 	}
 	for (auto &mapping : settlement_controller.towns) {
 		auto &town = mapping.second;
@@ -483,10 +487,12 @@ void Campaign::display_labels()
 
 	for (auto &mapping : meeple_controller.meeples) {
 		auto &meeple = mapping.second;
-		font_shader->uniform_float("SCALE", meeple->label->scale);
-		font_shader->uniform_vec3("ORIGIN", meeple->transform.position + glm::vec3(0.f, 1.f, 0.f));
-		font_shader->uniform_vec3("COLOR", meeple->label->text_color);
-		meeple->label->text_mesh->display();
+		if (meeple->visible) {
+			font_shader->uniform_float("SCALE", meeple->label->scale);
+			font_shader->uniform_vec3("ORIGIN", meeple->transform.position + glm::vec3(0.f, 1.f, 0.f));
+			font_shader->uniform_vec3("COLOR", meeple->label->text_color);
+			meeple->label->text_mesh->display();
+		}
 	}
 	for (auto &mapping : settlement_controller.towns) {
 		auto &town = mapping.second;
@@ -1279,7 +1285,12 @@ void Campaign::update_meeple_path(Meeple *meeple)
 	
 void Campaign::update_meeple_behavior(Meeple *meeple)
 {
-	if (meeple->control_type == MeepleControlType::AI_BARBARIAN && meeple->behavior_state == MeepleBehavior::PATROL) {
+	uint32_t weakest_target = 0;
+	CampaignEntityType weakest_target_type = CampaignEntityType::INVALID;
+	int weakest_target_troops = meeple->troop_count;
+	glm::vec2 map_position = { 0.f, 0.f };
+
+	if (meeple->control_type == MeepleControlType::AI_BARBARIAN) {
 		// scan area for enemies
 		const auto &visibility = meeple->visibility()->ghost_object();
 		int count = visibility->getNumOverlappingObjects();
@@ -1290,10 +1301,11 @@ void Campaign::update_meeple_behavior(Meeple *meeple)
 				Meeple *target = static_cast<Meeple*>(obj->getUserPointer());
 				if (target) {
 					if (target->faction_id != meeple->faction_id) {
-						if (meeple->troop_count > target->troop_count) {
-							meeple->behavior_state = MeepleBehavior::ATTACK;
-							set_meeple_target(meeple, target->id, uint8_t(entity_type));
-							break;
+						if (target->troop_count < weakest_target_troops) {
+							weakest_target_troops = target->troop_count;
+							weakest_target = target->id;
+							weakest_target_type = entity_type;
+							map_position = target->map_position();
 						}
 					}
 				}
@@ -1301,20 +1313,58 @@ void Campaign::update_meeple_behavior(Meeple *meeple)
 				Town *target = static_cast<Town*>(obj->getUserPointer());
 				if (target) {
 					if (target->faction != meeple->faction_id) {
-						if (meeple->troop_count > target->troop_count) {
-							meeple->behavior_state = MeepleBehavior::ATTACK;
-							set_meeple_target(meeple, target->id, uint8_t(entity_type));
-							// find initial path
-							std::list<glm::vec2> nodes;
-							board->find_path(meeple->map_position(), target->map_position(), nodes);
-							if (nodes.size()) {
-								meeple->set_path(nodes);
-							}
-							break;
+						if (target->troop_count < weakest_target_troops) {
+							weakest_target_troops = target->troop_count;
+							weakest_target = target->id;
+							weakest_target_type = entity_type;
+							map_position = target->map_position();
 						}
 					}
 				}
 			}
 		}
 	}
+
+	if (weakest_target) {
+		// new target
+		if (weakest_target != meeple->target_id) {
+			meeple->behavior_state = MeepleBehavior::ATTACK;
+			set_meeple_target(meeple, weakest_target, uint8_t(weakest_target_type));
+			// find initial path
+			std::list<glm::vec2> nodes;
+			board->find_path(meeple->map_position(), map_position, nodes);
+			if (nodes.size()) {
+				meeple->set_path(nodes);
+			}
+		}
+	} else {
+		// didn't find any targets
+		if (meeple->behavior_state == MeepleBehavior::ATTACK) {
+			meeple->clear_target();
+			meeple->behavior_state = MeepleBehavior::PATROL;
+		}
+	}
+}
+
+void Campaign::check_meeple_visibility()
+{
+	for (auto &mapping : meeple_controller.meeples) {
+		auto &meeple = mapping.second;
+		meeple->visible = false;
+	}
+	const auto &visibility = meeple_controller.player->visibility()->ghost_object();
+	int count = visibility->getNumOverlappingObjects();
+	for (int i = 0; i < count; i++) {
+		btCollisionObject *obj = visibility->getOverlappingObject(i);
+		CampaignEntityType entity_type = CampaignEntityType(obj->getUserIndex2());
+		if (entity_type == CampaignEntityType::MEEPLE) {
+			Meeple *target = static_cast<Meeple*>(obj->getUserPointer());
+			if (target) {
+				target->visible = true;
+			}
+		}
+	}
+
+	// make player always visible
+	meeple_controller.player->visible = true;
 }
