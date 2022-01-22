@@ -1073,6 +1073,8 @@ void Campaign::set_player_movement(const glm::vec3 &ray)
 				marker.position = nodes.back();
 				board->set_marker(marker);
 				meeple_controller.player->set_path(nodes);
+			
+				meeple_controller.player->behavior_state == MeepleBehavior::ATTACK;
 
 				// found a path so unpause
 				// if in pause mode unpause game
@@ -1274,8 +1276,13 @@ void Campaign::update_meeple_path(Meeple *meeple)
 	if (entity_type == CampaignEntityType::MEEPLE) {
 		auto search = meeple_controller.meeples.find(meeple->target_id);
 		if (search != meeple_controller.meeples.end()) {
+			const auto &target = search->second;
 			std::list<glm::vec2> nodes;
-			board->find_path(meeple->map_position(), search->second->map_position(), nodes);
+			glm::vec2 end_location = target->map_position();
+			if (meeple->behavior_state == MeepleBehavior::EVADE) {
+				end_location = meeple->map_position() + (meeple->map_position() - target->map_position());
+			}
+			board->find_path(meeple->map_position(), end_location, nodes);
 			if (nodes.size()) {
 				meeple->set_path(nodes);
 			}
@@ -1288,6 +1295,8 @@ void Campaign::update_meeple_behavior(Meeple *meeple)
 	uint32_t weakest_target = 0;
 	CampaignEntityType weakest_target_type = CampaignEntityType::INVALID;
 	int weakest_target_troops = meeple->troop_count;
+	uint32_t strongest_target = 0;
+	CampaignEntityType strongest_target_type = CampaignEntityType::INVALID;
 	glm::vec2 map_position = { 0.f, 0.f };
 
 	if (meeple->control_type == MeepleControlType::AI_BARBARIAN) {
@@ -1301,11 +1310,14 @@ void Campaign::update_meeple_behavior(Meeple *meeple)
 				Meeple *target = static_cast<Meeple*>(obj->getUserPointer());
 				if (target) {
 					if (target->faction_id != meeple->faction_id) {
-						if (target->troop_count < weakest_target_troops) {
+						if (target->troop_count <= weakest_target_troops) {
 							weakest_target_troops = target->troop_count;
 							weakest_target = target->id;
 							weakest_target_type = entity_type;
 							map_position = target->map_position();
+						} else {
+							strongest_target = target->id;
+							strongest_target_type = entity_type;
 						}
 					}
 				}
@@ -1313,7 +1325,7 @@ void Campaign::update_meeple_behavior(Meeple *meeple)
 				Town *target = static_cast<Town*>(obj->getUserPointer());
 				if (target) {
 					if (target->faction != meeple->faction_id) {
-						if (target->troop_count < weakest_target_troops) {
+						if (target->troop_count <= weakest_target_troops) {
 							weakest_target_troops = target->troop_count;
 							weakest_target = target->id;
 							weakest_target_type = entity_type;
@@ -1323,25 +1335,31 @@ void Campaign::update_meeple_behavior(Meeple *meeple)
 				}
 			}
 		}
-	}
 
-	if (weakest_target) {
-		// new target
-		if (weakest_target != meeple->target_id) {
-			meeple->behavior_state = MeepleBehavior::ATTACK;
-			set_meeple_target(meeple, weakest_target, uint8_t(weakest_target_type));
-			// find initial path
-			std::list<glm::vec2> nodes;
-			board->find_path(meeple->map_position(), map_position, nodes);
-			if (nodes.size()) {
-				meeple->set_path(nodes);
-			}
+		if (strongest_target) {
+			meeple->behavior_state = MeepleBehavior::EVADE;
+			set_meeple_target(meeple, strongest_target, uint8_t(strongest_target_type));
+			return;
 		}
-	} else {
-		// didn't find any targets
-		if (meeple->behavior_state == MeepleBehavior::ATTACK) {
-			meeple->clear_target();
-			meeple->behavior_state = MeepleBehavior::PATROL;
+
+		if (weakest_target) {
+			// new target
+			if (weakest_target != meeple->target_id) {
+				meeple->behavior_state = MeepleBehavior::ATTACK;
+				set_meeple_target(meeple, weakest_target, uint8_t(weakest_target_type));
+				// find initial path
+				std::list<glm::vec2> nodes;
+				board->find_path(meeple->map_position(), map_position, nodes);
+				if (nodes.size()) {
+					meeple->set_path(nodes);
+				}
+			}
+		} else {
+			// didn't find any targets
+			if (meeple->behavior_state == MeepleBehavior::ATTACK) {
+				meeple->clear_target();
+				meeple->behavior_state = MeepleBehavior::PATROL;
+			}
 		}
 	}
 }
