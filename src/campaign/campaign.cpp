@@ -178,7 +178,7 @@ void Campaign::generate(int seedling)
 	}
 
 	// find ideal places to settle towns in our generated world
-	faction_controller.find_town_targets(atlas, 4 + 1);
+	faction_controller.find_town_targets(atlas, 4);
 
 	// spawn factions including the player's
 	spawn_factions();
@@ -304,6 +304,8 @@ void Campaign::update(float delta)
 	}
 	
 	update_camera(delta);
+
+	//delta *= 4.f;
 
 	// accumulate time for game tick if not paused
 	if (state == CampaignState::RUNNING) {

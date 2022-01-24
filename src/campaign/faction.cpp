@@ -49,47 +49,97 @@ void FactionController::clear()
 	while (!m_expansion_requests.empty()) m_expansion_requests.pop();
 }
 
+// uses breadth first search to select a radius of tiles around a selected tile to reserve them
+void FactionController::target_town_tiles(const Tile &tile, const Atlas &atlas, int radius, std::unordered_map<uint32_t, bool> &visited, std::unordered_map<uint32_t, uint32_t> &depth)
+{
+	const auto &cells = atlas.graph().cells;	
+	const auto &borders = atlas.borders();	
+	const auto &tiles = atlas.tiles();	
+
+	depth[tile.index] = 0;
+	visited[tile.index] = true;
+
+	std::queue<uint32_t> nodes;
+	nodes.push(tile.index);
+
+	while (!nodes.empty()) {
+		auto node = nodes.front();
+		nodes.pop();
+		uint32_t layer = depth[node] + 1;
+		if (layer < radius) {
+			const auto &cell = cells[node];
+			for (const auto &edge : cell.edges) {
+				const auto &border = borders[edge->index];
+				// if no river is between them
+				if (!(border.flags & BORDER_FLAG_RIVER) && !(border.flags & BORDER_FLAG_FRONTIER)) {
+					auto neighbor_index = edge->left_cell->index == node ? edge->right_cell->index : edge->left_cell->index;
+					const Tile *neighbor = &tiles[neighbor_index];
+					if (walkable_tile(neighbor) && !visited[neighbor->index]) {
+						visited[neighbor->index] = true;
+						depth[neighbor->index] = layer;
+						nodes.push(neighbor->index);
+					}
+				}
+			}
+		}
+	}
+}
+
 void FactionController::find_town_targets(const Atlas &atlas, int radius)
 {
 	const auto &cells = atlas.graph().cells;	
+	const auto &borders = atlas.borders();	
 	const auto &tiles = atlas.tiles();	
 
 	// do breath first search
 	//
 	std::unordered_map<uint32_t, bool> visited;
 	std::unordered_map<uint32_t, uint32_t> depth;
+
+	// to shuffle 
+	std::random_device rd;
+	std::mt19937 gen(rd());
+
+	// first do tiles near river and coast
 	for (const auto &tile : tiles) {
 		m_desirable_tiles[tile.index] = false;
-		if (visited[tile.index] == false && walkable_tile(&tile)) {
-			depth[tile.index] = 0;
-			visited[tile.index] = true;
+		bool ideal_start = (tile.flags & TILE_FLAG_RIVER) && (tile.flags & TILE_FLAG_COAST);
+		if (!visited[tile.index] && walkable_tile(&tile) && ideal_start) {
 			// found target
 			town_targets.push_back(tile.index);
 			m_desirable_tiles[tile.index] = true;
 
-			std::queue<uint32_t> nodes;
-			nodes.push(tile.index);
+			target_town_tiles(tile, atlas, radius, visited, depth);
+		}
+	}
+	
+	std::shuffle(town_targets.begin(), town_targets.end(), gen);
+	
+	// then tiles next to river but not coastal
+	for (const auto &tile : tiles) {
+		bool near_river = (tile.flags & TILE_FLAG_RIVER);
+		if (!visited[tile.index] && walkable_tile(&tile) && near_river) {
+			// found target
+			town_targets.push_back(tile.index);
+			m_desirable_tiles[tile.index] = true;
 
-			while (!nodes.empty()) {
-				auto node = nodes.front();
-				nodes.pop();
-				uint32_t layer = depth[node] + 1;
-				if (layer < radius) {
-					for (const auto &cell : cells[node].neighbors) {
-						const Tile *neighbor = &tiles[cell->index];
-						if (walkable_tile(neighbor) && visited[neighbor->index] == false) {
-							visited[neighbor->index] = true;
-							depth[neighbor->index] = layer;
-							nodes.push(neighbor->index);
-						}
-					}
-				}
-			}
+			target_town_tiles(tile, atlas, radius, visited, depth);
+		}
+	}
+	
+	std::shuffle(town_targets.begin(), town_targets.end(), gen);
+
+	// lastly fill in the gaps
+	for (const auto &tile : tiles) {
+		if (!visited[tile.index] && walkable_tile(&tile)) {
+			// found target
+			town_targets.push_back(tile.index);
+			m_desirable_tiles[tile.index] = true;
+			
+			target_town_tiles(tile, atlas, radius, visited, depth);
 		}
 	}
 
-	std::random_device rd;
-	std::mt19937 gen(rd());
 	std::shuffle(town_targets.begin(), town_targets.end(), gen);
 }
 	

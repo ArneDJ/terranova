@@ -47,4 +47,6 @@ private:
 	std::unordered_map<uint32_t, bool> m_desirable_tiles;
 	std::queue<uint32_t> m_expansion_requests; // queue with ids of factions that request expansion
 	uint64_t m_internal_ticks = 0;
+private:
+	void target_town_tiles(const Tile &tile, const Atlas &atlas, int radius, std::unordered_map<uint32_t, bool> &visited, std::unordered_map<uint32_t, uint32_t> &depth);
 };
