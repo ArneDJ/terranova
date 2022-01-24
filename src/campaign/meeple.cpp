@@ -92,7 +92,7 @@ Meeple::Meeple()
 {
 	geom::Sphere sphere = {
 		transform.position,
-		1.5f
+		1.f
 	};
 	m_trigger = std::make_unique<fysx::TriggerSphere>(sphere);
 
@@ -111,13 +111,6 @@ const fysx::TriggerSphere* Meeple::trigger() const { return m_trigger.get(); }
 
 const fysx::TriggerSphere* Meeple::visibility() const { return m_visibility.get(); }
 
-/*
-glm::vec2 Meeple::map_position() const
-{
-	return glm::vec2(transform.position.x, transform.position.z);
-}
-*/
-	
 PathState Meeple::path_state() const
 {
 	return m_path_finder.state();
@@ -135,7 +128,7 @@ void Meeple::set_vertical_offset(float offset)
 	transform.position.y = offset;
 
 	glm::vec3 trigger_position = transform.position;
-	trigger_position.y += 1.f;
+	trigger_position.y += 0.5f;
 	m_trigger->set_position(trigger_position);
 	m_visibility->set_position(trigger_position);
 }

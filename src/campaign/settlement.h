@@ -16,8 +16,6 @@ public:
 	const gfx::Model *wall_model = nullptr;
 public:
 	Settlement();
-//public:
-	//glm::vec2 map_position() const;
 public:
 	void set_position(const glm::vec3 &position);
 public:
@@ -33,10 +31,6 @@ public:
 		);
 	}
 };
-/*
-class Village : public Settlement {
-};
-*/
 
 class Town : public Settlement {
 };

@@ -119,6 +119,8 @@ private:
 	void set_player_construction(const glm::vec3 &ray);
 private:
 	void place_meeple(Meeple *meeple);
+	void station_meeple(Meeple *meeple, Town *town);
+	void unstation_meeple(Meeple *meeple);
 	void set_meeple_target(Meeple *meeple, uint32_t target_id, uint8_t target_type);
 	void update_meeple_target(Meeple *meeple);
 	void spawn_barbarians();

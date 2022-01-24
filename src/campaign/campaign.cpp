@@ -305,8 +305,6 @@ void Campaign::update(float delta)
 	
 	update_camera(delta);
 
-	delta *= 8.f;
-
 	// accumulate time for game tick if not paused
 	if (state == CampaignState::RUNNING) {
 		hourglass_sand += delta;
@@ -530,7 +528,10 @@ void Campaign::place_meeple(Meeple *meeple)
 	auto trigger = meeple->trigger();
 	trigger->ghost_object()->setUserIndex(meeple->id);
 	trigger->ghost_object()->setUserIndex2(int(CampaignEntityType::MEEPLE));
-	physics.add_object(trigger->ghost_object(), COLLISION_GROUP_INTERACTION, meeple_mask);
+
+	if (meeple->behavior_state != MeepleBehavior::STATIONED) {
+		physics.add_object(trigger->ghost_object(), COLLISION_GROUP_INTERACTION, meeple_mask);
+	}
 	auto visibility = meeple->visibility();
 	physics.add_object(visibility->ghost_object(), COLLISION_GROUP_VISIBILITY, COLLISION_GROUP_INTERACTION);
 
@@ -546,6 +547,8 @@ void Campaign::place_meeple(Meeple *meeple)
 	}
 	meeple->label->format("Army " + std::to_string(meeple->troop_count), labeler->font);
 	meeple->label->scale = 0.1f;
+
+	meeple->visible = false;
 }
 	
 // spawns a group of new factions
@@ -948,7 +951,8 @@ void Campaign::update_meeple_target(Meeple *meeple)
 					battle_data.tile = town->tile;
 					battle_data.town_size = town->size;
 					battle_data.walled = town->walled;
-					state = CampaignState::BATTLE_REQUEST;
+					//state = CampaignState::BATTLE_REQUEST;
+					station_meeple(meeple, town.get());
 				} else {
 					auto &fiefdom = settlement_controller.fiefdoms[town->fiefdom];
 					raze_town(town.get());
@@ -963,6 +967,12 @@ void Campaign::update_meeple_target(Meeple *meeple)
 	} else if (entity_type == CampaignEntityType::MEEPLE) {
 		auto search = meeple_controller.meeples.find(meeple->target_id);
 		if (search != meeple_controller.meeples.end()) {
+			// if target is stationed ignore it
+			if (search->second->behavior_state == MeepleBehavior::STATIONED) {
+				meeple->clear_target();
+				meeple->behavior_state = MeepleBehavior::PATROL;
+				return;
+			}
 			float distance = glm::distance(meeple->map_position(), search->second->map_position());
 			if (distance < 1.F) {
 				reached_target = true;
@@ -1063,6 +1073,10 @@ void Campaign::set_player_movement(const glm::vec3 &ray)
 	auto result = physics.cast_ray(camera.position, camera.position + (1000.f * ray), COLLISION_GROUP_HEIGHTMAP | COLLISION_GROUP_INTERACTION);
 	if (result.hit && result.object) {
 		if (result.object->getUserIndex() != player_data.meeple_id) {
+			// if player is stationed in town unstation
+			if (meeple_controller.player->behavior_state == MeepleBehavior::STATIONED) {
+				unstation_meeple(meeple_controller.player);
+			}
 			set_meeple_target(meeple_controller.player, result.object->getUserIndex(), result.object->getUserIndex2());
 			// find initial path
 			glm::vec2 hitpoint = glm::vec2(result.point.x, result.point.z);
@@ -1279,6 +1293,12 @@ void Campaign::update_meeple_path(Meeple *meeple)
 		auto search = meeple_controller.meeples.find(meeple->target_id);
 		if (search != meeple_controller.meeples.end()) {
 			const auto &target = search->second;
+			// if target is stationed ignore it
+			if (target->behavior_state == MeepleBehavior::STATIONED) {
+				meeple->clear_target();
+				meeple->behavior_state = MeepleBehavior::PATROL;
+				return;
+			}
 			std::list<glm::vec2> nodes;
 			glm::vec2 end_location = target->map_position();
 			if (meeple->behavior_state == MeepleBehavior::EVADE) {
@@ -1301,7 +1321,7 @@ void Campaign::update_meeple_behavior(Meeple *meeple)
 	CampaignEntityType strongest_target_type = CampaignEntityType::INVALID;
 	glm::vec2 map_position = { 0.f, 0.f };
 
-	if (meeple->control_type == MeepleControlType::AI_BARBARIAN) {
+	if (meeple->control_type == MeepleControlType::AI_BARBARIAN && meeple->behavior_state == MeepleBehavior::PATROL) {
 		// scan area for enemies
 		const auto &visibility = meeple->visibility()->ghost_object();
 		int count = visibility->getNumOverlappingObjects();
@@ -1385,6 +1405,38 @@ void Campaign::check_meeple_visibility()
 		}
 	}
 
-	// make player always visible
-	meeple_controller.player->visible = true;
+	// make player always visible unless stationed
+	if (meeple_controller.player->behavior_state != MeepleBehavior::STATIONED) {
+		meeple_controller.player->visible = true;
+	}
+}
+	
+// stations army entity in a town
+void Campaign::station_meeple(Meeple *meeple, Town *town)
+{
+	// remove trigger
+	auto trigger = meeple->trigger();
+	physics.remove_object(trigger->ghost_object());
+
+	// make invisible
+	meeple->visible = false;
+	
+	// teleport to town center
+	meeple->teleport(town->map_position());
+
+	// set behavior state
+	meeple->behavior_state = MeepleBehavior::STATIONED;
+}
+
+void Campaign::unstation_meeple(Meeple *meeple)
+{
+	// re-add trigger
+	int meeple_mask = COLLISION_GROUP_INTERACTION | COLLISION_GROUP_VISIBILITY | COLLISION_GROUP_RAY;
+	auto trigger = meeple->trigger();
+	physics.add_object(trigger->ghost_object(), COLLISION_GROUP_INTERACTION, meeple_mask);
+
+	meeple->visible = true;
+
+	// set behavior state
+	meeple->behavior_state = MeepleBehavior::PATROL;
 }

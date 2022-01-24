@@ -44,7 +44,8 @@ enum class MeepleControlType : uint8_t {
 enum class MeepleBehavior : uint8_t {
 	PATROL,
 	EVADE,
-	ATTACK
+	ATTACK,
+	STATIONED
 };
 
 // moves on the campaign map
@@ -78,7 +79,6 @@ public:
 public:
 	const fysx::TriggerSphere* trigger() const;
 	const fysx::TriggerSphere* visibility() const;
-	//glm::vec2 map_position() const;
 	PathState path_state() const;
 public:
 	// TODO remove this and create seperate save record from entity

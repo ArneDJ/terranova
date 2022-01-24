@@ -32,13 +32,6 @@ Settlement::Settlement()
 	trigger->ghost_object()->setUserPointer(this);
 }
 
-/*
-glm::vec2 Settlement::map_position() const
-{
-	return glm::vec2(transform.position.x, transform.position.z);
-}
-*/
-
 void Settlement::set_position(const glm::vec3 &position)
 {
 	transform.position = position;
