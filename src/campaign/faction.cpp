@@ -151,6 +151,7 @@ uint32_t FactionController::find_closest_town_target(const Atlas &atlas, Faction
 {
 	const auto &cells = atlas.graph().cells;	
 	const auto &tiles = atlas.tiles();	
+	const auto &borders = atlas.borders();	
 
 	std::unordered_map<uint32_t, bool> visited;
 	visited[origin_tile] = true;
@@ -161,23 +162,30 @@ uint32_t FactionController::find_closest_town_target(const Atlas &atlas, Faction
 	while (!nodes.empty()) {
 		auto node = nodes.front();
 		nodes.pop();
-		for (const auto &cell : cells[node].neighbors) {
-			const Tile *neighbor = &tiles[cell->index];
-			// is it a land tile and has it not been visited yet?
-			if (walkable_tile(neighbor) && !visited[neighbor->index]) {
-				visited[neighbor->index] = true;
-				auto occupier = tile_owners[neighbor->index];
-				// is the tile unoccupied?
-				if (occupier == 0) {
-					// if it is a desirable tile then we found what we were looking for
-					if (m_desirable_tiles[neighbor->index]) {
-						return neighbor->index;
-					} else {
+		//for (const auto &cell : cells[node].neighbors) {
+		const auto &cell = cells[node];
+		for (const auto &edge : cell.edges) {
+			const auto &border = borders[edge->index];
+			// if no river is between them
+			if (!(border.flags & BORDER_FLAG_RIVER) && !(border.flags & BORDER_FLAG_FRONTIER)) {
+				auto neighbor_index = edge->left_cell->index == node ? edge->right_cell->index : edge->left_cell->index;
+				const Tile *neighbor = &tiles[neighbor_index];
+				// is it a land tile and has it not been visited yet?
+				if (walkable_tile(neighbor) && !visited[neighbor->index]) {
+					visited[neighbor->index] = true;
+					auto occupier = tile_owners[neighbor->index];
+					// is the tile unoccupied?
+					if (occupier == 0) {
+						// if it is a desirable tile then we found what we were looking for
+						if (m_desirable_tiles[neighbor->index]) {
+							return neighbor->index;
+						} else {
+							nodes.push(neighbor->index);
+						}
+					} else if (occupier == faction->id()) {
+						// occupied by this faction then simply add to queue
 						nodes.push(neighbor->index);
 					}
-				} else if (occupier == faction->id()) {
-					// occupied by this faction then simply add to queue
-					nodes.push(neighbor->index);
 				}
 			}
 		}

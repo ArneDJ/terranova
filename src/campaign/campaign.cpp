@@ -305,7 +305,7 @@ void Campaign::update(float delta)
 	
 	update_camera(delta);
 
-	//delta *= 4.f;
+	delta *= 8.f;
 
 	// accumulate time for game tick if not paused
 	if (state == CampaignState::RUNNING) {
