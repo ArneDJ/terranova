@@ -134,6 +134,7 @@ public:
 	void spawn_factions();
 	void update_faction_taxes();
 	void update_factions();
+	void repaint_fiefdom_tiles(const Fiefdom *fiefdom);
 private:
 	float vertical_offset(const glm::vec2 &position);
 	BoardMarker marker_data(const glm::vec2 &position, uint32_t target_id, uint8_t target_type);
