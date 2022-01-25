@@ -6,6 +6,7 @@
 #include "meeple.h"
 #include "settlement.h"
 #include "faction.h"
+#include "prompt.h"
 
 enum class CampaignState {
 	RUNNING,
@@ -64,6 +65,7 @@ public:
 	Blueprint wall_blueprint;
 public: // indicators
 	BoardMarker marker = {};
+	TownPrompt town_prompt = {};
 public:
 	util::IdGenerator id_generator;
 	util::Camera camera;

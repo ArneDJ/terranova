@@ -241,6 +241,7 @@ void Campaign::prepare()
 		for (const auto &tile : fiefdom->tiles()) {
 			board->paint_tile(tile, color, 1.f);
 			// draw the political borders on the map
+			// TODO put in function
 			const auto &cell = cells[tile];
 			for (const auto &edge : cell.edges) {
 				// find neighbor tile
@@ -273,6 +274,9 @@ void Campaign::prepare()
 	state = CampaignState::PAUSED;
 	// marker is not present at start
 	board->hide_marker();
+	
+	town_prompt.choice = TownPromptChoice::UNDECIDED;
+	town_prompt.active = false;
 }
 
 // clears all the campaign data
@@ -299,6 +303,38 @@ void Campaign::update(float delta)
 		if (state == CampaignState::RUNNING) {
 			state = CampaignState::PAUSED;
 		} else if (state == CampaignState::PAUSED) {
+			state = CampaignState::RUNNING;
+		}
+	}
+
+	// handle town prompt
+	if (town_prompt.active) {
+		state = CampaignState::PAUSED;
+
+		bool choice_made = false;
+			
+		if (town_prompt.choice == TownPromptChoice::VISIT) {
+			choice_made = true;
+			auto search = settlement_controller.towns.find(meeple_controller.player->target_id);
+			if (search != settlement_controller.towns.end()) {
+				const auto &town = search->second;
+				station_meeple(meeple_controller.player, town.get());
+				meeple_controller.player->clear_target();
+			}
+		} else if (town_prompt.choice == TownPromptChoice::BESIEGE) {
+			choice_made = true;
+			auto search = settlement_controller.towns.find(meeple_controller.player->target_id);
+			if (search != settlement_controller.towns.end()) {
+				const auto &town = search->second;
+				transfer_town(town.get(), meeple_controller.player->faction_id);
+				station_meeple(meeple_controller.player, town.get());
+				meeple_controller.player->clear_target();
+			}
+		}
+
+		if (choice_made) {
+			town_prompt.choice = TownPromptChoice::UNDECIDED;
+			town_prompt.active = false;
 			state = CampaignState::RUNNING;
 		}
 	}
@@ -654,7 +690,7 @@ uint32_t Campaign::spawn_town(const Tile *tile, Faction *faction)
 		faction_controller.tile_owners[tile->index] = faction->id();
 
 		// add town to faction
-		faction->towns.push_back(id);
+		faction->add_town(id);
 
 		return id;
 	}
@@ -739,6 +775,7 @@ void Campaign::spawn_fiefdom(Town *town)
 	for (const auto &tile : fiefdom->tiles()) {
 		board->paint_tile(tile, color, 1.f);
 		// draw the political borders on the map
+		// TODO put in function
 		const auto &cell = cells[tile];
 		for (const auto &edge : cell.edges) {
 			// find neighbor tile
@@ -831,7 +868,7 @@ void Campaign::raze_town(Town *town)
 	const auto &faction = faction_controller.factions[town->faction];
 
 	// remove town from faction list
-	faction->towns.remove(town->id);
+	faction->remove_town(town->id);
 
 	// if town is faction captial find new capital
 	if (town->id == faction->capital_id) {
@@ -944,7 +981,6 @@ void Campaign::update_meeple_target(Meeple *meeple)
 			float distance = glm::distance(meeple->map_position(), town->map_position());
 			if (distance < 1.F) {
 				reached_target = true;
-				meeple->clear_target();
 				meeple->behavior_state = MeepleBehavior::PATROL;
 				// add town event
 				if (meeple->id == player_data.meeple_id) {
@@ -952,11 +988,15 @@ void Campaign::update_meeple_target(Meeple *meeple)
 					battle_data.town_size = town->size;
 					battle_data.walled = town->walled;
 					//state = CampaignState::BATTLE_REQUEST;
-					station_meeple(meeple, town.get());
+					//station_meeple(meeple, town.get());
+					// add town prompt
+					town_prompt.active = true;
+					town_prompt.choice = TownPromptChoice::UNDECIDED;
 				} else {
 					auto &fiefdom = settlement_controller.fiefdoms[town->fiefdom];
 					raze_town(town.get());
 					wipe_fiefdom(fiefdom.get());
+					meeple->clear_target();
 				}
 				//ConsoleManager::print("town action happens");
 			}
@@ -1035,6 +1075,18 @@ void Campaign::update_debug_menu()
 	if (state == CampaignState::PAUSED) {
 		ImGui::Begin("Game is paused");
 		ImGui::SetWindowSize(ImVec2(150, 100));
+		ImGui::End();
+	}
+
+	if (town_prompt.active) {
+		ImGui::Begin("Town prompt");
+		ImGui::SetWindowSize(ImVec2(300, 200));
+		if (ImGui::Button("visit")) {
+			town_prompt.choice = TownPromptChoice::VISIT;
+		}
+		if (ImGui::Button("besiege")) {
+			town_prompt.choice = TownPromptChoice::BESIEGE;
+		}
 		ImGui::End();
 	}
 
@@ -1132,19 +1184,69 @@ void Campaign::set_player_construction(const glm::vec3 &ray)
 
 void Campaign::transfer_town(Town *town, uint32_t faction)
 {
+	// town is already part of this faction so early exit
+	if (town->faction == faction) {
+		return;
+	}
+
+	// remove town from previous faction
+	auto &prev_faction = faction_controller.factions[town->faction];
+	prev_faction->remove_town(town->id);
+	
+	auto &cur_faction = faction_controller.factions[faction];
+
 	auto &fiefdom = settlement_controller.fiefdoms[town->fiefdom];
 	fiefdom->set_faction(faction);
 
-	// change fiefdom tiles faction
-	glm::vec3 color = faction_controller.factions[faction]->color();
-	for (const auto &tile : fiefdom->tiles()) {
-		faction_controller.tile_owners[tile] = faction;
-		board->paint_tile(tile, color, 1.f);
-	}
+	// add town to faction
+	cur_faction->add_town(town->id);
 
 	// transfer capital
 	town->faction = faction;
+	
+	glm::vec3 color = faction_controller.factions[faction]->color();
+
 	town->label->text_color = color;
+
+	// change fiefdom tiles faction
+	const auto &atlas = board->atlas();	
+	const auto &graph = atlas.graph();	
+	const auto &tiles = atlas.tiles();	
+	const auto &borders = atlas.borders();	
+	const auto &cells = graph.cells;	
+
+	for (const auto &tile : fiefdom->tiles()) {
+		faction_controller.tile_owners[tile] = faction;
+	}
+	// TODO put in function
+	// first wipe borders between same factions
+	for (const auto &tile : fiefdom->tiles()) {
+		// draw the political borders on the map
+		const auto &cell = cells[tile];
+		for (const auto &edge : cell.edges) {
+			// find neighbor tile
+			auto neighbor_index = edge->left_cell->index == tile ? edge->right_cell->index : edge->left_cell->index;
+			const Tile *neighbor = &tiles[neighbor_index];
+			if (faction_controller.tile_owners[neighbor->index] == fiefdom->faction()) {
+				board->paint_border(edge->index, 0);
+			}
+		}
+	}
+
+	// add tile paint jobs
+	for (const auto &tile : fiefdom->tiles()) {
+		board->paint_tile(tile, color, 1.f);
+		// draw the political borders on the map
+		const auto &cell = cells[tile];
+		for (const auto &edge : cell.edges) {
+			// find neighbor tile
+			auto neighbor_index = edge->left_cell->index == tile ? edge->right_cell->index : edge->left_cell->index;
+			const Tile *neighbor = &tiles[neighbor_index];
+			if (faction_controller.tile_owners[neighbor->index] != fiefdom->faction()) {
+				board->paint_border(edge->index, 255);
+			}
+		}
+	}
 }
 	
 // only used in cheat mode

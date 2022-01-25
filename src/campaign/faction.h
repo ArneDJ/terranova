@@ -14,6 +14,8 @@ public:
 	void set_id(uint32_t id);
 public:
 	void add_gold(int amount);
+	void add_town(uint32_t town);
+	void remove_town(uint32_t town);
 public:
 	template <class Archive>
 	void serialize(Archive &archive)

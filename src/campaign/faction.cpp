@@ -38,6 +38,18 @@ void Faction::add_gold(int amount)
 	m_gold += amount;
 }
 
+void Faction::add_town(uint32_t town)
+{
+	towns.push_back(town);
+
+	towns.unique();
+}
+
+void Faction::remove_town(uint32_t town)
+{
+	towns.remove(town);
+}
+
 void FactionController::clear()
 {
 	tile_owners.clear();
