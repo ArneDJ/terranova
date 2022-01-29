@@ -1426,16 +1426,28 @@ void Campaign::update_meeple_path(Meeple *meeple)
 				meeple->behavior_state = MeepleBehavior::PATROL;
 				return;
 			}
-			std::list<glm::vec2> nodes;
-			glm::vec2 end_location = target->map_position();
-			if (meeple->behavior_state == MeepleBehavior::EVADE) {
-				end_location = meeple->map_position() + (meeple->map_position() - target->map_position());
-			}
-			board->find_path(meeple->map_position(), end_location, nodes);
-			if (nodes.size()) {
-				meeple->set_path(nodes);
-			}
+			set_path_to_entity(meeple, target.get());
 		}
+	} else if (entity_type == CampaignEntityType::TOWN) {
+		auto search = settlement_controller.towns.find(meeple->target_id);
+		if (search != settlement_controller.towns.end()) {
+			const auto &target = search->second;
+			set_path_to_entity(meeple, target.get());
+		}
+	}
+}
+
+// finds the path to an entity
+void Campaign::set_path_to_entity(Meeple *meeple, const CampaignEntity *entity)
+{
+	std::list<glm::vec2> nodes;
+	glm::vec2 end_location = entity->map_position();
+	if (meeple->behavior_state == MeepleBehavior::EVADE) {
+		end_location = meeple->map_position() + (meeple->map_position() - entity->map_position());
+	}
+	board->find_path(meeple->map_position(), end_location, nodes);
+	if (nodes.size()) {
+		meeple->set_path(nodes);
 	}
 }
 	

@@ -135,6 +135,7 @@ private:
 	void update_meeple_target(Meeple *meeple);
 	void spawn_barbarians();
 	void update_meeple_path(Meeple *meeple);
+	void set_path_to_entity(Meeple *meeple, const CampaignEntity *entity);
 	void update_meeple_paths();
 	void update_meeple_behavior(Meeple *meeple);
 	void check_meeple_visibility();
