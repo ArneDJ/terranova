@@ -42,7 +42,7 @@ void BoardModel::paint_political_triangle(const glm::vec2 &a, const glm::vec2 &b
 
 void BoardModel::paint_political_line(const glm::vec2 &a, const glm::vec2 &b, uint8_t color)
 {
-	m_political_boundaries.draw_thick_line_relative(a, b, 3, util::CHANNEL_RED, color);
+	m_political_boundaries.draw_thick_line_relative(a, b, 2, util::CHANNEL_RED, color);
 }
 
 BoardModel::BoardModel(std::shared_ptr<gfx::Shader> shader, std::shared_ptr<gfx::Shader> blur_shader, const util::Image<float> &heightmap, const util::Image<float> &normalmap)

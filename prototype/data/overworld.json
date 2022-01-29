@@ -1,12 +1,14 @@
 {
     "value0": {
-        "marker": "data/media/models/primitives/cone.glb",
-        "town": "data/media/models/miniature/village.glb",
-        "town_wall": "data/media/models/miniature/wall_small.glb",
         "meeple": "data/media/models/miniature/human.glb",
         "meeple_skeleton": "data/media/skeletons/miniature/human.ozz",
         "meeple_anim_idle": "data/media/animations/miniature/idle.ozz",
         "meeple_anim_run": "data/media/animations/miniature/run.ozz",
+	"towns": [
+		{ "size": 1, "base_model": "data/media/models/miniature/town_small.glb", "wall_model": "data/media/models/miniature/wall_small.glb" },
+		{ "size": 2, "base_model": "data/media/models/miniature/town_medium.glb", "wall_model": "data/media/models/miniature/wall_medium.glb" },
+		{ "size": 3, "base_model": "data/media/models/miniature/town_large.glb", "wall_model": "data/media/models/miniature/wall_large.glb" }
+	],
 	"materials": [
 		{ "shader_name": "BUMP", "texture_path": "data/media/textures/board/bump.dds" },
 		{ "shader_name": "ROCK", "texture_path": "data/media/textures/board/rock.dds" },

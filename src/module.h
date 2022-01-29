@@ -147,22 +147,32 @@ struct OverworldMaterial {
 	}
 };
 
+struct OverworldTownModule {
+	uint8_t size = 0;
+	std::string base_model = {};
+	std::string wall_model = {};
+
+	template <class Archive>
+	void serialize(Archive &archive)
+	{
+		archive(CEREAL_NVP(size), CEREAL_NVP(base_model), CEREAL_NVP(wall_model));
+	}
+};
+
 struct BoardModule {
-	std::string marker = {};
-	std::string town = {};
-	std::string town_wall = {};
 	std::string meeple = {};
 	std::string meeple_skeleton = {};
 	std::string meeple_anim_idle = {};
 	std::string meeple_anim_run = {};
+
+	std::vector<OverworldTownModule> towns;
 
 	std::vector<OverworldMaterial> materials;
 
 	template <class Archive>
 	void serialize(Archive &archive)
 	{
-		archive(CEREAL_NVP(marker), CEREAL_NVP(town), CEREAL_NVP(town_wall),
-			CEREAL_NVP(meeple), CEREAL_NVP(meeple_skeleton), CEREAL_NVP(meeple_anim_idle), CEREAL_NVP(meeple_anim_run), CEREAL_NVP(materials)
+		archive(CEREAL_NVP(meeple), CEREAL_NVP(meeple_skeleton), CEREAL_NVP(meeple_anim_idle), CEREAL_NVP(meeple_anim_run), CEREAL_NVP(towns),  CEREAL_NVP(materials)
 		);
 	}
 };

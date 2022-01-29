@@ -3,6 +3,7 @@ enum class TownPromptChoice {
 	UNDECIDED,
 	BESIEGE,
 	VISIT,
+	REST,
 	TRANSFER,
 	CANCEL
 };

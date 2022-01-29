@@ -47,6 +47,11 @@ struct Blueprint {
 	const gfx::Model *model = nullptr;
 };
 
+struct TownBlueprint {
+	const gfx::Model *base_model = nullptr;
+	const gfx::Model *wall_model = nullptr;
+};
+
 struct MeepleBlueprint {
 	const gfx::Model *model = nullptr;
 	std::unique_ptr<util::AnimationSet> anim_set;
@@ -61,8 +66,7 @@ public:
 	int seed;
 public:
 	MeepleBlueprint army_blueprint;
-	Blueprint town_blueprint;
-	Blueprint wall_blueprint;
+	std::unordered_map<uint64_t, TownBlueprint> town_blueprints;
 public: // indicators
 	BoardMarker marker = {};
 	TownPrompt town_prompt = {};
@@ -115,8 +119,11 @@ private:
 	void place_town(Town *town);
 	void raze_town(Town *town);
 	void transfer_town(Town *town, uint32_t faction);
+	void update_town_tick(Town *town, uint64_t ticks);
+private:
 	void spawn_fiefdom(Town *town);
 	void wipe_fiefdom(Fiefdom *fiefdom);
+private:
 	void set_player_movement(const glm::vec3 &ray);
 	void set_player_construction(const glm::vec3 &ray);
 private:

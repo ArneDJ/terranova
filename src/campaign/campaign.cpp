@@ -89,9 +89,16 @@ void Campaign::init(const gfx::ShaderGroup *shaders)
 // load campaign bueprints from the module
 void Campaign::load_blueprints(const Module &module)
 {
-	town_blueprint.model = MediaManager::load_model(module.board_module.town);
-	wall_blueprint.model = MediaManager::load_model(module.board_module.town_wall);
-	con_marker.model = MediaManager::load_model(module.board_module.town);
+	// town data
+	for (const auto &town : module.board_module.towns) {
+		TownBlueprint blueprint = {
+			MediaManager::load_model(town.base_model),
+			MediaManager::load_model(town.wall_model)
+		};
+		town_blueprints[town.size] = blueprint;
+	}
+
+	con_marker.model = town_blueprints[1].base_model;
 
 	army_blueprint.model = MediaManager::load_model(module.board_module.meeple);
 	// load skeletons and animations for miniatures
@@ -312,12 +319,22 @@ void Campaign::update(float delta)
 
 		bool choice_made = false;
 			
-		if (town_prompt.choice == TownPromptChoice::VISIT) {
+		if (town_prompt.choice == TownPromptChoice::REST) {
 			choice_made = true;
 			auto search = settlement_controller.towns.find(meeple_controller.player->target_id);
 			if (search != settlement_controller.towns.end()) {
 				const auto &town = search->second;
 				station_meeple(meeple_controller.player, town.get());
+				meeple_controller.player->clear_target();
+			}
+		} else if (town_prompt.choice == TownPromptChoice::VISIT) {
+			choice_made = true;
+			auto search = settlement_controller.towns.find(meeple_controller.player->target_id);
+			if (search != settlement_controller.towns.end()) {
+				const auto &town = search->second;
+				battle_data.tile = town->tile;
+				battle_data.town_size = town->size;
+				battle_data.walled = town->walled;
 				meeple_controller.player->clear_target();
 			}
 		} else if (town_prompt.choice == TownPromptChoice::BESIEGE) {
@@ -332,9 +349,13 @@ void Campaign::update(float delta)
 		}
 
 		if (choice_made) {
+			if (town_prompt.choice == TownPromptChoice::VISIT) {
+				state = CampaignState::BATTLE_REQUEST;
+			} else {
+				state = CampaignState::RUNNING;
+			}
 			town_prompt.choice = TownPromptChoice::UNDECIDED;
 			town_prompt.active = false;
-			state = CampaignState::RUNNING;
 		}
 	}
 	
@@ -356,6 +377,11 @@ void Campaign::update(float delta)
 				update_meeple_behavior(meeple.get());
 			}
 			update_meeple_paths();
+			// update town gameplay
+			for (auto &mapping : settlement_controller.towns) {
+				auto &town = mapping.second;
+				update_town_tick(town.get(), integral);
+			}
 		}
 	}
 
@@ -658,10 +684,6 @@ uint32_t Campaign::spawn_town(const Tile *tile, Faction *faction)
 
 	NameGen::Generator namegen(MIDDLE_EARTH);
 
-	std::random_device rd;
-	std::mt19937 gen(rd());
-	std::uniform_int_distribution<> distrib(15, 30);
-
 	auto search = faction_controller.tile_owners.find(tile->index);
 	if (search == faction_controller.tile_owners.end() || search->second == 0) {
 		std::unique_ptr<Town> town = std::make_unique<Town>();
@@ -670,19 +692,13 @@ uint32_t Campaign::spawn_town(const Tile *tile, Faction *faction)
 		town->faction = faction->id();
 		town->tile = tile->index;
 
-		if (tile->flags & TILE_FLAG_RIVER) {
-			town->size = 3;
-		} else {
-			town->size = 1;
-		}
-
-		town->walled = (town->size > 1);
+		town->size = 1;
+		town->walled = (tile->flags & TILE_FLAG_RIVER);
+		town->troop_count = 10;
 
 		// give town a random name
 		town->name = namegen.toString();
 
-		// add random amount of garrison troops
-		town->troop_count = distrib(gen);
 
 		settlement_controller.towns[id] = std::move(town);
 
@@ -802,8 +818,9 @@ void Campaign::place_town(Town *town)
 
 	town->set_position(glm::vec3(center.x, offset, center.y));
 
-	town->model = town_blueprint.model; // TODO needs to be done at spawn
-	town->wall_model = wall_blueprint.model; // TODO needs to be done at spawn
+	const auto &blueprint = town_blueprints[town->size];
+	town->model = blueprint.base_model;
+	town->wall_model = blueprint.wall_model;
 
 	const int mask = COLLISION_GROUP_INTERACTION | COLLISION_GROUP_VISIBILITY | COLLISION_GROUP_RAY;
 
@@ -954,11 +971,6 @@ void Campaign::update_meeple_target(Meeple *meeple)
 				meeple->behavior_state = MeepleBehavior::PATROL;
 				// add town event
 				if (meeple->id == player_data.meeple_id) {
-					battle_data.tile = town->tile;
-					battle_data.town_size = town->size;
-					battle_data.walled = town->walled;
-					//state = CampaignState::BATTLE_REQUEST;
-					//station_meeple(meeple, town.get());
 					// add town prompt
 					town_prompt.active = true;
 					town_prompt.choice = TownPromptChoice::UNDECIDED;
@@ -1053,6 +1065,9 @@ void Campaign::update_debug_menu()
 		ImGui::SetWindowSize(ImVec2(300, 200));
 		if (ImGui::Button("visit")) {
 			town_prompt.choice = TownPromptChoice::VISIT;
+		}
+		if (ImGui::Button("rest")) {
+			town_prompt.choice = TownPromptChoice::REST;
 		}
 		if (ImGui::Button("besiege")) {
 			town_prompt.choice = TownPromptChoice::BESIEGE;
@@ -1190,6 +1205,45 @@ void Campaign::transfer_town(Town *town, uint32_t faction)
 	}
 
 	repaint_fiefdom_tiles(fiefdom.get());
+}
+	
+// updates town gameplay data by the amount of ticks
+void Campaign::update_town_tick(Town *town, uint64_t ticks)
+{
+	const auto prev_ticks = town->ticks;
+	// age town based on ticks
+	town->ticks += ticks;
+
+	bool size_changed = false;
+
+	// grow in size
+	if (prev_ticks < 60 && town->ticks >= 60) {
+		size_changed = true;
+		town->size = 2;
+		town->troop_count = 20;
+	}
+	if (prev_ticks < 300 && town->ticks >= 300) {
+		size_changed = true;
+		town->size = 3;
+		town->troop_count = 30;
+	}
+
+	if (size_changed) {
+		const auto &blueprint = town_blueprints[town->size];
+		town->model = blueprint.base_model;
+		town->wall_model = blueprint.wall_model;
+		
+		town->label->format(town->name + " " + std::to_string(town->troop_count), labeler->font);
+	}
+
+	float scale = 0.25f;
+	if (town->size > 2) {
+		scale = 0.5f;
+	} else if (town->size > 1) {
+		scale = 0.4f;
+	}
+
+	town->label->scale = scale;
 }
 	
 // only used in cheat mode
@@ -1334,7 +1388,7 @@ void Campaign::spawn_barbarians()
 
 	// generate random points with poisson distrib
 	PoissonGenerator::DefaultPRNG PRNG(distrib(gen));
-	const auto positions = PoissonGenerator::generatePoissonPoints(64, PRNG, false);
+	const auto positions = PoissonGenerator::generatePoissonPoints(48, PRNG, false);
 
 	std::vector<glm::vec2> points;
 
