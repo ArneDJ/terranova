@@ -50,6 +50,7 @@ struct Blueprint {
 struct TownBlueprint {
 	const gfx::Model *base_model = nullptr;
 	const gfx::Model *wall_model = nullptr;
+	float label_scale = 1.f;
 };
 
 struct MeepleBlueprint {

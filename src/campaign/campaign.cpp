@@ -93,7 +93,8 @@ void Campaign::load_blueprints(const Module &module)
 	for (const auto &town : module.board_module.towns) {
 		TownBlueprint blueprint = {
 			MediaManager::load_model(town.base_model),
-			MediaManager::load_model(town.wall_model)
+			MediaManager::load_model(town.wall_model),
+			town.label_scale
 		};
 		town_blueprints[town.size] = blueprint;
 	}
@@ -360,6 +361,8 @@ void Campaign::update(float delta)
 	}
 	
 	update_camera(delta);
+
+	//delta *= 8.f;
 
 	// accumulate time for game tick if not paused
 	if (state == CampaignState::RUNNING) {
@@ -834,14 +837,7 @@ void Campaign::place_town(Town *town)
 	town->label->format(town->name + " " + std::to_string(town->troop_count), labeler->font);
 	town->label->text_color = color;
 
-	float scale = 0.25f;
-	if (town->size > 2) {
-		scale = 0.5f;
-	} else if (town->size > 1) {
-		scale = 0.4f;
-	}
-
-	town->label->scale = scale;
+	town->label->scale = blueprint.label_scale;
 }
 	
 //  remove town entity from the campaign map
@@ -1232,18 +1228,11 @@ void Campaign::update_town_tick(Town *town, uint64_t ticks)
 		const auto &blueprint = town_blueprints[town->size];
 		town->model = blueprint.base_model;
 		town->wall_model = blueprint.wall_model;
+	
+		town->label->scale = blueprint.label_scale;
 		
 		town->label->format(town->name + " " + std::to_string(town->troop_count), labeler->font);
 	}
-
-	float scale = 0.25f;
-	if (town->size > 2) {
-		scale = 0.5f;
-	} else if (town->size > 1) {
-		scale = 0.4f;
-	}
-
-	town->label->scale = scale;
 }
 	
 // only used in cheat mode
@@ -1388,7 +1377,7 @@ void Campaign::spawn_barbarians()
 
 	// generate random points with poisson distrib
 	PoissonGenerator::DefaultPRNG PRNG(distrib(gen));
-	const auto positions = PoissonGenerator::generatePoissonPoints(48, PRNG, false);
+	const auto positions = PoissonGenerator::generatePoissonPoints(32, PRNG, false);
 
 	std::vector<glm::vec2> points;
 

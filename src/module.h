@@ -149,13 +149,14 @@ struct OverworldMaterial {
 
 struct OverworldTownModule {
 	uint8_t size = 0;
+	float label_scale = 1.f;
 	std::string base_model = {};
 	std::string wall_model = {};
 
 	template <class Archive>
 	void serialize(Archive &archive)
 	{
-		archive(CEREAL_NVP(size), CEREAL_NVP(base_model), CEREAL_NVP(wall_model));
+		archive(CEREAL_NVP(size), CEREAL_NVP(label_scale), CEREAL_NVP(base_model), CEREAL_NVP(wall_model));
 	}
 };
 

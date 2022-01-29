@@ -18,6 +18,7 @@
 #include "../geometry/voronoi.h"
 #include "../geometry/transform.h"
 #include "../util/image.h"
+#include "../util/noise.h"
 
 #include "atlas.h"
 	
@@ -232,27 +233,19 @@ void Atlas::generate(int seed, const geom::Rectangle &bounds, const AtlasParamet
 	fastnoise.SetPerturbFrequency(parameters.perturb_frequency);
 	fastnoise.SetGradientPerturbAmp(parameters.perturb_amp);
 
-	/*
-	for (int i = 0; i < m_heightmap.width(); i++) {
-		for (int j = 0; j < m_heightmap.height(); j++) {
-			float x = i; float y = j;
-			fastnoise.GradientPerturbFractal(x, y);
-			float height = 0.5f * (fastnoise.GetNoise(x, y) + 1.f);
-			m_heightmap.plot(i, j, util::CHANNEL_RED, height);
-		}
-	}
-	*/
+	// fill image with noise
+	const glm::vec2 image_scale = {
+		scale.x / float(m_heightmap.width()),
+		scale.y / float(m_heightmap.height())
+	};
+
+	util::noise_image(m_heightmap, &fastnoise, image_scale, util::CHANNEL_RED);
 
 	for (auto &tile : m_tiles) {
 		glm::vec2 center = m_graph.cells[tile.index].center;
-		//float x = center.x / bounds.max.x; 
-		//float y = center.y / bounds.max.y;
-		//tile.height = 255 * m_heightmap.sample_relative(x, y, util::CHANNEL_RED);
-		float x = center.x; float y = center.y;
-		fastnoise.GradientPerturbFractal(x, y);
-		float height = 0.5f * (fastnoise.GetNoise(x, y) + 1.f);
-		tile.height = 255 * height;
-
+		float x = center.x / scale.x; 
+		float y = center.y / scale.y;
+		tile.height = 255 * m_heightmap.sample_relative(x, y, util::CHANNEL_RED);
 		if (tile.height > parameters.mountains) {
 			tile.relief = ReliefType::MOUNTAINS;
 		} else if (tile.height > parameters.hills) {
@@ -1197,7 +1190,7 @@ void Atlas::form_base_relief()
 			float mix = score / float(score_bounds.max);
 			amp = glm::mix(0.8f, 1.f, mix);
 		} else if (tile.relief == ReliefType::SEABED) {
-			amp = 0.4f;
+			amp = 0.3f;
 		}
 
 		// draw the triangles
@@ -1208,7 +1201,15 @@ void Atlas::form_base_relief()
 			const auto &right_vertex = edge->right_vertex;
 			glm::vec2 a = left_vertex->position / m_bounds.max;
 			glm::vec2 b = right_vertex->position / m_bounds.max;
-			m_heightmap.draw_triangle_relative(center, a, b, util::CHANNEL_RED, amp * (tile.height / 255.f));
+			//m_heightmap.draw_triangle_relative(center, a, b, util::CHANNEL_RED, amp * (tile.height / 255.f));
+			std::vector<glm::ivec2> pixels;
+			m_heightmap.find_triangle_pixels_relative(center, a, b, pixels);
+			for (const auto &pixel : pixels) {
+				float height = m_heightmap.sample(pixel.x, pixel.y, util::CHANNEL_RED);
+				height = glm::mix(height, amp * (tile.height / 255.f), 0.7f);
+				//height *= amp;
+				m_heightmap.plot(pixel.x, pixel.y, util::CHANNEL_RED, height);
+			}
 		}
 	}
 	
@@ -1274,7 +1275,6 @@ void Atlas::river_cut_relief()
 			const auto &right_vertex = edge.right_vertex;
 			glm::vec2 a = left_vertex->position / m_bounds.max;
 			glm::vec2 b = right_vertex->position / m_bounds.max;
-			//m_mask.draw_line_relative(a, b, util::CHANNEL_RED, 255);
 			m_mask.draw_thick_line_relative(a, b, 1, util::CHANNEL_RED, 255);
 		}
 	}

@@ -5,9 +5,9 @@
         "meeple_anim_idle": "data/media/animations/miniature/idle.ozz",
         "meeple_anim_run": "data/media/animations/miniature/run.ozz",
 	"towns": [
-		{ "size": 1, "base_model": "data/media/models/miniature/town_small.glb", "wall_model": "data/media/models/miniature/wall_small.glb" },
-		{ "size": 2, "base_model": "data/media/models/miniature/town_medium.glb", "wall_model": "data/media/models/miniature/wall_medium.glb" },
-		{ "size": 3, "base_model": "data/media/models/miniature/town_large.glb", "wall_model": "data/media/models/miniature/wall_large.glb" }
+		{ "size": 1, "label_scale": 0.25, "base_model": "data/media/models/miniature/town_small.glb", "wall_model": "data/media/models/miniature/wall_small.glb" },
+		{ "size": 2, "label_scale": 0.35, "base_model": "data/media/models/miniature/town_medium.glb", "wall_model": "data/media/models/miniature/wall_medium.glb" },
+		{ "size": 3, "label_scale": 0.5, "base_model": "data/media/models/miniature/town_large.glb", "wall_model": "data/media/models/miniature/wall_large.glb" }
 	],
 	"materials": [
 		{ "shader_name": "BUMP", "texture_path": "data/media/textures/board/bump.dds" },
