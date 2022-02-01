@@ -5,6 +5,7 @@
 #include "mold.h"
 #include "building.h"
 #include "creature.h"
+#include "crowd.h"
 
 struct BattleParameters {
 	int seed;
@@ -46,6 +47,7 @@ public:
 	std::vector<HitCapsule> creature_hitboxes;
 public:
 	util::Navigation navigation; // bots need to make use of this
+	std::unique_ptr<CrowdController> crowd;
 public:
 	void init(const gfx::ShaderGroup *shaders);
 public:

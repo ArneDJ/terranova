@@ -220,6 +220,8 @@ void Battle::prepare(const BattleParameters &params)
 	// create navigation
 	build_navigation();
 
+	crowd = std::make_unique<CrowdController>(navigation.navmesh());
+
 	// building add collision
 	for (const auto &building : building_entities) {
 		physics.add_body(building->body.get(), group, mask);
@@ -299,9 +301,35 @@ void Battle::update(float delta)
 	}
 	player->update_collision(physics.world(), delta);
 
+	// update bot navigation
+	crowd->update(delta);
+
 	auto world = physics.world();
 	for (auto &creature : creature_entities) {
+		// carrot on a stick
+		// the carrot is the navigation agent
+		// the creature will try to follow the navigation agent
+		int nav_agent = creature->nav_agent;
+		if (nav_agent > -1) {
+			// TODO get editable agent
+			glm::vec3 agent_pos = crowd->agent_position(nav_agent);
+			glm::vec3 creature_pos = creature->transform->position;
+			float dist = glm::distance(agent_pos, creature_pos);
+			if (dist > 5.f) {
+				auto target = crowd->agent_target(nav_agent);
+				crowd->teleport_agent(nav_agent, creature_pos);
+				crowd->retarget_agent(nav_agent, target.position, target.ref);
+			}
+			const float margin = 0.02f; // nav agent needs to be ahead of creature so it needs a higher speed
+			crowd->set_agent_speed(nav_agent, creature->bumper->speed + margin);
+
+			agent_pos = crowd->agent_position(nav_agent);
+			glm::vec3 agent_vel = crowd->agent_velocity(nav_agent);
+			creature->stick_to_agent(agent_pos, agent_vel);
+			creature->look_direction = agent_vel;
+		}
 		creature->update_collision(physics.world(), delta);
+		creature->set_leg_movement(true, false, false, false);
 	}
 
 	physics.update(delta);
@@ -386,9 +414,7 @@ void Battle::display()
 	terrain->display(camera);
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		
-	debugger->display_navmeshes();
-	
-	//debugger->display();
+	//debugger->display_navmeshes();
 }
 
 float Battle::vertical_offset(float x, float z)
@@ -493,6 +519,11 @@ void Battle::add_creatures()
 	physics.add_object(player->root_hitbox->ghost_object.get(), COLLISION_GROUP_HITBOX, COLLISION_GROUP_RAY | COLLISION_GROUP_WEAPON);
 	physics.add_object(player->left_fist->ghost_object.get(), COLLISION_GROUP_WEAPON, COLLISION_GROUP_RAY | COLLISION_GROUP_HITBOX);
 
+
+	//  TODO remove this
+	glm::vec3 map_center = { 1024.f, 0.f, 1024.f };
+	map_center.y = vertical_offset(map_center.x, map_center.z);
+
 	for (int i = 0; i < 16; i++) {
 		for (int j = 0; j < 4; j++) {
 			glm::vec3 position = { 800.f + (i+i), 64.f, 800.f + (j+j) };
@@ -504,6 +535,10 @@ void Battle::add_creatures()
 			creature->set_hitbox(creature_hitboxes);
 			physics.add_object(creature->bumper->ghost_object.get(), group, mask);
 			physics.add_object(creature->root_hitbox->ghost_object.get(), COLLISION_GROUP_HITBOX, COLLISION_GROUP_RAY | COLLISION_GROUP_WEAPON);
+
+			// add navigation bot
+			creature->nav_agent = crowd->add_agent(position, navigation.query());
+			crowd->retarget_agent(creature->nav_agent, map_center, navigation.query());
 			creature_entities.push_back(std::move(creature));
 		}
 	}

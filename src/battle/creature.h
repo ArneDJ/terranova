@@ -101,15 +101,19 @@ public: // maybe use flags instead of bools for this?
 	bool attacking = false;
 	bool running = false;
 	bool dead = false;
+public: // navigation stuff
+	int nav_agent = -1;
 public:
 	Creature();
 public:
 	void set_animation(util::AnimationSet *set);
 	void set_hitbox(const std::vector<HitCapsule> &capsules);
-public:
+public: // locomotion
 	void set_movement(const glm::vec3 &direction);
 	void set_leg_movement(bool forward, bool backward, bool left, bool right);
 	void teleport(const glm::vec3 &position);
+	void stick_to_agent(const glm::vec3 &agent_position, const glm::vec3 &agent_velocity);
+public:
 	void update_collision(const btDynamicsWorld *world, float delta);
 	void update_transform();
 	void update_animation(float delta);

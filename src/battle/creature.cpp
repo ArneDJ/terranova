@@ -337,3 +337,18 @@ void Creature::change_lower_body_animation(CreatureAnimation anim)
 		}
 	}
 }
+	
+void Creature::stick_to_agent(const glm::vec3 &agent_position, const glm::vec3 &agent_velocity)
+{
+	glm::vec2 current = { transform->position.x, transform->position.z };
+	glm::vec2 target = { agent_position.x, agent_position.z };
+
+	if (agent_velocity.x != 0.f || agent_velocity.z != 0.f) {
+		//glm::vec2 direction = { agent_velocity.x, agent_velocity.z };
+		bumper->walk_direction = glm::normalize(agent_velocity);
+	}
+
+	//bumper->walk_direction.x = agent_velocity.x;
+	//bumper->walk_direction.z = agent_velocity.z;
+	//m_bumper->set_velocity(m_velocity.x, m_velocity.z);
+}
