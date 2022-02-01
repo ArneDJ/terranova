@@ -45,6 +45,8 @@ public:
 	std::unique_ptr<util::AnimationSet> anim_set;
 	std::vector<HitCapsule> creature_hitboxes;
 public:
+	util::Navigation navigation; // bots need to make use of this
+public:
 	void init(const gfx::ShaderGroup *shaders);
 public:
 	void load_molds(const Module &module);
@@ -64,4 +66,6 @@ private:
 	void add_walls();
 	void add_creatures();
 	void place_fort_part(const carto::LandscapeObject &part);
+private:
+	void build_navigation();
 };

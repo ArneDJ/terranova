@@ -152,7 +152,9 @@ void FactionController::find_town_targets(const Atlas &atlas, int radius)
 		}
 	}
 
-	std::shuffle(town_targets.begin(), town_targets.end(), gen);
+	for (int i = 0; i < 5; i++) {
+		std::shuffle(town_targets.begin(), town_targets.end(), gen);
+	}
 }
 	
 // finds the closest desirable unoccupied town target for a faction to settle

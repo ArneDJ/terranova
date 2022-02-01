@@ -186,7 +186,7 @@ void Campaign::generate(int seedling)
 	}
 
 	// find ideal places to settle towns in our generated world
-	faction_controller.find_town_targets(atlas, 4);
+	faction_controller.find_town_targets(atlas, 5);
 
 	// spawn factions including the player's
 	spawn_factions();
@@ -719,7 +719,7 @@ uint32_t Campaign::spawn_town(const Tile *tile, Faction *faction)
 // spawns a new valid town entity
 void Campaign::spawn_fiefdom(Town *town)
 {
-	int radius = 4;
+	int radius = 5;
 
 	const auto faction = town->faction;
 
@@ -1373,7 +1373,7 @@ void Campaign::spawn_barbarians()
 	std::mt19937 gen(rd());
 	std::uniform_int_distribution<> distrib;
 	
-	std::uniform_int_distribution<> troop_size_distrib(10, 20);
+	std::uniform_int_distribution<> troop_size_distrib(5, 15);
 
 	// generate random points with poisson distrib
 	PoissonGenerator::DefaultPRNG PRNG(distrib(gen));

@@ -1,6 +1,7 @@
 
 class BuildingEntity {
 public:
+	const gfx::Model *model = nullptr;
 	std::unique_ptr<geom::Transform> transform;
 	std::unique_ptr<btMotionState> motionstate;
 	std::unique_ptr<btRigidBody> body;

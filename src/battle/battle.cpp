@@ -59,6 +59,10 @@ const geom::AABB SCENE_BOUNDS = {
 	{ 0.F, 0.F, 0.F },
 	{ 2048.F, 255.F, 2048.F }
 };
+const geom::Rectangle PLAYABLE_AREA = {
+	{ 512.F, 512.F },
+	{ 1536.F, 1536.F }
+};
   
 // TODO remove
 glm::vec3 creature_fly_direction(const glm::vec3 &view, bool forward, bool backward, bool right, bool left)
@@ -204,7 +208,7 @@ void Battle::prepare(const BattleParameters &params)
 	terrain->generate(distrib(gen));
 
 	landscaper.generate(parameters.seed, parameters.tile, parameters.town_size, parameters.walled, terrain->heightmap());
-	
+
 	int group = COLLISION_GROUP_LANDSCAPE;
 	int mask = COLLISION_GROUP_RAY | COLLISION_GROUP_BUMPER;
 	physics.add_object(terrain->height_field()->object(), group, mask);
@@ -212,6 +216,9 @@ void Battle::prepare(const BattleParameters &params)
 	add_houses();
 
 	add_walls();
+
+	// create navigation
+	build_navigation();
 
 	// building add collision
 	for (const auto &building : building_entities) {
@@ -225,6 +232,8 @@ void Battle::prepare(const BattleParameters &params)
 	SDL_SetRelativeMouseMode(SDL_TRUE);
 	
 	camera_mode = BattleCamMode::THIRD_PERSON;
+
+	debugger->add_navmesh(navigation.navmesh());
 }
 
 void Battle::clear()
@@ -376,6 +385,8 @@ void Battle::display()
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	terrain->display(camera);
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		
+	debugger->display_navmeshes();
 	
 	//debugger->display();
 }
@@ -420,6 +431,7 @@ void Battle::add_houses()
 				position.y = vertical_offset(transform.position.x, transform.position.y);
 				glm::quat rotation = glm::angleAxis(transform.angle, glm::vec3(0.f, 1.f, 0.f));
 				auto building = std::make_unique<BuildingEntity>(position, rotation, search->second->collision->shape.get());
+				building->model = search->second->model;
 
 				object->add_transform(building->transform.get());
 
@@ -453,6 +465,7 @@ void Battle::place_fort_part(const carto::LandscapeObject &part)
 			position.y = vertical_offset(transform.position.x, transform.position.y);
 			glm::quat rotation = glm::angleAxis(transform.angle, glm::vec3(0.f, 1.f, 0.f));
 			auto building = std::make_unique<BuildingEntity>(position, rotation, search->second->collision->shape.get());
+			building->model = search->second->model;
 
 			object->add_transform(building->transform.get());
 
@@ -557,4 +570,64 @@ void Battle::load_fort_mold(const FortificationModule &fort)
 	id = std::hash<std::string>()(fort.gate.id);
 	fort_molds[id] = std::make_unique<BuildingMold>(id, MediaManager::load_model(fort.gate.model));
 	landscaper.fortification.gate.mold_id = id;
+}
+
+void Battle::build_navigation()
+{
+	std::vector<float> vertices;
+	std::vector<int> indices;
+	int index = 0;
+
+	// navigation from heightmap
+	const auto &heightmap = terrain->heightmap();
+	const size_t nav_res = 512;
+	const glm::vec3 scale = SCENE_BOUNDS.max - SCENE_BOUNDS.min;
+	const glm::vec2 area_size = PLAYABLE_AREA.max - PLAYABLE_AREA.min;
+	for (int i = 0; i < nav_res; i++) {
+		for (int j = 0; j < nav_res; j++) {
+			glm::vec2 relative_position = { i / float(nav_res), j / float(nav_res) };
+			glm::vec2 real_position = (relative_position * area_size) + PLAYABLE_AREA.min;
+			glm::vec2 image_position = { real_position.x / scale.x, real_position.y / scale.z };
+			float height = heightmap.sample_relative(image_position.x, image_position.y, util::CHANNEL_RED);
+			vertices.push_back(real_position.x);
+			vertices.push_back(scale.y * height);
+			vertices.push_back(real_position.y);
+		}
+	}
+	for (int y = 0; y < nav_res - 1; y++) {
+		for (int x = 0; x < nav_res - 1; x++) {
+			int index = x + y * nav_res;
+
+			indices.push_back(index);
+			indices.push_back(index + nav_res);
+			indices.push_back(index + 1);
+
+			indices.push_back(index + 1);
+			indices.push_back(index + nav_res);
+			indices.push_back(index + 1 + nav_res);
+		}
+	}
+
+	// navigation from buildings and other static entities
+	for (const auto &building : building_entities) {
+		const auto &model = building->model;
+		glm::mat4 T = glm::translate(glm::mat4(1.f), building->transform->position);
+		glm::mat4 R = glm::mat4(building->transform->rotation);
+		glm::mat4 M = T * R;
+		int index_offset = vertices.size() / 3;
+		for (const auto &mesh : model->collision_meshes()) {
+			for (const auto &pos : mesh->positions) {
+				glm::vec4 vertex = { pos.x, pos.y, pos.z, 1.f };
+				vertex = M * vertex;
+				vertices.push_back(vertex.x);
+				vertices.push_back(vertex.y);
+				vertices.push_back(vertex.z);
+			}
+			for (const auto &index : mesh->indices) {
+				indices.push_back(index_offset + index);
+			}
+		}
+	}
+
+	navigation.build(vertices, indices);
 }
