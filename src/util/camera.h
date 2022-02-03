@@ -21,6 +21,7 @@ public:
 	// change the camera direction vector
 	void direct(const glm::vec3 &dir);
 	void target(const glm::vec3 &location);
+	void angles_to_direction();
 	// add offset to yaw and pitch
 	void add_offset(const glm::vec2 &offset);
 	// move the camera
@@ -32,8 +33,6 @@ public:
 	void teleport(const glm::vec3 &location);
 public:
 	glm::vec3 ndc_to_ray(const glm::vec2 &ndc) const;
-private:
-	void angles_to_direction();
 };
 
 // camera saving

@@ -58,6 +58,18 @@ struct MeepleBlueprint {
 	std::unique_ptr<util::AnimationSet> anim_set;
 };
 
+enum class ScrollStatus {
+	INACTIVE,
+	FORWARD,
+	BACKWARD
+};
+
+struct CampaignScroll {
+	ScrollStatus status = ScrollStatus::INACTIVE;
+	float time = 0.f;
+	float speed = 1.f;
+};
+
 // the overworld
 class Campaign {
 public:
@@ -73,13 +85,15 @@ public: // indicators
 	TownPrompt town_prompt = {};
 public:
 	util::IdGenerator id_generator;
-	util::Camera camera;
 	fysx::PhysicalSystem physics;
 	std::unique_ptr<Board> board;
 	std::unique_ptr<gfx::LabelFont> labeler;
 	MeepleController meeple_controller;
 	SettlementController settlement_controller;
 	FactionController faction_controller;
+public:
+	util::Camera camera;
+	CampaignScroll scroller;
 public: // entities
 	ConstructionMarker con_marker;
 	CampaignPlayerData player_data = {};

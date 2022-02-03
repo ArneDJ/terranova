@@ -302,6 +302,7 @@ void Battle::update(float delta)
 	player->update_collision(physics.world(), delta);
 
 	// update bot navigation
+	// TODO split in threads
 	crowd->update(delta);
 
 	auto world = physics.world();
@@ -390,6 +391,7 @@ void Battle::display()
 	*/
 	debugger->update_camera(camera);
 	debugger->display_sphere(player->left_fist->transform->position, player->left_fist->shape->getRadius());
+	/*
 	for (const auto &creature : creature_entities) {
 		for (auto &hitbox : creature->hitboxes) {
 			geom::Capsule scaled_capsule = hitbox.capsule;
@@ -397,6 +399,7 @@ void Battle::display()
 			debugger->display_capsule(scaled_capsule);
 		}
 	}
+	*/
 
 	creature_shader->use();
 	creature_shader->uniform_mat4("CAMERA_VP", camera.VP);
@@ -524,9 +527,29 @@ void Battle::add_creatures()
 	glm::vec3 map_center = { 1024.f, 0.f, 1024.f };
 	map_center.y = vertical_offset(map_center.x, map_center.z);
 
+	// attackers
 	for (int i = 0; i < 16; i++) {
 		for (int j = 0; j < 4; j++) {
-			glm::vec3 position = { 800.f + (i+i), 64.f, 800.f + (j+j) };
+			glm::vec3 position = { 512.f + (i+i), 64.f, 512.f + (j+j) };
+			position.y = vertical_offset(position.x, position.z) + 1.f;
+			auto creature = std::make_unique<Creature>();
+			creature->teleport(position);
+			creature->model = MediaManager::load_model("data/media/models/human.glb");
+			creature->set_animation(anim_set.get());
+			creature->set_hitbox(creature_hitboxes);
+			physics.add_object(creature->bumper->ghost_object.get(), group, mask);
+			physics.add_object(creature->root_hitbox->ghost_object.get(), COLLISION_GROUP_HITBOX, COLLISION_GROUP_RAY | COLLISION_GROUP_WEAPON);
+
+			// add navigation bot
+			creature->nav_agent = crowd->add_agent(position, navigation.query());
+			crowd->retarget_agent(creature->nav_agent, map_center, navigation.query());
+			creature_entities.push_back(std::move(creature));
+		}
+	}
+	// defenders
+	for (int i = 0; i < 16; i++) {
+		for (int j = 0; j < 4; j++) {
+			glm::vec3 position = { 1536.f + (i+i), 64.f, 1536.f + (j+j) };
 			position.y = vertical_offset(position.x, position.z) + 1.f;
 			auto creature = std::make_unique<Creature>();
 			creature->teleport(position);

@@ -284,6 +284,8 @@ void Campaign::prepare()
 	
 	town_prompt.choice = TownPromptChoice::UNDECIDED;
 	town_prompt.active = false;
+	
+	scroller.status = ScrollStatus::INACTIVE;
 }
 
 // clears all the campaign data
@@ -1081,17 +1083,83 @@ void Campaign::update_debug_menu()
 	
 void Campaign::update_camera(float delta)
 {
+	float camera_level = glm::smoothstep(0.1f, 0.3f, camera.position.y / board->SCALE.y);
+	float zoomlevel = 2.f * glm::clamp(camera_level, 0.f, 2.f);
+
 	float modifier = 10.f * delta;
-	float speed = 2.5f * modifier;
-	if (util::InputManager::key_down(SDL_BUTTON_LEFT)) {
+	
+	float fuckyou = glm::clamp(camera.position.y / board->SCALE.y, 0.f, 2.f);
+	float speed = 4.f * modifier * (fuckyou * fuckyou);
+
+	if (util::InputManager::key_down(SDL_BUTTON_MIDDLE)) {
 		glm::vec2 offset = modifier * 0.05f * util::InputManager::rel_mouse_coords();
 		camera.add_offset(offset);
+
+	} else {
+		glm::vec2 abs_mousecoords = util::InputManager::abs_mouse_coords() / camera.resolution;
+		if (abs_mousecoords.x > 0.99f) {
+			camera.add_offset(0.05f * modifier * glm::vec2(5.f, 0.f));
+			camera.move_left(speed);
+		} else if (abs_mousecoords.x < 0.01f) {
+			camera.add_offset(0.05f * modifier * glm::vec2(-5.f, 0.f));
+			camera.move_right(speed);
+		}
 	}
-	if (util::InputManager::key_down(SDLK_w)) { camera.move_forward(speed); }
-	if (util::InputManager::key_down(SDLK_s)) { camera.move_backward(speed); }
+
+	if (util::InputManager::key_down(SDLK_w)) {
+		glm::vec2 dir = glm::normalize(glm::vec2(camera.direction.x, camera.direction.z));
+		camera.position += speed * glm::vec3(dir.x, 0.f, dir.y);
+	}
+	if (util::InputManager::key_down(SDLK_s)) {
+		glm::vec2 dir = glm::normalize(glm::vec2(camera.direction.x, camera.direction.z));
+		camera.position -= speed * glm::vec3(dir.x, 0.f, dir.y);
+	}
+
 	if (util::InputManager::key_down(SDLK_d)) { camera.move_right(speed); }
 	if (util::InputManager::key_down(SDLK_a)) { camera.move_left(speed); }
 
+	// scroll camera forward or backward
+	// smooth scroll
+	int mousewheel = util::InputManager::mousewheel();
+	if (mousewheel > 0) {
+		scroller.status = ScrollStatus::FORWARD;
+		scroller.time = 1.f;
+		scroller.speed += 1.f;
+	}
+	if (mousewheel < 0) {
+		scroller.status = ScrollStatus::BACKWARD;
+		scroller.time = 1.f;
+		scroller.speed += 1.f;
+	}
+
+	scroller.speed = glm::clamp(scroller.speed, 1.f, 4.f);
+	
+	modifier *= zoomlevel * zoomlevel;
+
+	// update scroll
+	if (scroller.status != ScrollStatus::INACTIVE) {
+		float pitch = glm::mix(-1.55f, -0.5f, 1.f - (camera.position.y / (4.f * board->SCALE.y)));
+		scroller.time -= 5.f * delta;
+
+		camera.pitch = glm::clamp(pitch, -1.55f, -0.1f);
+		camera.angles_to_direction();
+
+		if (scroller.status == ScrollStatus::BACKWARD) {
+			camera.position.x -= 0.5f * scroller.speed * modifier * camera.direction.x;
+			camera.position.y -= scroller.speed * modifier * camera.direction.y;
+			camera.position.z -= 0.5f * scroller.speed * modifier * camera.direction.z;
+		} else if (scroller.status == ScrollStatus::FORWARD) {
+			camera.position.x += 0.5f * scroller.speed * modifier * camera.direction.x;
+			camera.position.y += scroller.speed * modifier * camera.direction.y;
+			camera.position.z += 0.5f * scroller.speed * modifier * camera.direction.z;
+		}
+
+		if (scroller.time < 0.f) {
+			scroller.status = ScrollStatus::INACTIVE;
+			scroller.time = 0.f;
+			scroller.speed = 1.f;
+		}
+	}
 	// collide with map
 	float offset = vertical_offset(glm::vec2(camera.position.x, camera.position.z)) + 2.5f;
 	if (camera.position.y < offset) {
