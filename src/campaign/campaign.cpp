@@ -1141,8 +1141,8 @@ void Campaign::update_camera(float delta)
 		float pitch = glm::mix(-1.55f, -0.5f, 1.f - (camera.position.y / (4.f * board->SCALE.y)));
 		scroller.time -= 5.f * delta;
 
-		camera.pitch = glm::clamp(pitch, -1.55f, -0.1f);
-		camera.angles_to_direction();
+		//camera.pitch = glm::clamp(pitch, -1.55f, -0.1f);
+		//camera.angles_to_direction();
 
 		if (scroller.status == ScrollStatus::BACKWARD) {
 			camera.position.x -= 0.5f * scroller.speed * modifier * camera.direction.x;

@@ -19,6 +19,7 @@
 #include "../geometry/transform.h"
 #include "../util/image.h"
 #include "../util/noise.h"
+#include "../util/erode.h"
 
 #include "atlas.h"
 	
@@ -240,6 +241,9 @@ void Atlas::generate(int seed, const geom::Rectangle &bounds, const AtlasParamet
 	};
 
 	util::noise_image(m_heightmap, &fastnoise, image_scale, util::CHANNEL_RED);
+	
+	//util::Eroder eroder;
+	//eroder.erode(m_heightmap);
 
 	for (auto &tile : m_tiles) {
 		glm::vec2 center = m_graph.cells[tile.index].center;
@@ -278,7 +282,6 @@ void Atlas::generate(int seed, const geom::Rectangle &bounds, const AtlasParamet
 	// alter height map
 	create_reliefmap(seed);
 	river_cut_relief();
-	
 	//m_heightmap.normalize(util::CHANNEL_RED);
 }
 	

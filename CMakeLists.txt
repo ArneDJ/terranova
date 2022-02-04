@@ -15,6 +15,8 @@ include_directories(GLEW::GLEW)
 
 find_package(Freetype REQUIRED)
 
+find_package(OpenMP REQUIRED)
+
 include_directories("src/extern")
 include_directories("src/extern/bullet")
 
@@ -44,6 +46,7 @@ file(GLOB all_SRCS
 
 add_executable(${PROJECT_NAME} ${all_SRCS})
 target_link_libraries(${PROJECT_NAME} pthread)
+target_link_libraries(${PROJECT_NAME} OpenMP::OpenMP_CXX)
 target_link_libraries(${PROJECT_NAME} dl)
 target_link_libraries(${PROJECT_NAME} SDL2::SDL2 SDL2::SDL2main)
 target_link_libraries(${PROJECT_NAME} GLEW::GLEW)
