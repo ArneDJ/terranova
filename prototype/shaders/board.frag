@@ -110,7 +110,7 @@ void main(void)
 	mat3 orthobasis = mat3(tangent, normal, bitangent);
 	bump = normalize(orthobasis * bump);
 
-	normal = mix(normal, bump, slope);
+	//normal = mix(normal, bump, slope);
 
 	vec3 rock_color = vec3(0.8) * texture(ROCK, 50.0 * fragment.texcoord).rbg;
 	vec3 gravel_color = texture(GRAVEL, 50.0 * fragment.texcoord).rbg;
@@ -135,6 +135,7 @@ void main(void)
 	vec3 border_color = mix(final_color, vec3(1.0, 1.0, 1.0), BORDER_MIX);
 	final_color = mix(final_color, border_color, smoothstep(0.1, 0.2, border));
 
+	//final_color = vec3(height);
 	// terrain lighting
 	final_color = apply_light(final_color, normal);
 

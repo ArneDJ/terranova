@@ -69,7 +69,7 @@ void Eroder::erode(Image<float> &image)
 	m_terrain_ping.copy(image);
 
 	float time = 0.1f;
-	for (int i = 0; i < 500; i++) {
+	for (int i = 0; i < 1000; i++) {
 		erosion_step(time);
 	}
 
@@ -173,7 +173,7 @@ void Eroder::increment_water(int x, int y, float time)
 void Eroder::simulate_flow(int x, int y, float time)
 {
 	float A = l * l; // pipe area
-	float g = 1.6f; // gravity
+	float g = 0.8f; // gravity
 			//
 	float f_left = m_flux_ping.sample(x, y, LEFT);
 	float f_right = m_flux_ping.sample(x, y, RIGHT);
@@ -288,9 +288,9 @@ void Eroder::update_water_velocity(int x, int y, float time)
 void Eroder::erosion_deposition(int x, int y)
 {
 	const float Ks = 0.025; // dissolving constant
-	const float Kd = 0.004; // deposition constant
+	const float Kd = 0.025; // deposition constant
 	// sediment transport capacity constant Kc
-	const float Kc = 0.8F;
+	const float Kc = 0.08F;
 
 	float tilt_angle = terrain_slope(x, y);
 	tilt_angle = abs(sqrtf(1.f - tilt_angle * tilt_angle));
