@@ -30,8 +30,8 @@
 
 #include <cassert>
 
-#include "soa_float.h"
-#include "../platform.h"
+#include "ozz/base/maths/soa_float.h"
+#include "ozz/base/platform.h"
 
 namespace ozz {
 namespace math {

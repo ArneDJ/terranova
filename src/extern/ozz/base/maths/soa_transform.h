@@ -28,9 +28,9 @@
 #ifndef OZZ_OZZ_BASE_MATHS_SOA_TRANSFORM_H_
 #define OZZ_OZZ_BASE_MATHS_SOA_TRANSFORM_H_
 
-#include "soa_float.h"
-#include "soa_quaternion.h"
-#include "../platform.h"
+#include "ozz/base/maths/soa_float.h"
+#include "ozz/base/maths/soa_quaternion.h"
+#include "ozz/base/platform.h"
 
 namespace ozz {
 namespace math {

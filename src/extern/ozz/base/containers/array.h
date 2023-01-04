@@ -25,58 +25,49 @@
 //                                                                            //
 //----------------------------------------------------------------------------//
 
-#ifndef OZZ_OZZ_ANIMATION_RUNTIME_TRACK_SAMPLING_JOB_H_
-#define OZZ_OZZ_ANIMATION_RUNTIME_TRACK_SAMPLING_JOB_H_
+#ifndef OZZ_OZZ_BASE_CONTAINERS_ARRAY_H_
+#define OZZ_OZZ_BASE_CONTAINERS_ARRAY_H_
 
-#include "ozz/animation/runtime/export.h"
-#include "ozz/animation/runtime/track.h"
+#include <array>
+
+#include "ozz/base/platform.h"
 
 namespace ozz {
-namespace animation {
+// Redirects std::array to ozz::array .
+template <class _Ty, size_t _N>
+using array = std::array<_Ty, _N>;
 
-namespace internal {
+// Extends std::array with two functions that gives access to the begin and the
+// end of its array of elements.
 
-// TrackSamplingJob internal implementation. See *TrackSamplingJob for more
-// details.
-template <typename _Track>
-struct TrackSamplingJob {
-  typedef typename _Track::ValueType ValueType;
+// Returns the mutable begin of the array of elements, or nullptr if
+// array's empty.
+template <class _Ty, size_t _N>
+inline _Ty* array_begin(std::array<_Ty, _N>& _array) {
+  return _array.data();
+}
 
-  TrackSamplingJob();
+// Returns the non-mutable begin of the array of elements, or nullptr if
+// array's empty.
+template <class _Ty, size_t _N>
+inline const _Ty* array_begin(const std::array<_Ty, _N>& _array) {
+  return _array.data();
+}
 
-  // Validates all parameters.
-  bool Validate() const;
+// Returns the mutable end of the array of elements, or nullptr if
+// array's empty. Array end is one element past the last element of the
+// array, it cannot be dereferenced.
+template <class _Ty, size_t _N>
+inline _Ty* array_end(std::array<_Ty, _N>& _array) {
+  return _array.data() + _N;
+}
 
-  // Validates and executes sampling.
-  bool Run() const;
-
-  // Ratio used to sample track, clamped in range [0,1] before job execution. 0
-  // is the beginning of the track, 1 is the end. This is a ratio rather than a
-  // ratio because tracks have no duration.
-  float ratio;
-
-  // Track to sample.
-  const _Track* track;
-
-  // Job output.
-  typename _Track::ValueType* result;
-};
-}  // namespace internal
-
-// Track sampling job implementation. Track sampling allows to query a track
-// value for a specified ratio. This is a ratio rather than a time because
-// tracks have no duration.
-struct OZZ_ANIMATION_DLL FloatTrackSamplingJob
-    : public internal::TrackSamplingJob<FloatTrack> {};
-struct OZZ_ANIMATION_DLL Float2TrackSamplingJob
-    : public internal::TrackSamplingJob<Float2Track> {};
-struct OZZ_ANIMATION_DLL Float3TrackSamplingJob
-    : public internal::TrackSamplingJob<Float3Track> {};
-struct OZZ_ANIMATION_DLL Float4TrackSamplingJob
-    : public internal::TrackSamplingJob<Float4Track> {};
-struct OZZ_ANIMATION_DLL QuaternionTrackSamplingJob
-    : public internal::TrackSamplingJob<QuaternionTrack> {};
-
-}  // namespace animation
+// Returns the non-mutable end of the array of elements, or nullptr if
+// array's empty. Array end is one element past the last element of the
+// array, it cannot be dereferenced.
+template <class _Ty, size_t _N>
+inline const _Ty* array_end(const std::array<_Ty, _N>& _array) {
+  return _array.data() + _N;
+}
 }  // namespace ozz
-#endif  // OZZ_OZZ_ANIMATION_RUNTIME_TRACK_SAMPLING_JOB_H_
+#endif  // OZZ_OZZ_BASE_CONTAINERS_ARRAY_H_

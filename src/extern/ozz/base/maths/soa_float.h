@@ -30,9 +30,9 @@
 
 #include <cassert>
 
-#include "math_constant.h"
-#include "simd_math.h"
-#include "../platform.h"
+#include "ozz/base/maths/math_constant.h"
+#include "ozz/base/maths/simd_math.h"
+#include "ozz/base/platform.h"
 
 namespace ozz {
 namespace math {

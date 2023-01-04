@@ -52,6 +52,8 @@ bool UserDirectory::locate_dir(const char *base, const char *target, std::string
 
 Engine::Engine()
 {
+	LOG_F(INFO, "starting engine");
+
 	SDL_Init(SDL_INIT_VIDEO);
 
 	// get user paths where the ini files are located

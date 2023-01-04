@@ -30,15 +30,15 @@
 
 #include <cassert>
 
-#include "math_constant.h"
-#include "math_ex.h"
-#include "vec_float.h"
-#include "../platform.h"
+#include "ozz/base/maths/math_constant.h"
+#include "ozz/base/maths/math_ex.h"
+#include "ozz/base/maths/vec_float.h"
+#include "ozz/base/platform.h"
 
 namespace ozz {
 namespace math {
 
-struct Quaternion {
+struct OZZ_BASE_DLL Quaternion {
   float x, y, z, w;
 
   // Constructs an uninitialized quaternion.

@@ -76,7 +76,7 @@ void Campaign::init(const gfx::ShaderGroup *shaders)
 {
 	debugger = std::make_unique<Debugger>(shaders->debug);
 
-	labeler = std::make_unique<gfx::LabelFont>("fonts/exocet.ttf", 30);
+	//labeler = std::make_unique<gfx::LabelFont>("fonts/exocet.ttf", 30);
 
 	board = std::make_unique<Board>(shaders->tilemap, shaders->blur);
 	
@@ -514,7 +514,7 @@ void Campaign::display()
 		debugger->display_navmeshes();
 	}
 
-	display_labels();
+	//display_labels();
 }
 	
 void Campaign::display_labels()
@@ -611,7 +611,7 @@ void Campaign::place_meeple(Meeple *meeple)
 	} else {
 		meeple->label->text_color = { 1.f, 0.f, 0.f };
 	}
-	meeple->label->format("Army " + std::to_string(meeple->troop_count), labeler->font);
+	//meeple->label->format("Army " + std::to_string(meeple->troop_count), labeler->font);
 	meeple->label->scale = 0.1f;
 
 	meeple->visible = false;
@@ -836,7 +836,7 @@ void Campaign::place_town(Town *town)
 
 	// add label
 	glm::vec3 color = faction_controller.factions[town->faction]->color();
-	town->label->format(town->name + " " + std::to_string(town->troop_count), labeler->font);
+	//town->label->format(town->name + " " + std::to_string(town->troop_count), labeler->font);
 	town->label->text_color = color;
 
 	town->label->scale = blueprint.label_scale;
@@ -1299,7 +1299,7 @@ void Campaign::update_town_tick(Town *town, uint64_t ticks)
 	
 		town->label->scale = blueprint.label_scale;
 		
-		town->label->format(town->name + " " + std::to_string(town->troop_count), labeler->font);
+		//town->label->format(town->name + " " + std::to_string(town->troop_count), labeler->font);
 	}
 }
 	

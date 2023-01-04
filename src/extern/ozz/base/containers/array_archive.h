@@ -25,58 +25,39 @@
 //                                                                            //
 //----------------------------------------------------------------------------//
 
-#ifndef OZZ_OZZ_ANIMATION_RUNTIME_TRACK_SAMPLING_JOB_H_
-#define OZZ_OZZ_ANIMATION_RUNTIME_TRACK_SAMPLING_JOB_H_
+#ifndef OZZ_OZZ_BASE_CONTAINERS_ARRAY_ARCHIVE_H_
+#define OZZ_OZZ_BASE_CONTAINERS_ARRAY_ARCHIVE_H_
 
-#include "ozz/animation/runtime/export.h"
-#include "ozz/animation/runtime/track.h"
+#include "ozz/base/containers/array.h"
+#include "ozz/base/io/archive.h"
 
 namespace ozz {
-namespace animation {
+namespace io {
 
-namespace internal {
+OZZ_IO_TYPE_NOT_VERSIONABLE_T2(class _Ty, size_t _N, std::array<_Ty, _N>)
 
-// TrackSamplingJob internal implementation. See *TrackSamplingJob for more
-// details.
-template <typename _Track>
-struct TrackSamplingJob {
-  typedef typename _Track::ValueType ValueType;
-
-  TrackSamplingJob();
-
-  // Validates all parameters.
-  bool Validate() const;
-
-  // Validates and executes sampling.
-  bool Run() const;
-
-  // Ratio used to sample track, clamped in range [0,1] before job execution. 0
-  // is the beginning of the track, 1 is the end. This is a ratio rather than a
-  // ratio because tracks have no duration.
-  float ratio;
-
-  // Track to sample.
-  const _Track* track;
-
-  // Job output.
-  typename _Track::ValueType* result;
+template <class _Ty, size_t _N>
+struct Extern<std::array<_Ty, _N>> {
+  inline static void Save(OArchive& _archive,
+                          const std::array<_Ty, _N>* _values, size_t _count) {
+    if (void(0), _N != 0) {
+      for (size_t i = 0; i < _count; i++) {
+        const std::array<_Ty, _N>& array = _values[i];
+        _archive << ozz::io::MakeArray(array.data(), _N);
+      }
+    }
+  }
+  inline static void Load(IArchive& _archive, std::array<_Ty, _N>* _values,
+                          size_t _count, uint32_t _version) {
+    (void)_version;
+    if (void(0), _N != 0) {
+      for (size_t i = 0; i < _count; i++) {
+        std::array<_Ty, _N>& array = _values[i];
+        _archive >> ozz::io::MakeArray(array.data(), _N);
+      }
+    }
+  }
 };
-}  // namespace internal
-
-// Track sampling job implementation. Track sampling allows to query a track
-// value for a specified ratio. This is a ratio rather than a time because
-// tracks have no duration.
-struct OZZ_ANIMATION_DLL FloatTrackSamplingJob
-    : public internal::TrackSamplingJob<FloatTrack> {};
-struct OZZ_ANIMATION_DLL Float2TrackSamplingJob
-    : public internal::TrackSamplingJob<Float2Track> {};
-struct OZZ_ANIMATION_DLL Float3TrackSamplingJob
-    : public internal::TrackSamplingJob<Float3Track> {};
-struct OZZ_ANIMATION_DLL Float4TrackSamplingJob
-    : public internal::TrackSamplingJob<Float4Track> {};
-struct OZZ_ANIMATION_DLL QuaternionTrackSamplingJob
-    : public internal::TrackSamplingJob<QuaternionTrack> {};
-
-}  // namespace animation
+}  // namespace io
 }  // namespace ozz
-#endif  // OZZ_OZZ_ANIMATION_RUNTIME_TRACK_SAMPLING_JOB_H_
+#endif  // OZZ_OZZ_BASE_CONTAINERS_ARRAY_ARCHIVE_H_

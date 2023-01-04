@@ -50,7 +50,7 @@ struct CharacterAnimation {
 	std::vector<ozz::math::SoaTransform> blended_locals; // TODO make unique blend output
 	float weight = 1.f; // blend weight
 	PlaybackController controller;
-	ozz::animation::SamplingCache cache;
+	ozz::animation::SamplingJob::Context context;
 	ozz::vector<ozz::math::SoaTransform> locals; // Buffer of local transforms which stores the blending result.
  	ozz::vector<ozz::math::Float4x4> models; // Buffer of model space matrices. These are computed by the local-to-model // job after the blending stage.
 };
@@ -72,7 +72,7 @@ public:
 class AnimationController {
 public:
 	PlaybackController playback;
-	ozz::animation::SamplingCache cache;
+	ozz::animation::SamplingJob::Context context;
 	ozz::vector<ozz::math::SoaTransform> locals; // Buffer of local transforms which stores the blending result.
  	ozz::vector<ozz::math::Float4x4> models; // Buffer of model space matrices. These are computed by the local-to-model // job after the blending stage.
 public:

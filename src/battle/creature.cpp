@@ -67,12 +67,12 @@ void Creature::set_animation(util::AnimationSet *set)
 	animation_sampler_a.locals.resize(set->skeleton->num_soa_joints());
 	animation_sampler_a.blended_locals.resize(set->skeleton->num_joints());
 	animation_sampler_a.models.resize(set->skeleton->num_joints());
-	animation_sampler_a.cache.Resize(set->max_tracks);
+	animation_sampler_a.context.Resize(set->max_tracks);
 
 	animation_sampler_b.locals.resize(set->skeleton->num_soa_joints());
 	animation_sampler_b.blended_locals.resize(set->skeleton->num_joints());
 	animation_sampler_b.models.resize(set->skeleton->num_joints());
-	animation_sampler_b.cache.Resize(set->max_tracks);
+	animation_sampler_b.context.Resize(set->max_tracks);
 
 	joint_matrices.data.resize(set->skeleton->num_joints());
 	joint_matrices.update_present();

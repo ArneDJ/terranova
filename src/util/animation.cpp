@@ -58,7 +58,7 @@ bool update_character_animation(CharacterAnimation *character, const ozz::animat
 	// Setup sampling job.
 	ozz::animation::SamplingJob sampling_job;
 	sampling_job.animation = animation;
-	sampling_job.cache = &character->cache;
+	sampling_job.context = &character->context;
 	sampling_job.ratio = character->controller.time_ratio;
 	sampling_job.output = ozz::make_span(character->locals);
 
@@ -84,7 +84,7 @@ bool update_blended_animation(CharacterAnimation *sampler_a, CharacterAnimation 
 	if (sampler_a->weight > 0.f) {
 		ozz::animation::SamplingJob sampling_job;
 		sampling_job.animation = animation_a;
-		sampling_job.cache = &sampler_a->cache;
+		sampling_job.context = &sampler_a->context;
 		sampling_job.ratio = sampler_a->controller.time_ratio;
 		sampling_job.output = ozz::make_span(sampler_a->locals);
 		// Samples animation.
@@ -96,7 +96,7 @@ bool update_blended_animation(CharacterAnimation *sampler_a, CharacterAnimation 
 	if (sampler_b->weight > 0.f) {
 		ozz::animation::SamplingJob sampling_job;
 		sampling_job.animation = animation_b;
-		sampling_job.cache = &sampler_b->cache;
+		sampling_job.context = &sampler_b->context;
 		sampling_job.ratio = sampler_b->controller.time_ratio;
 		sampling_job.output = ozz::make_span(sampler_b->locals);
 		// Samples animation.
@@ -129,7 +129,7 @@ bool update_blended_animation(CharacterAnimation *sampler_a, CharacterAnimation 
 	ozz::animation::BlendingJob blend_job;
 	blend_job.threshold = threshold;
 	blend_job.layers = ozz::make_span(layers);
-	blend_job.bind_pose = skeleton->joint_bind_poses();
+	blend_job.rest_pose = skeleton->joint_rest_poses();
 	blend_job.output = ozz::make_span(sampler_a->blended_locals);
 
 	// Blends.
@@ -164,7 +164,7 @@ AnimationController::AnimationController(const AnimationSet *set)
 	// find max tracks
 	locals.resize(set->skeleton->num_soa_joints());
 	models.resize(set->skeleton->num_joints());
-	cache.Resize(set->max_tracks);
+	context.Resize(set->max_tracks);
 }
 	
 void AnimationController::update(uint8_t animation_id, float delta)
@@ -180,7 +180,7 @@ void AnimationController::update(uint8_t animation_id, float delta)
 		// Setup sampling job.
 		ozz::animation::SamplingJob sampling_job;
 		sampling_job.animation = animation;
-		sampling_job.cache = &cache;
+		sampling_job.context = &context;
 		sampling_job.ratio = playback.time_ratio;
 		sampling_job.output = ozz::make_span(locals);
 
