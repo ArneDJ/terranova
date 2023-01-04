@@ -10,11 +10,10 @@
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "../extern/loguru/loguru.hpp"
-
 #define DDSKTX_IMPLEMENT
 #include "../extern/ddsktx/dds-ktx.h"
 
+#include "../util/logger.h"
 #include "../util/image.h"
 
 #include "texture.h"
@@ -153,7 +152,7 @@ void Texture::load_dds(const uint8_t *blob, const size_t size)
 	if (ddsktx_parse(&tc, blob, size, &error)) {
 		m_format = dds_texture_format(tc.format);
 		if (!m_format) {
-			LOG_F(ERROR, "DDS error: Invalid texture format");
+			logger::ERROR("DDS error: Invalid texture format");
 			return;
 		}
 
@@ -178,8 +177,7 @@ void Texture::load_dds(const uint8_t *blob, const size_t size)
 			glCompressedTexImage2D(GL_TEXTURE_2D, mip, m_format, sub_data.width, sub_data.height, 0, sub_data.size_bytes, sub_data.buff);
 		}
 	} else {
-		std::string err = error.msg;
-		LOG_F(ERROR, "DDS error: %s", err.c_str());
+		logger::ERROR("DDS error: {}", error.msg);
 	}
 }
 

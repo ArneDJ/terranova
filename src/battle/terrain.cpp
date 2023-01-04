@@ -10,8 +10,6 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "../extern/loguru/loguru.hpp"
-
 #include "../extern/fastnoise/FastNoise.h"
 
 #include "../geometry/geometry.h"

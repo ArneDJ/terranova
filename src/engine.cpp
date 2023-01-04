@@ -13,8 +13,6 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "extern/loguru/loguru.hpp"
-
 #include "extern/imgui/imgui.h"
 #include "extern/imgui/imgui_impl_sdl.h"
 #include "extern/imgui/imgui_impl_opengl3.h"
@@ -24,6 +22,7 @@
 
 #include "extern/freetypegl/freetype-gl.h"
 
+#include "util/logger.h"
 #include "engine.h"
 
 static const char *GAME_NAME = "terranova";
@@ -52,13 +51,15 @@ bool UserDirectory::locate_dir(const char *base, const char *target, std::string
 
 Engine::Engine()
 {
-	LOG_F(INFO, "starting engine");
+	logger::init(GAME_NAME);
+
+	logger::INFO("starting engine");
 
 	SDL_Init(SDL_INIT_VIDEO);
 
 	// get user paths where the ini files are located
 	if (!user_dir.locate(GAME_NAME)) {
-		LOG_F(FATAL, "Could not find user settings directory");
+		logger::FATAL("Could not find user settings directory");
 		exit(EXIT_FAILURE);
 	}
 	
@@ -68,10 +69,10 @@ Engine::Engine()
 		if (config.load("default.ini")) {
 			// save default settings to user path
 			if (!config.save(settings_filepath)) {
-				LOG_F(ERROR, "Could not save user settings %s", settings_filepath.c_str());
+				logger::ERROR("Could not save user settings {}", settings_filepath);
 			}
 		} else {
-			LOG_F(ERROR, "Could not open default settings!");
+			logger::ERROR("Could not open default settings!");
 		}
 	}
 
@@ -84,7 +85,7 @@ Engine::Engine()
 	// Check that the window was successfully created
 	if (window == nullptr) {
 		// In the case that the window could not be made...
-		LOG_F(FATAL, "Could not create window: %s\n", SDL_GetError());
+		logger::FATAL("Could not create window: {}", std::string(SDL_GetError()));
 		exit(EXIT_FAILURE);
 	}
 
@@ -110,6 +111,8 @@ Engine::~Engine()
 
 	// Clean up SDL
 	SDL_Quit();
+
+	logger::exit("Exiting");
 }
 	
 void Engine::init_opengl()
@@ -120,7 +123,7 @@ void Engine::init_opengl()
 	// initialize glew
 	GLenum error = glewInit();
 	if (error != GLEW_OK) {
-		LOG_F(FATAL, "Could not init GLEW: %s\n", glewGetErrorString(error));
+		logger::FATAL("Could not init GLEW: {}", std::string((const char*)glewGetErrorString(error)));
 		exit(EXIT_FAILURE);
 	}
 

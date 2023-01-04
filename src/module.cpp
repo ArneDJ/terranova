@@ -1,11 +1,10 @@
 #include <iostream>
 #include <fstream>
 
-#include "extern/loguru/loguru.hpp"
-
 #include "extern/cereal/archives/binary.hpp"
 #include "extern/cereal/archives/json.hpp"
 
+#include "util/logger.h"
 #include "util/serialize.h"
 #include "geometry/geometry.h"
 
@@ -20,7 +19,7 @@ void Module::load_json(T &data, const std::string &filepath)
 		cereal::JSONInputArchive archive(stream);
 		archive(data);
 	} else {
-		LOG_F(ERROR, "Could not load ", filepath.c_str());
+		logger::ERROR("Could not load {}", filepath);
 	}
 }
 

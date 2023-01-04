@@ -13,8 +13,6 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "../extern/loguru/loguru.hpp"
-
 #include "../extern/imgui/imgui.h"
 
 #include "../extern/cereal/archives/binary.hpp"
@@ -24,6 +22,7 @@
 
 #include "../extern/poisson/PoissonGenerator.h"
 
+#include "../util/logger.h"
 #include "../util/serialize.h"
 #include "../util/config.h"
 #include "../util/input.h"
@@ -135,7 +134,7 @@ void Campaign::load(const std::string &filepath)
 		archive(game_ticks);
 		archive(faction_ticks);
 	} else {
-		LOG_F(ERROR, "Game loading error: could not open save file %s", filepath.c_str());
+		logger::ERROR("Game loading error: could not open save file {}", filepath);
 	}
 }
 
@@ -158,7 +157,7 @@ void Campaign::save(const std::string &filepath)
 		archive(game_ticks);
 		archive(faction_ticks);
 	} else {
-		LOG_F(ERROR, "Game saving error: could not open save file %s", filepath.c_str());
+		logger::ERROR("Game saving error: could not open save file {}", filepath);
 	}
 }
 	
@@ -663,7 +662,7 @@ void Campaign::spawn_factions()
 
 	for (const auto &mapping : faction_controller.factions) {
 		if (targets.empty()) {
-			LOG_F(ERROR, "No more locations to spawn faction capital");
+			logger::ERROR("No more locations to spawn faction capital");
 			break;
 		}
 		// assign a random tile as capital start

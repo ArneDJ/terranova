@@ -7,8 +7,7 @@
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "../extern/loguru/loguru.hpp"
-
+#include "../util/logger.h"
 #include "physical.h"
 
 namespace fysx {
@@ -113,7 +112,7 @@ CollisionMesh::CollisionMesh(const std::vector<glm::vec3> &positions, const std:
 	mesh = std::make_unique<btTriangleMesh>();
 
 	if (indices.size() < 3 || positions.size() < 3) {
-		LOG_F(ERROR, "Collision mesh shape error: no triangle data found, using a sphere instead");
+		logger::ERROR("Collision mesh shape error: no triangle data found, using a sphere instead");
 		shape = std::make_unique<btSphereShape>(5.f);
 	} else {
 		for (int i = 0; i < indices.size(); i += 3) {

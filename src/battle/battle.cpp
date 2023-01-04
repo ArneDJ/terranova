@@ -15,8 +15,6 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "../extern/loguru/loguru.hpp"
-
 #include "../extern/imgui/imgui.h"
 #include "../extern/imgui/imgui_impl_sdl.h"
 #include "../extern/imgui/imgui_impl_opengl3.h"

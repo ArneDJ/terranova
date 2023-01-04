@@ -12,8 +12,6 @@
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtx/rotate_vector.hpp>
 
-#include "../extern/loguru/loguru.hpp"
-
 #include "../geometry/geometry.h"
 #include "../geometry/transform.h"
 #include "../util/camera.h"

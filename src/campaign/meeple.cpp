@@ -102,7 +102,7 @@ Meeple::Meeple()
 	m_visibility->ghost_object()->setUserPointer(this);
 	m_trigger->ghost_object()->setUserPointer(this);
 
-	transform.scale = glm::vec3(0.005f);
+	transform.scale = glm::vec3(0.01f);
 	
 	m_joint_matrices.buffer.set_target(GL_SHADER_STORAGE_BUFFER);
 }

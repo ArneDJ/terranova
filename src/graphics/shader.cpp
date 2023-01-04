@@ -10,8 +10,7 @@
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "../extern/loguru/loguru.hpp"
-
+#include "../util/logger.h"
 #include "shader.h"
 
 namespace gfx {
@@ -39,7 +38,7 @@ void Shader::compile(const std::string &filepath, GLenum type)
 {
 	std::ifstream file(filepath);
         if (file.fail()) {
-		LOG_F(ERROR, "Shader compile error: failed to open %s", filepath.c_str());
+		logger::ERROR("Shader compile error: failed to open {}", filepath);
 		return;
         }
 
@@ -69,7 +68,7 @@ void Shader::compile_source(const GLchar *source, GLenum type)
 		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len);
 		std::vector<GLchar> log(len);
 		glGetShaderInfoLog(shader, len, &len, log.data());
-		LOG_F(ERROR, "Compilation failed: %s", log.data());
+		logger::ERROR("Compilation failed: {}", log.data());
 
 		// clean up shader
 		glDeleteShader(shader);
@@ -99,7 +98,7 @@ void Shader::link()
 		glGetProgramiv(m_program, GL_INFO_LOG_LENGTH, &len);
 		std::vector<GLchar> log(len);
 		glGetProgramInfoLog(m_program, len, &len, log.data());
-		LOG_F(ERROR, "Program linking failed: %s", log.data());
+		logger::ERROR("Program linking failed: {}", log.data());
 
 		for (GLuint object : m_shaders) {
 			glDetachShader(m_program, object);
@@ -183,7 +182,7 @@ void Shader::set_storage_block(const GLchar *name, GLuint binding) const
 	GLuint index = resource_index(GL_SHADER_STORAGE_BLOCK, name);
 
 	if (index == GL_INVALID_INDEX) {
-		LOG_F(ERROR, "Shader storage block binding error: invalid index for %s", name);
+		//logger::(ERROR, "Shader storage block binding error: invalid index for %s", name);
 	}
 
 	bind_storage_block(index, binding);
@@ -194,7 +193,7 @@ void Shader::set_uniform_block(const GLchar *name, GLuint binding) const
 	GLuint index = uniform_block_index(name);
 
 	if (index == GL_INVALID_INDEX) {
-		LOG_F(ERROR, "Shader uniform block binding error: invalid index for %s", name);
+		//logger::(ERROR, "Shader uniform block binding error: invalid index for %s", name);
 	}
 
 	bind_uniform_block(index, binding);

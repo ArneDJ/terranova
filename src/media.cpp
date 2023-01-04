@@ -14,8 +14,7 @@
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "extern/loguru/loguru.hpp"
-
+#include "util/logger.h"
 #include "util/image.h"
 #include "util/animation.h"
 #include "geometry/transform.h"
@@ -58,7 +57,7 @@ const gfx::Texture* MediaManager::load_texture(const std::string &filepath)
 		// import file blob
 		FILE *file = fopen(filepath.c_str(), "rb");
 		if (!file) {
-			LOG_F(ERROR, "texture load error: failed to open file %s", filepath.c_str());
+			logger::ERROR("texture load error: failed to open file {}", filepath);
 		} else {
 			fseek(file, 0L, SEEK_END);
 			size_t size = ftell(file);
@@ -96,13 +95,13 @@ const ozz::animation::Skeleton* MediaManager::load_skeleton(const std::string &f
 
 		// Checks file status, which can be closed if filepath.c_str() is invalid.
 		if (!file.opened()) {
-			LOG_F(ERROR, "cannot open skeleton file %s", filepath.c_str());
+			logger::ERROR("cannot open skeleton file {}", filepath);
 		}
 
 		ozz::io::IArchive archive(&file);
 
 		if (!archive.TestTag<ozz::animation::Skeleton>()) {
-			LOG_F(ERROR, "archive doesn't contain the expected object type");
+			logger::ERROR("archive doesn't contain the expected object type");
 		}
 
 		archive >> *skeleton;
@@ -127,11 +126,11 @@ const ozz::animation::Animation* MediaManager::load_animation(const std::string 
 		
 		ozz::io::File file(filepath.c_str(), "rb");
 		if (!file.opened()) {
-			LOG_F(ERROR, "cannot open animation file %s", filepath.c_str());
+			logger::ERROR("cannot open animation file {}", filepath);
 		}
 		ozz::io::IArchive archive(&file);
 		if (!archive.TestTag<ozz::animation::Animation>()) {
-			LOG_F(ERROR, "failed to load animation instance file");
+			logger::ERROR("failed to load animation instance file");
 		}
 
 		// Once the tag is validated, reading cannot fail.

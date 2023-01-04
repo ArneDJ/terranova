@@ -14,10 +14,9 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/string_cast.hpp>
 
-#include "../extern/loguru/loguru.hpp"
-
 #define CGLTF_IMPLEMENTATION
 
+#include "../util/logger.h"
 #include "../geometry/transform.h"
 #include "mesh.h"
 #include "model.h"
@@ -52,7 +51,7 @@ Model::Model(const std::string &filepath)
 	if (result == cgltf_result_success) {
 		load(data);
 	} else {
-		LOG_F(ERROR, "glTF import file %s error:", filepath.c_str());
+		logger::ERROR("glTF import file {} error:", filepath);
 		print_gltf_error(result);
 	}
 		
@@ -380,31 +379,31 @@ static void print_gltf_error(cgltf_result error)
 {
 	switch (error) {
 	case cgltf_result_data_too_short:
-		LOG_F(ERROR, "data too short");
+		logger::ERROR("data too short");
 		break;
 	case cgltf_result_unknown_format:
-		LOG_F(ERROR, "unknown format");
+		logger::ERROR("unknown format");
 		break;
 	case cgltf_result_invalid_json:
-		LOG_F(ERROR, "invalid json");
+		logger::ERROR("invalid json");
 		break;
 	case cgltf_result_invalid_gltf:
-		LOG_F(ERROR, "invalid GLTF");
+		logger::ERROR("invalid GLTF");
 		break;
 	case cgltf_result_invalid_options:
-		LOG_F(ERROR, "invalid options");
+		logger::ERROR("invalid options");
 		break;
 	case cgltf_result_file_not_found:
-		LOG_F(ERROR, "file not found");
+		logger::ERROR("file not found");
 		break;
 	case cgltf_result_io_error:
-		LOG_F(ERROR, "io error");
+		logger::ERROR("io error");
 		break;
 	case cgltf_result_out_of_memory:
-		LOG_F(ERROR, "out of memory");
+		logger::ERROR("out of memory");
 		break;
 	case cgltf_result_legacy_gltf:
-		LOG_F(ERROR, "legacy glTF");
+		logger::ERROR("legacy glTF");
 		break;
 	};
 }

@@ -11,8 +11,6 @@
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "../extern/loguru/loguru.hpp"
-
 #include "../geometry/frustum.h"
 #include "mesh.h"
 

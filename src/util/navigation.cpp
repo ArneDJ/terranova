@@ -13,8 +13,7 @@
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtx/string_cast.hpp>
 
-#include "../extern/loguru/loguru.hpp"
-
+#include "logger.h"
 #include "serialize.h"
 
 #include "navigation.h"
@@ -173,13 +172,13 @@ bool Navigation::build(const std::vector<float> &vertices, const std::vector<int
 	
 	dtStatus status = m_navmesh->init(&params);
 	if (dtStatusFailed(status)) {
-		LOG_F(ERROR, "Build tiled navigation: could not init navmesh");
+		logger::ERROR("Build tiled navigation: could not init navmesh");
 		return false;
 	}
 	
 	status = m_query->init(m_navmesh.get(), 2048);
 	if (dtStatusFailed(status)) {
-		LOG_F(ERROR, "Build tiled navigation: could not init Detour navmesh query");
+		logger::ERROR("Build tiled navigation: could not init Detour navmesh query");
 		return false;
 	}
 
@@ -401,11 +400,11 @@ uint8_t* Navbuilder::alloc_navdata(const int tx, const int ty, float *bmin, floa
 	// Allocate voxel heightfield where we rasterize our input data to.
 	solid = rcAllocHeightfield();
 	if (!solid) {
-		LOG_F(ERROR, "buildNavigation: Out of memory 'solid'");
+		logger::ERROR("buildNavigation: Out of memory 'solid'");
 		return 0;
 	}
 	if (!rcCreateHeightfield(context, *solid, config->width, config->height, bmin, bmax, config->cs, config->ch)) {
-		LOG_F(ERROR, "buildNavigation: Could not create solid heightfield");
+		logger::ERROR("buildNavigation: Could not create solid heightfield");
 		return 0;
 	}
 	
@@ -414,7 +413,7 @@ uint8_t* Navbuilder::alloc_navdata(const int tx, const int ty, float *bmin, floa
 	// and array which can hold the max number of triangles you need to process.
 	triareas = new uint8_t[chunky_mesh->maxTrisPerChunk];
 	if (!triareas) {
-		LOG_F(ERROR, "buildNavigation: Out of memory 'triareas'");
+		logger::ERROR("buildNavigation: Out of memory 'triareas'");
 		return 0;
 	}
 	
@@ -440,7 +439,7 @@ uint8_t* Navbuilder::alloc_navdata(const int tx, const int ty, float *bmin, floa
 		memset(triareas, 1, nctris*sizeof(uint8_t));
 		//rcMarkWalkableTriangles(context, config->walkableSlopeAngle, verts, nverts, ctris, nctris, triareas);
 		if (!rcRasterizeTriangles(context, verts, nverts, ctris, triareas, nctris, *solid, config->walkableClimb)) { 
-			LOG_F(ERROR, "could not rasterize tris");
+			logger::ERROR("could not rasterize tris");
 			return 0; 
 		}
 	}
@@ -460,11 +459,11 @@ uint8_t* Navbuilder::alloc_navdata(const int tx, const int ty, float *bmin, floa
 	// between walkable cells will be calculated.
 	chf = rcAllocCompactHeightfield();
 	if (!chf) {
-		LOG_F(ERROR, "buildNavigation: Out of memory 'chf'");
+		logger::ERROR("buildNavigation: Out of memory 'chf'");
 		return 0;
 	}
 	if (!rcBuildCompactHeightfield(context, config->walkableHeight, config->walkableClimb, *solid, *chf)) {
-		LOG_F(ERROR, "buildNavigation: Could not build compact data");
+		logger::ERROR("buildNavigation: Could not build compact data");
 		return 0;
 	}
 	
@@ -474,7 +473,7 @@ uint8_t* Navbuilder::alloc_navdata(const int tx, const int ty, float *bmin, floa
 	// Erode the walkable area by agent radius.
 	if (!m_ignore_agent_radius) {
 		if (!rcErodeWalkableArea(context, config->walkableRadius, *chf)) {
-			LOG_F(ERROR, "buildNavigation: Could not erode");
+			logger::ERROR("buildNavigation: Could not erode");
 			return 0;
 		}
 	}
@@ -515,18 +514,18 @@ uint8_t* Navbuilder::alloc_navdata(const int tx, const int ty, float *bmin, floa
 	
 	// Partition the walkable surface into simple regions without holes.
 	if (!rcBuildLayerRegions(context, *chf, config->borderSize, config->minRegionArea)) {
-		LOG_F(ERROR, "buildNavigation: Could not build layer regions");
+		logger::ERROR("buildNavigation: Could not build layer regions");
 		return 0;
 	}
 	 	
 	// Create contours.
 	cset = rcAllocContourSet();
 	if (!cset) {
-		LOG_F(ERROR, "buildNavigation: Out of memory 'cset'");
+		logger::ERROR("buildNavigation: Out of memory 'cset'");
 		return 0;
 	}
 	if (!rcBuildContours(context, *chf, config->maxSimplificationError, config->maxEdgeLen, *cset)) {
-		LOG_F(ERROR, "buildNavigation: Could not create contours");
+		logger::ERROR("buildNavigation: Could not create contours");
 		return 0;
 	}
 	
@@ -536,7 +535,7 @@ uint8_t* Navbuilder::alloc_navdata(const int tx, const int ty, float *bmin, floa
 	pmesh = rcAllocPolyMesh();
 
 	if (!rcBuildPolyMesh(context, *cset, config->maxVertsPerPoly, *pmesh)) {
-		LOG_F(ERROR, "buildNavigation: Could not triangulate contours");
+		logger::ERROR("buildNavigation: Could not triangulate contours");
 		return 0;
 	}
 	
@@ -544,7 +543,7 @@ uint8_t* Navbuilder::alloc_navdata(const int tx, const int ty, float *bmin, floa
 	dmesh = rcAllocPolyMeshDetail();
 	
 	if (!rcBuildPolyMeshDetail(context, *pmesh, *chf, config->detailSampleDist, config->detailSampleMaxError, *dmesh)) {
-		LOG_F(ERROR, "buildNavigation: Could build polymesh detail");
+		logger::ERROR("buildNavigation: Could build polymesh detail");
 		return 0;
 	}
 	
@@ -558,7 +557,7 @@ uint8_t* Navbuilder::alloc_navdata(const int tx, const int ty, float *bmin, floa
 	if (config->maxVertsPerPoly <= DT_VERTS_PER_POLYGON) {
 		if (pmesh->nverts >= 0xffff) {
 			// The vertex indices are ushorts, and cannot point to more than 0xffff vertices.
-			LOG_F(ERROR, "Too many vertices per tile");
+			logger::ERROR("Too many vertices per tile");
 			return 0;
 		}
 		
@@ -604,7 +603,7 @@ uint8_t* Navbuilder::alloc_navdata(const int tx, const int ty, float *bmin, floa
 		params.buildBvTree = true;
 		
 		if (!dtCreateNavMeshData(&params, &navdata, &navdata_size)) {
-			LOG_F(ERROR, "Could not build Detour navmesh");
+			logger::ERROR("Could not build Detour navmesh");
 			return 0;
 		}		
 	}
