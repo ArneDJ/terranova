@@ -52,6 +52,7 @@ bool UserDirectory::locate_dir(const char *base, const char *target, std::string
 Engine::Engine()
 {
 	logger::init(GAME_NAME);
+	logger::add_sink(Console::print_line);
 
 	logger::INFO("starting engine");
 
@@ -102,7 +103,7 @@ Engine::~Engine()
 {
 	MediaManager::clear();
 
-	ConsoleManager::clear();
+	Console::clear();
 
 	// in reverse order of initialization
 	SDL_GL_DeleteContext(glcontext);
@@ -246,7 +247,7 @@ void Engine::update_campaign_menu()
 	if (ImGui::Button("Exit")) { state = EngineState::EXIT; }
 
 	if (show_console) {
-		ConsoleManager::display();
+		Console::display();
 	}
 
 	ImGui::End();
@@ -376,14 +377,12 @@ void Engine::update_battle_menu()
 	battle.update_debug_menu();
 
 	if (show_console) {
-		ConsoleManager::display();
+		Console::display();
 	}
 }
 	
 void Engine::run_battle()
 {
-	ConsoleManager::print("starting new battle\n");
-
 	state = EngineState::BATTLE; 
 
 	// import local battle settings from campaign
@@ -392,6 +391,9 @@ void Engine::run_battle()
 	parameters.tile = campaign.battle_data.tile;
 	parameters.town_size = campaign.battle_data.town_size;
 	parameters.walled = campaign.battle_data.walled;
+	
+	Console::print("battle seed {}", parameters.seed);
+	Console::print("battle tile {}", parameters.tile);
 
 	// prepare the battle based on selected parameters
 	battle.prepare(parameters);

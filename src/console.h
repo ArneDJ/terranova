@@ -1,12 +1,22 @@
+#pragma once 
+#include <string>
+#include <fmt/core.h>
+#include <fmt/format.h>
+#include <fmt/ranges.h>
 
-class ConsoleManager {
+class Console {
 public:
 	static void clear();
-	static void print(const char *fmt, ...) IM_FMTARGS(2);
+	static void print_line(const std::string &line);
+	template<typename... A>
+	static void print(fmt::format_string<A...> format, A &&... args)
+	{
+		std::string message = fmt::vformat(format, fmt::make_format_args(args...));
+
+		print_line(message);
+	}
 	static void display();
 private:
-	static ImVector<char*> m_items;
-	static ImGuiTextFilter m_filter;
+	static std::vector<std::string> m_lines;
 	static bool m_auto_scroll;
-	static bool m_scroll_to_bottom;
 };

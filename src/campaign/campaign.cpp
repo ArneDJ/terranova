@@ -856,7 +856,6 @@ void Campaign::raze_town(Town *town)
 
 	// if town is faction captial find new capital
 	if (town->id == faction->capital_id) {
-		ConsoleManager::print("finding new capital");
 		// find largest town that isn't this town
 		uint8_t max_size = 0;
 		uint32_t candidate_id = 0;
@@ -871,6 +870,8 @@ void Campaign::raze_town(Town *town)
 		}
 		faction->capital_id = candidate_id;
 	}
+		
+	Console::print("removing town {} belonging to faction {}", town->id, town->faction);
 			
 	// finally remove town
 	settlement_controller.towns.erase(town->id);
@@ -977,7 +978,7 @@ void Campaign::update_meeple_target(Meeple *meeple)
 					wipe_fiefdom(fiefdom.get());
 					meeple->clear_target();
 				}
-				//ConsoleManager::print("town action happens");
+				//Console::print("town action happens");
 			}
 		} else {
 			// town not found clear target
