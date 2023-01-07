@@ -70,6 +70,7 @@ private:
 	util::Config config;
 	VideoSettings video_settings;
 	Campaign campaign;
+	CampaignGenParams campaign_gen_params = {};
 	Battle battle;
 	std::unique_ptr<gfx::ShaderGroup> shaders;
 private:

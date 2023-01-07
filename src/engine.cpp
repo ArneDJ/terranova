@@ -54,8 +54,6 @@ Engine::Engine()
 	logger::init(GAME_NAME);
 	logger::add_sink(Console::print_line);
 
-	logger::INFO("starting engine");
-
 	SDL_Init(SDL_INIT_VIDEO);
 
 	// get user paths where the ini files are located
@@ -97,6 +95,24 @@ Engine::Engine()
 	init_opengl();
 
 	init_imgui();
+
+	// world generation defaults
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_int_distribution<int> distrib;
+
+	campaign_gen_params.seed = distrib(gen);
+	campaign_gen_params.map_size = 1024.f;
+	campaign_gen_params.faction_count = 24;
+	campaign_gen_params.atlas.tile_count = 8000;
+	campaign_gen_params.atlas.lowland = 114;
+	campaign_gen_params.atlas.hills = 147;
+	campaign_gen_params.atlas.mountains = 168;
+	campaign_gen_params.atlas.noise_frequency = 0.002f;
+	campaign_gen_params.atlas.noise_octaves = 6;
+	campaign_gen_params.atlas.noise_lacunarity = 2.5f;
+	campaign_gen_params.atlas.perturb_frequency = 0.002f;
+	campaign_gen_params.atlas.perturb_amp = 250.f;
 }
 
 Engine::~Engine()
@@ -232,6 +248,7 @@ void Engine::update_campaign_menu()
 	ImGui::NewFrame();
 	ImGui::Begin("Campaign Debug");
 	ImGui::SetWindowSize(ImVec2(400, 300));
+	ImGui::Text("seed %d", campaign.seed);
 	ImGui::Text("cam position: %f, %f, %f", campaign.camera.position.x, campaign.camera.position.y, campaign.camera.position.z);
 	ImGui::Text("%.2f ms/frame (%.1d fps)", (frame_timer.FPS_UPDATE_TIME / frame_timer.frames_per_second()), frame_timer.frames_per_second());
 	ImGui::Text("%.4f frame delta", frame_timer.delta_seconds());
@@ -263,6 +280,12 @@ void Engine::run_campaign()
 	
 		// first update user keyboard and mouse input
 		util::InputManager::update();
+
+		SDL_Event event = {};
+		while (SDL_PollEvent(&event)) {
+			util::InputManager::sample_event(&event);
+			ImGui_ImplSDL2_ProcessEvent(&event);
+		}
 
 		if (util::InputManager::key_pressed(SDLK_BACKQUOTE)) {
 			show_console = !show_console;
@@ -314,14 +337,16 @@ void Engine::run()
 
 	load_module();
 
-	// random number for the world seed
-	std::random_device rd;
-	std::mt19937 gen(rd());
-	std::uniform_int_distribution<int> distrib;
-
 	// the main menu loop
 	while (state == EngineState::TITLE) {
 		util::InputManager::update(); // user keyboard and mouse input
+
+		SDL_Event event = {};
+		while (SDL_PollEvent(&event)) {
+			util::InputManager::sample_event(&event);
+			ImGui_ImplSDL2_ProcessEvent(&event);
+		}
+
 		if (util::InputManager::exit_request()) {
 			state = EngineState::EXIT;
 		}
@@ -338,8 +363,7 @@ void Engine::run()
 		// start a new campaign
 		if (state == EngineState::NEW_CAMPAIGN) {
 			campaign.clear();
-			campaign.generate(distrib(gen));
-			//campaign.generate(1337);
+			campaign.generate(campaign_gen_params);
 			campaign.reset_camera();
 			state = EngineState::RUNNING_CAMPAIGN;
 		}
@@ -405,6 +429,12 @@ void Engine::run_battle()
 		// first update keyboard and mouse input
 		util::InputManager::update();
 
+		SDL_Event event = {};
+		while (SDL_PollEvent(&event)) {
+			util::InputManager::sample_event(&event);
+			ImGui_ImplSDL2_ProcessEvent(&event);
+		}
+
 		if (util::InputManager::key_pressed(SDLK_BACKQUOTE)) {
 			show_console = !show_console;
 		}
@@ -437,11 +467,34 @@ void Engine::run_battle()
 
 void Engine::update_main_menu()
 {
+	// random number for the world seed
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_int_distribution<int> distrib;
+
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplSDL2_NewFrame(window);
 	ImGui::NewFrame();
 	ImGui::Begin("Main Menu Debug Mode");
-	ImGui::SetWindowSize(ImVec2(400, 200));
+
+        if (ImGui::TreeNode("world generation parameters")) {
+		ImGui::InputInt("seed", &campaign_gen_params.seed);
+		if (ImGui::Button("generate seed")) {
+			campaign_gen_params.seed = distrib(gen);
+		}
+		ImGui::InputInt("factions", &campaign_gen_params.faction_count);
+		ImGui::InputInt("tiles", &campaign_gen_params.atlas.tile_count);
+		ImGui::InputInt("lowland", &campaign_gen_params.atlas.lowland);
+		ImGui::InputInt("hills", &campaign_gen_params.atlas.hills);
+		ImGui::InputInt("mountains", &campaign_gen_params.atlas.mountains);
+		ImGui::InputFloat("noise frequency", &campaign_gen_params.atlas.noise_frequency);
+		ImGui::InputInt("noise octaves", &campaign_gen_params.atlas.noise_octaves);
+		ImGui::InputFloat("noise lacunarity", &campaign_gen_params.atlas.noise_lacunarity);
+		ImGui::InputFloat("perturb frequency", &campaign_gen_params.atlas.perturb_frequency);
+		ImGui::InputFloat("perturb amp", &campaign_gen_params.atlas.perturb_amp);
+		ImGui::InputFloat("map size", &campaign_gen_params.map_size);
+		ImGui::TreePop();
+	}
 	if (ImGui::Button("New World")) {
 		state = EngineState::NEW_CAMPAIGN;
 	}

@@ -162,19 +162,22 @@ void Campaign::save(const std::string &filepath)
 }
 	
 // generates a new campaign world based on a seed
-void Campaign::generate(int seedling)
+void Campaign::generate(const CampaignGenParams& gen_params)
 {
 	// reset game ticks
 	game_ticks = 0;
 	faction_ticks = 0;
 	
-	seed = seedling;
+	seed = gen_params.seed;
 
 	// new ids
 	id_generator.reset();
 
 	// generate our world
-	board->generate(seed);
+	board->scale.x = gen_params.map_size;
+	board->scale.y = 48.f;
+	board->scale.z = gen_params.map_size;
+	board->generate(seed, gen_params.atlas);
 
 	// set a new clean state for game data
 	const auto &atlas = board->atlas();	
@@ -188,7 +191,7 @@ void Campaign::generate(int seedling)
 	faction_controller.find_town_targets(atlas, 5);
 
 	// spawn factions including the player's
-	spawn_factions();
+	spawn_factions(gen_params.faction_count);
 
 	// spawn a meeple for every faction
 
@@ -574,7 +577,7 @@ void Campaign::display_labels()
 // returns the vertical offset of the campaign heightmap at map coordinates
 float Campaign::vertical_offset(const glm::vec2 &position)
 {
-	glm::vec3 origin = { position.x, 2.F * board->SCALE.y, position.y };
+	glm::vec3 origin = { position.x, 2.F * board->scale.y, position.y };
 	glm::vec3 end = { position.x, 0.F, position.y };
 
 	auto result = physics.cast_ray(origin, end, COLLISION_GROUP_HEIGHTMAP);
@@ -618,7 +621,7 @@ void Campaign::place_meeple(Meeple *meeple)
 	
 // spawns a group of new factions
 // this is used when a new campaign game is created
-void Campaign::spawn_factions()
+void Campaign::spawn_factions(int faction_count)
 {
 	std::mt19937 gen(seed);
 	std::uniform_real_distribution<float> dis(0.2f, 1.f);
@@ -638,7 +641,7 @@ void Campaign::spawn_factions()
 		player_data.faction_id = id;
 	}
 
-	for (int i = 0; i < 24; i++) {
+	for (int i = 0; i < faction_count; i++) {
 		std::unique_ptr<Faction> faction = std::make_unique<Faction>();
 		auto id = id_generator.generate();
 		faction->set_id(id);
@@ -1083,12 +1086,12 @@ void Campaign::update_debug_menu()
 	
 void Campaign::update_camera(float delta)
 {
-	float camera_level = glm::smoothstep(0.1f, 0.3f, camera.position.y / board->SCALE.y);
+	float camera_level = glm::smoothstep(0.1f, 0.3f, camera.position.y / board->scale.y);
 	float zoomlevel = 2.f * glm::clamp(camera_level, 0.f, 2.f);
 
 	float modifier = 10.f * delta;
 	
-	float fuckyou = glm::clamp(camera.position.y / board->SCALE.y, 0.f, 2.f);
+	float fuckyou = glm::clamp(camera.position.y / board->scale.y, 0.f, 2.f);
 	float speed = 4.f * modifier * (fuckyou * fuckyou);
 
 	if (util::InputManager::key_down(SDL_BUTTON_MIDDLE)) {
@@ -1138,7 +1141,7 @@ void Campaign::update_camera(float delta)
 
 	// update scroll
 	if (scroller.status != ScrollStatus::INACTIVE) {
-		float pitch = glm::mix(-1.55f, -0.5f, 1.f - (camera.position.y / (4.f * board->SCALE.y)));
+		float pitch = glm::mix(-1.55f, -0.5f, 1.f - (camera.position.y / (4.f * board->scale.y)));
 		scroller.time -= 5.f * delta;
 
 		//camera.pitch = glm::clamp(pitch, -1.55f, -0.1f);
@@ -1450,7 +1453,7 @@ void Campaign::spawn_barbarians()
 	std::vector<glm::vec2> points;
 
 	for (const auto &position : positions) {
-		glm::vec2 point = { board->SCALE.x * position.x, board->SCALE.z * position.y };
+		glm::vec2 point = { board->scale.x * position.x, board->scale.z * position.y };
 		const Tile *tile = board->atlas().tile_at(point);
 		if (walkable_tile(tile) && !faction_controller.tile_owners[tile->index]) {
 			glm::vec2 center = board->tile_center(tile->index);

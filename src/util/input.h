@@ -2,7 +2,7 @@ namespace util {
 
 using Keymap = std::unordered_map<uint32_t, bool>;
 
-struct MouseCoords {
+struct MouseCursor {
 	glm::vec2 absolute = {};
 	glm::vec2 relative = {};
 };
@@ -17,16 +17,15 @@ public:
 	static glm::vec2 abs_mouse_coords();
 	static glm::vec2 rel_mouse_coords();
 	static int mousewheel();
+	static void sample_event(const SDL_Event *event);
+	static const MouseCursor& mouse_cursor() { return m_mouse_cursor; }
 private:
 	static Keymap m_current;
 	static Keymap m_previous;
-	static MouseCoords m_mouse_coords;
+	static MouseCursor m_mouse_cursor;
 	static bool m_exit;
 	static int m_mousewheel;
 private:
-	static void sample_event(const SDL_Event *event);
-	static void sample_absolute_mouse();
-	static void sample_relative_mouse();	
 	static void press_key(uint32_t key);
 	static void release_key(uint32_t key);
 	static bool was_key_down(uint32_t key);

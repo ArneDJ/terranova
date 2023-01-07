@@ -70,6 +70,13 @@ struct CampaignScroll {
 	float speed = 1.f;
 };
 
+struct CampaignGenParams {
+	int seed = 0;
+	float map_size = 0.f;
+	int faction_count = 0;
+	AtlasParameters atlas = {};
+};
+
 // the overworld
 class Campaign {
 public:
@@ -114,7 +121,7 @@ public:
 public:
 	void load(const std::string &filepath);
 	void save(const std::string &filepath);
-	void generate(int seedling);
+	void generate(const CampaignGenParams& gen_params);
 	void prepare();
 	void clear();
 public:
@@ -154,7 +161,7 @@ private:
 	void update_meeple_behavior(Meeple *meeple);
 	void check_meeple_visibility();
 public:
-	void spawn_factions();
+	void spawn_factions(int faction_count);
 	void update_faction_taxes();
 	void update_factions();
 	void repaint_fiefdom_tiles(const Fiefdom *fiefdom);

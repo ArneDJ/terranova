@@ -181,7 +181,7 @@ void Atlas::generate(int seed, const geom::Rectangle &bounds, const AtlasParamet
 	std::vector<glm::vec2> points;
 
 	PoissonGenerator::DefaultPRNG PRNG(seed);
-	const auto positions = PoissonGenerator::generatePoissonPoints(8000, PRNG, false);
+	const auto positions = PoissonGenerator::generatePoissonPoints(parameters.tile_count, PRNG, false);
 	for (const auto &position : positions) {
 		glm::vec2 point = { scale.x * position.x, scale.y * position.y };
 		point += bounds.min;

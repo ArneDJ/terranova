@@ -8,7 +8,7 @@ namespace util {
 
 Keymap InputManager::m_current;
 Keymap InputManager::m_previous;
-MouseCoords InputManager::m_mouse_coords;
+MouseCursor InputManager::m_mouse_cursor;
 bool InputManager::m_exit = false;
 int InputManager::m_mousewheel = 0;
 
@@ -21,13 +21,17 @@ void InputManager::update()
 
 	m_mousewheel = 0;
 
-	// now sample the current events
-	SDL_Event event;
-	while (SDL_PollEvent(&event)) { sample_event(&event); }
-
 	// mouse coord sampling
-	sample_absolute_mouse();
-	sample_relative_mouse();	
+	int x = 0;
+	int y = 0;
+
+	SDL_GetRelativeMouseState(&x, &y);
+	m_mouse_cursor.relative.x = float(x);
+	m_mouse_cursor.relative.y = float(y);
+
+	SDL_GetMouseState(&x, &y);
+	m_mouse_cursor.absolute.x = float(x);
+	m_mouse_cursor.absolute.y = float(y);
 }
 
 bool InputManager::exit_request()
@@ -62,12 +66,12 @@ bool InputManager::was_key_down(uint32_t key)
 
 glm::vec2 InputManager::abs_mouse_coords()
 {
-	return m_mouse_coords.absolute;
+	return m_mouse_cursor.absolute;
 }
 
 glm::vec2 InputManager::rel_mouse_coords()
 {
-	return m_mouse_coords.relative;
+	return m_mouse_cursor.relative;
 }
 	
 int InputManager::mousewheel()
@@ -96,32 +100,6 @@ void InputManager::press_key(uint32_t key)
 void InputManager::release_key(uint32_t key)
 {
 	m_current[key] = false;
-}
-
-void InputManager::sample_relative_mouse()
-{
-	int x = 0;
-	int y = 0;
-
-	SDL_GetRelativeMouseState(&x, &y);
-	m_mouse_coords.relative.x = float(x);
-	m_mouse_coords.relative.y = float(y);
-/*
-	if (mousegrab == false) {
-		m_mouse_coords.relative.x = 0.f;
-		m_mouse_coords.relative.y = 0.f;
-	}
-	*/
-}
-
-void InputManager::sample_absolute_mouse()
-{
-	int x = 0;
-	int y = 0;
-
-	SDL_GetMouseState(&x, &y);
-	m_mouse_coords.absolute.x = float(x);
-	m_mouse_coords.absolute.y = float(y);
 }
 
 };

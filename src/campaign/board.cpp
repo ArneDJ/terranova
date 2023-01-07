@@ -77,6 +77,9 @@ BoardModel::BoardModel(std::shared_ptr<gfx::Shader> shader, std::shared_ptr<gfx:
 void BoardModel::set_scale(const glm::vec3 &scale)
 {
 	m_scale = scale;
+
+	geom::Rectangle rectangle = { { 0.f, 0.f }, { scale.x, scale.z } };
+	m_mesh.create(32, rectangle);
 }
 
 void BoardModel::add_material(const std::string &name, const gfx::Texture *texture)
@@ -201,25 +204,28 @@ void BoardModel::set_border_mix(float mix)
 Board::Board(std::shared_ptr<gfx::Shader> tilemap, std::shared_ptr<gfx::Shader> blur_shader)
 	: m_model(tilemap, blur_shader, m_atlas.heightmap(), m_atlas.normalmap())
 {
-	m_height_field = std::make_unique<fysx::HeightField>(m_atlas.heightmap(), SCALE);
+	m_height_field = std::make_unique<fysx::HeightField>(m_atlas.heightmap(), scale);
 }
 	
-void Board::generate(int seed)
+void Board::generate(int seed, const AtlasParameters& atlas_params)
 {
-	const geom::Rectangle bounds = { { 0.F, 0.F }, { SCALE.x, SCALE.z } };
-	AtlasParameters parameters = {};
-	m_atlas.generate(seed, bounds, parameters);
+	const geom::Rectangle bounds = { { 0.F, 0.F }, { scale.x, scale.z } };
+	//AtlasParameters parameters = {};
+	//parameters.tile_count = tile_count;
+	m_atlas.generate(seed, bounds, atlas_params);
 	
 	build_navigation();
 }
 	
 void Board::reload()
 {
+	m_height_field = std::make_unique<fysx::HeightField>(m_atlas.heightmap(), scale);
+
 	// world normalmap from heightmap
 	m_atlas.create_normalmap();
 	
 	m_model.reload(m_atlas);
-	m_model.set_scale(SCALE);
+	m_model.set_scale(scale);
 }
 	
 void Board::paint_tile(uint32_t tile, const glm::vec3 &color, float alpha)

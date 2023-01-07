@@ -80,11 +80,12 @@ void serialize(Archive &archive, Tile &tile)
 }
 
 struct AtlasParameters {
-	uint8_t lowland = 114;
-	uint8_t hills = 147;
-	uint8_t mountains = 168;
+	int tile_count = 8000;
+	int lowland = 114;
+	int hills = 147;
+	int mountains = 168;
 	float noise_frequency = 0.002f;
-	uint8_t noise_octaves = 6;
+	int noise_octaves = 6;
 	float noise_lacunarity = 2.5f;
 	float perturb_frequency = 0.002f;
 	float perturb_amp = 250.f;

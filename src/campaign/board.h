@@ -65,9 +65,9 @@ class Board {
 public:
 	Board(std::shared_ptr<gfx::Shader> tilemap, std::shared_ptr<gfx::Shader> blur_shader);
 public:
-	const glm::vec3 SCALE = { 1024.f, 64.f, 1024.f };
+	glm::vec3 scale = { 1024.f, 64.f, 1024.f };
 public:
-	void generate(int seed);
+	void generate(int seed, const AtlasParameters& atlas_params);
 	void reload();
 	void update();
 	void paint_tile(uint32_t tile, const glm::vec3 &color, float alpha);
