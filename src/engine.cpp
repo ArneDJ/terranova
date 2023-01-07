@@ -20,8 +20,6 @@
 #include "extern/cereal/archives/binary.hpp"
 #include "extern/cereal/archives/json.hpp"
 
-#include "extern/freetypegl/freetype-gl.h"
-
 #include "util/logger.h"
 #include "engine.h"
 

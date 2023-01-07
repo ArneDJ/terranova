@@ -18,8 +18,6 @@
 #include "../extern/cereal/archives/binary.hpp"
 #include "../extern/cereal/archives/json.hpp"
 
-#include "../extern/freetypegl/freetype-gl.h"
-
 #include "../extern/poisson/PoissonGenerator.h"
 
 #include "../util/logger.h"
@@ -548,6 +546,7 @@ void Campaign::display_labels()
 	font_shader->uniform_mat4("PROJECT", camera.projection);
 	font_shader->uniform_mat4("VIEW", camera.viewing);
 
+	/*
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, labeler->atlas->id);
 
@@ -569,7 +568,7 @@ void Campaign::display_labels()
 		font_shader->uniform_vec3("COLOR", town->label->text_color);
 		town->label->text_mesh->display();
 	}
-
+	*/
 
 	//glEnable(GL_DEPTH_TEST);
 }

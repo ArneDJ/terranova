@@ -1,6 +1,3 @@
-#pragma once
-#include "../extern/freetypegl/freetype-gl.h"
-
 namespace gfx {
 
 struct LabelVertex {
@@ -24,7 +21,7 @@ public:
 	LabelMesh();
 	~LabelMesh();
 public:
-	void set_text(const std::string &text, texture_font_t *font);
+	//void set_text(const std::string &text, texture_font_t *font);
 	void set_quad(const geom::Rectangle &rectangle);
 	void display() const;
 };
@@ -40,13 +37,10 @@ public:
 public:
 	Label();
 public:
-	void format(const std::string &text, texture_font_t *font);
+	//void format(const std::string &text, texture_font_t *font);
 };
 
 class LabelFont {
-public:
-	texture_atlas_t *atlas = nullptr;
-	texture_font_t *font = nullptr;
 public:
 	LabelFont(const std::string &fontpath, size_t fontsize);
 	~LabelFont();

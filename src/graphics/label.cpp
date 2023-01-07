@@ -11,8 +11,6 @@
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-//#include "../extern/freetypegl/freetype-gl.h"
-
 #include "../geometry/frustum.h"
 #include "../geometry/transform.h"
 #include "../geometry/geometry.h"
@@ -53,6 +51,7 @@ LabelMesh::~LabelMesh()
 	glDeleteVertexArrays(1, &VAO);
 }
 	
+/*
 void LabelMesh::set_text(const std::string &text, texture_font_t *font)
 {
 	buffer.vertices.clear();
@@ -128,6 +127,7 @@ void LabelMesh::set_text(const std::string &text, texture_font_t *font)
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(LabelVertex)*buffer.vertices.size(), buffer.vertices.data(), GL_DYNAMIC_DRAW);
 }
+*/
 	
 void LabelMesh::set_quad(const geom::Rectangle &rectangle)
 {
@@ -175,17 +175,17 @@ Label::Label()
 	background_mesh = std::make_unique<gfx::LabelMesh>();
 }
 	
+/*
 void Label::format(const std::string &text, texture_font_t *font)
 {
 	text_mesh->set_text(text, font);
 	background_mesh->set_quad(text_mesh->bounds);
 }
+*/
 	
 LabelFont::LabelFont(const std::string &fontpath, size_t fontsize)
 {
-	atlas = texture_atlas_new(1024, 1024, 1);
-	font = texture_font_new_from_file(atlas, fontsize, fontpath.c_str());
-
+	/*
 	// create the font atlas texture
 	glGenTextures(1, &atlas->id);
 	glBindTexture(GL_TEXTURE_2D, atlas->id);
@@ -194,15 +194,11 @@ LabelFont::LabelFont(const std::string &fontpath, size_t fontsize)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, atlas->width, atlas->height, 0, GL_RED, GL_UNSIGNED_BYTE, atlas->data);
+	*/
 }
 
 LabelFont::~LabelFont()
 {
-	glDeleteTextures(1, &atlas->id);
-
-	texture_font_delete(font);
-
-	texture_atlas_delete(atlas);
 }
 
 }

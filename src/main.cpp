@@ -13,8 +13,6 @@
 #include "extern/imgui/imgui_impl_sdl.h"
 #include "extern/imgui/imgui_impl_opengl3.h"
 
-#include "extern/freetypegl/freetype-gl.h"
-
 #include "engine.h"
 
 int main(int argc, char *argv[])
