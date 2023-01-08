@@ -9,13 +9,6 @@ public:
 public:
 	const gfx::Model *model = nullptr;
 public:
-	std::unique_ptr<gfx::Label> label;
-public:
-	CampaignEntity()
-	{
-		label = std::make_unique<gfx::Label>();
-	}
-public:
 	glm::vec2 map_position() const
 	{
 		return glm::vec2(transform.position.x, transform.position.z);

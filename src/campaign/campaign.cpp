@@ -37,7 +37,7 @@
 #include "../graphics/model.h"
 #include "../graphics/texture.h"
 #include "../graphics/scene.h"
-#include "../graphics/label.h"
+#include "../graphics/font.h"
 #include "../physics/physical.h"
 #include "../physics/heightfield.h"
 #include "../physics/trigger.h"
@@ -73,7 +73,7 @@ void Campaign::init(const gfx::ShaderGroup *shaders)
 {
 	debugger = std::make_unique<Debugger>(shaders->debug);
 
-	//labeler = std::make_unique<gfx::LabelFont>("fonts/exocet.ttf", 30);
+	font_manager.init();
 
 	board = std::make_unique<Board>(shaders->tilemap, shaders->blur);
 	
@@ -514,61 +514,34 @@ void Campaign::display()
 		debugger->display_navmeshes();
 	}
 
-	//display_labels();
+	display_labels();
 }
 	
 void Campaign::display_labels()
 {
 	//glDisable(GL_DEPTH_TEST);
 
-	label_shader->use();
-	label_shader->uniform_mat4("PROJECT", camera.projection);
-	label_shader->uniform_mat4("VIEW", camera.viewing);
-
-	for (auto &mapping : meeple_controller.meeples) {
-		auto &meeple = mapping.second;
-		if (meeple->visible) {
-			label_shader->uniform_float("SCALE", meeple->label->scale);
-			label_shader->uniform_vec3("ORIGIN", meeple->transform.position + glm::vec3(0.f, 1.f, 0.f));
-			label_shader->uniform_vec3("COLOR", meeple->label->background_color);
-			meeple->label->background_mesh->display();
-		}
-	}
-	for (auto &mapping : settlement_controller.towns) {
-		auto &town = mapping.second;
-		label_shader->uniform_float("SCALE", town->label->scale);
-		label_shader->uniform_vec3("ORIGIN", town->transform.position + glm::vec3(0.f, 2.5f, 0.f));
-		label_shader->uniform_vec3("COLOR", town->label->background_color);
-		town->label->background_mesh->display();
-	}
-
 	font_shader->use();
 	font_shader->uniform_mat4("PROJECT", camera.projection);
 	font_shader->uniform_mat4("VIEW", camera.viewing);
 
-	/*
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, labeler->atlas->id);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, labeler->atlas->width, labeler->atlas->height, 0, GL_RED, GL_UNSIGNED_BYTE, labeler->atlas->data);
-
 	for (auto &mapping : meeple_controller.meeples) {
 		auto &meeple = mapping.second;
 		if (meeple->visible) {
-			font_shader->uniform_float("SCALE", meeple->label->scale);
-			font_shader->uniform_vec3("ORIGIN", meeple->transform.position + glm::vec3(0.f, 1.f, 0.f));
-			font_shader->uniform_vec3("COLOR", meeple->label->text_color);
-			meeple->label->text_mesh->display();
+			font_shader->uniform_float("SCALE", 0.02f);
+			font_shader->uniform_vec3("ORIGIN", meeple->transform.position + glm::vec3(0.f, 2.f, 0.f));
+			font_shader->uniform_vec3("COLOR", glm::vec3(1.f, 1.f, 0.f));
+			font_manager.display_text("boid " + std::to_string(meeple->id), 0.f, 0.f, 1.f);
 		}
 	}
+
 	for (auto &mapping : settlement_controller.towns) {
 		auto &town = mapping.second;
-		font_shader->uniform_float("SCALE", town->label->scale);
+		font_shader->uniform_float("SCALE", 0.05f);
 		font_shader->uniform_vec3("ORIGIN", town->transform.position + glm::vec3(0.f, 2.5f, 0.f));
-		font_shader->uniform_vec3("COLOR", town->label->text_color);
-		town->label->text_mesh->display();
+		font_shader->uniform_vec3("COLOR", glm::vec3(1.f, 1.f, 0.f));
+		font_manager.display_text("town " + std::to_string(town->id), 0.f, 0.f, 1.f);
 	}
-	*/
 
 	//glEnable(GL_DEPTH_TEST);
 }
@@ -603,17 +576,6 @@ void Campaign::place_meeple(Meeple *meeple)
 	physics.add_object(visibility->ghost_object(), COLLISION_GROUP_VISIBILITY, COLLISION_GROUP_INTERACTION);
 
 	meeple->model = army_blueprint.model;
-
-	// add label
-	auto faction_search = faction_controller.factions.find(meeple->faction_id);
-	if (faction_search != faction_controller.factions.end()) {
-		auto &faction = faction_search->second;
-		meeple->label->text_color = faction->color();
-	} else {
-		meeple->label->text_color = { 1.f, 0.f, 0.f };
-	}
-	//meeple->label->format("Army " + std::to_string(meeple->troop_count), labeler->font);
-	meeple->label->scale = 0.1f;
 
 	meeple->visible = false;
 }
@@ -834,13 +796,6 @@ void Campaign::place_town(Town *town)
 	trigger->ghost_object()->setUserIndex(town->id);
 	trigger->ghost_object()->setUserIndex2(int(CampaignEntityType::TOWN));
 	physics.add_object(trigger->ghost_object(), COLLISION_GROUP_INTERACTION, mask);
-
-	// add label
-	glm::vec3 color = faction_controller.factions[town->faction]->color();
-	//town->label->format(town->name + " " + std::to_string(town->troop_count), labeler->font);
-	town->label->text_color = color;
-
-	town->label->scale = blueprint.label_scale;
 }
 	
 //  remove town entity from the campaign map
@@ -1257,8 +1212,6 @@ void Campaign::transfer_town(Town *town, uint32_t faction)
 	
 	glm::vec3 color = faction_controller.factions[faction]->color();
 
-	town->label->text_color = color;
-
 	// change fiefdom tiles faction
 	const auto &atlas = board->atlas();	
 	const auto &graph = atlas.graph();	
@@ -1298,10 +1251,6 @@ void Campaign::update_town_tick(Town *town, uint64_t ticks)
 		const auto &blueprint = town_blueprints[town->size];
 		town->model = blueprint.base_model;
 		town->wall_model = blueprint.wall_model;
-	
-		town->label->scale = blueprint.label_scale;
-		
-		//town->label->format(town->name + " " + std::to_string(town->troop_count), labeler->font);
 	}
 }
 	

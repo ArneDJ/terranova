@@ -94,7 +94,7 @@ public:
 	util::IdGenerator id_generator;
 	fysx::PhysicalSystem physics;
 	std::unique_ptr<Board> board;
-	std::unique_ptr<gfx::LabelFont> labeler;
+	FontManager font_manager;
 	MeepleController meeple_controller;
 	SettlementController settlement_controller;
 	FactionController faction_controller;

@@ -20,7 +20,6 @@
 #include "../physics/trigger.h"
 #include "../graphics/mesh.h"
 #include "../graphics/model.h"
-#include "../graphics/label.h"
 
 #include "entity.h"
 #include "meeple.h"

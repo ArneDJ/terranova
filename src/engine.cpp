@@ -21,6 +21,7 @@
 #include "extern/cereal/archives/json.hpp"
 
 #include "util/logger.h"
+#include "graphics/font.h"
 #include "engine.h"
 
 static const char *GAME_NAME = "terranova";
@@ -115,6 +116,8 @@ Engine::Engine()
 
 Engine::~Engine()
 {
+	campaign.font_manager.shutdown();
+
 	MediaManager::clear();
 
 	Console::clear();

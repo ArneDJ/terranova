@@ -21,7 +21,6 @@
 #include "../graphics/mesh.h"
 #include "../graphics/texture.h"
 #include "../graphics/model.h"
-#include "../graphics/label.h"
 #include "../physics/physical.h"
 #include "../physics/bumper.h"
 
